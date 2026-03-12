@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:ns1="urn:oasis:names:tc:xliff:document:1.2" xmlns:ns2="http://schemas.android.com/tools">
+    <string-array name="categories_list">
+        <item>비즈니스</item>
+        <item>엔터테인먼트</item>
+        <item>패션</item>
+        <item>라이프스타일</item>
+        <item>음악</item>
+        <item>뉴스</item>
+        <item>정치</item>
+        <item>과학</item>
+        <item>스포츠</item>
+        <item>기술</item>
+    </string-array>
+    <string-array name="connectivityArray">
+        <item>Wi-Fi 및 모바일 네트워크</item>
+        <item>Wi-Fi만</item>
+    </string-array>
+    <string-array name="entries_list_preference">
+        <item translatable="false">Deutsch</item>
+        <item translatable="false">English</item>
+        <item translatable="false">Español</item>
+        <item translatable="false">Français</item>
+        <item translatable="false">Italiano</item>
+        <item translatable="false">한국어</item>
+        <item translatable="false">Português</item>
+        <item translatable="false">Русский</item>
+    </string-array>
+    <string-array name="prefs_theme_names">
+        <item>화이트</item>
+        <item>라이트</item>
+        <item>다크</item>
+        <item>블랙</item>
+    </string-array>
+    <string-array name="refreshTimerArray">
+        <item>15분</item>
+        <item>30분</item>
+        <item>1시간</item>  
+        <item>3시간</item>  
+        <item>24시간</item>
+    </string-array>
+    <plurals name="mtrl_badge_content_description">
+    <item quantity="one">새 알림 %d개</item>
+    <item quantity="other">새 알림 %d개</item>
+  </plurals>
+    <string msgid="5976598919945601918" name="abc_action_bar_home_description">"홈으로 이동"</string>
+    <string msgid="8388173803310557296" name="abc_action_bar_up_description">"위로 이동"</string>
+    <string msgid="3937310113216875497" name="abc_action_menu_overflow_description">"추가 옵션"</string>
+    <string msgid="4692188335987374352" name="abc_action_mode_done">"완료"</string>
+    <string msgid="1189761859438369441" name="abc_activity_chooser_view_see_all">"전체 보기"</string>
+    <string msgid="2165779757652331008" name="abc_activitychooserview_choose_application">"앱 선택"</string>
+    <string msgid="4215997306490295099" name="abc_capital_off">"사용 중지"</string>
+    <string msgid="884982626291842264" name="abc_capital_on">"사용"</string>
+    <string msgid="8833365367933412986" name="abc_menu_alt_shortcut_label">"Alt+"</string>
+    <string msgid="2223301931652355242" name="abc_menu_ctrl_shortcut_label">"Ctrl+"</string>
+    <string msgid="838001238306846836" name="abc_menu_delete_shortcut_label">"Delete"</string>
+    <string msgid="7986526966204849475" name="abc_menu_enter_shortcut_label">"Enter"</string>
+    <string msgid="375214403600139847" name="abc_menu_function_shortcut_label">"Function+"</string>
+    <string msgid="4192209724446364286" name="abc_menu_meta_shortcut_label">"Meta+"</string>
+    <string msgid="4741552369836443843" name="abc_menu_shift_shortcut_label">"Shift+"</string>
+    <string msgid="5473865519181928982" name="abc_menu_space_shortcut_label">"스페이스바"</string>
+    <string msgid="6180552449598693998" name="abc_menu_sym_shortcut_label">"Sym+"</string>
+    <string msgid="5520303668377388990" name="abc_prepend_shortcut_label">"Menu+"</string>
+    <string msgid="7208076849092622260" name="abc_search_hint">"검색..."</string>
+    <string msgid="3741173234950517107" name="abc_searchview_description_clear">"검색어 삭제"</string>
+    <string msgid="693312494995508443" name="abc_searchview_description_query">"검색어"</string>
+    <string msgid="3417662926640357176" name="abc_searchview_description_search">"검색"</string>
+    <string msgid="1486535517437947103" name="abc_searchview_description_submit">"검색어 보내기"</string>
+    <string msgid="2293578557972875415" name="abc_searchview_description_voice">"음성 검색"</string>
+    <string msgid="8875138169939072951" name="abc_shareactionprovider_share_with">"공유 대상:"</string>
+    <string msgid="9055268688411532828" name="abc_shareactionprovider_share_with_application">"<ns1:g id="APPLICATION_NAME">%s</ns1:g>과(와) 공유"</string>
+    <string msgid="1656852541809559762" name="abc_toolbar_collapse_description">"접기"</string>
+    <string name="ago">전</string>
+    <string name="app_descrip">이 애플리케이션은 웹에서 뉴스를 가져오는 가장 빠른 방법을 제공합니다</string>
+    <string name="app_name">News Reader</string>
+    <string name="auto">자동</string>
+    <string name="backup">백업</string>
+    <string name="backup_hint">저장되지 않은 데이터가 있습니다. 백업하시겠습니까?</string>
+    <string name="bottomsheet_action_collapse">하단 시트 접기</string>
+    <string name="bottomsheet_action_expand">하단 시트 펼치기</string>
+    <string name="bottomsheet_action_expand_halfway">반만 펼치기</string>
+    <string name="bottomsheet_drag_handle_content_description">드래그 핸들</string>
+    <string msgid="881409763997275156" name="call_notification_answer_action">"통화"</string>
+    <string msgid="8793775615905189152" name="call_notification_answer_video_action">"동영상"</string>
+    <string msgid="3229508546291798546" name="call_notification_decline_action">"거절"</string>
+    <string msgid="2659457946726154263" name="call_notification_hang_up_action">"전화 끊기"</string>
+    <string msgid="6107532579223922871" name="call_notification_incoming_text">"수신 전화"</string>
+    <string msgid="8623827134497363134" name="call_notification_ongoing_text">"진행 중인 통화"</string>
+    <string msgid="59049573811482460" name="call_notification_screening_text">"수신 전화 검사 중"</string>
+    <string name="character_counter_content_description">입력된 글자 %1$d/%2$d</string>
+    <string name="character_counter_overflowed_content_description">글자 수 제한이 초과되었습니다(%1$d/%2$d).</string>
+    <string name="clear_text_end_icon_content_description">텍스트 삭제</string>
+    <string name="color_picker_default_title">색상 선택</string>
+    <string msgid="6083905920877235314" name="copy">"복사"</string>
+    <string name="copy_label">복사</string>
+    <string name="credits">크레딧</string>
+    <string name="credits_text">이 애플리케이션에는 다음 항목이 포함됩니다:&lt;br>&lt;br>&lt;b>Android Support&lt;/b> 라이브러리는 Apache License 2.0, http://www.apache.org/licenses 하에 배포됩니다</string>
+    <string name="default_feed_language_code">ko</string>
+    <string name="delete">삭제</string>
+    <string name="dialog_title_list_preference">피드 언어</string>
+    <string name="display">표시</string>
+    <string name="dlg_add_category">새 카테고리 추가</string>
+    <string name="dlg_add_feed">새 사용자 피드 추가</string>
+    <string name="dlg_cat_description_hint">카테고리에 대한 짧은 설명</string>
+    <string name="dlg_cat_title_hint">카테고리 제목</string>
+    <string name="dlg_edit_category">카테고리 편집</string>
+    <string name="dlg_edit_feed">사용자 피드 편집</string>
+    <string name="dlg_rss_hint">유효한 RSS 피드 주소</string>
+    <string name="dlg_title_hint">피드 제목</string>
+    <string name="download_images">이미지 다운로드</string>
+    <string name="error_a11y_label">오류: 잘못됨</string>
+    <string name="error_icon_content_description">오류</string>
+    <string name="exit">종료</string>
+    <string msgid="2427401033573778270" name="expand_button_title">"고급"</string>
+    <string name="export_label">내보내기</string>
+    <string name="exposed_dropdown_menu_content_description">드롭다운 메뉴 표시</string>
+    <string name="ext_storage">외부 저장소</string>
+    <string name="feeds_language">피드 언어</string>
+    <string name="full_story">전체 기사</string>
+    <string name="genericColor">일반 색상</string>
+    <string name="go_next_label">다음 항목</string>
+    <string name="go_prev_label">이전 항목</string>
+    <string name="hour">시간</string>
+    <string name="hours">시간</string>
+    <string name="hyperlinkColor">하이퍼링크 텍스트</string>
+    <string name="icon_content_description">대화상자 아이콘</string>
+    <string name="import_label">가져오기</string>
+    <string name="import_opml">OPML 파일 가져오기</string>
+    <string name="item_view_role_description">탭</string>
+    <string name="local_storage">로컬 저장소</string>
+    <string name="m3_loading_indicator_content_description">로드 중</string>
+    <string name="material_clock_toggle_content_description">오전 또는 오후를 선택하세요.</string>
+    <string name="material_hour_24h_suffix">%1$s시간</string>
+    <string name="material_hour_selection">시간 선택</string>
+    <string name="material_hour_suffix">%1$s시 정각</string>
+    <string name="material_minute_selection">분 선택</string>
+    <string name="material_minute_suffix">%1$s분</string>
+    <string name="material_slider_range_end">범위 끝</string>
+    <string name="material_slider_range_start">범위 시작</string>
+    <string name="material_slider_value">값</string>
+    <string name="material_timepicker_am">오전</string>
+    <string name="material_timepicker_clock_mode_description">시간 입력을 위해 시계 모드로 전환합니다.</string>
+    <string name="material_timepicker_hour">시간</string>
+    <string name="material_timepicker_minute">분</string>
+    <string name="material_timepicker_pm">오후</string>
+    <string name="material_timepicker_select_time">시간 선택</string>
+    <string name="material_timepicker_text_input_mode_description">시간 입력을 위해 텍스트 입력 모드로 전환합니다.</string>
+    <string name="max_titles">최대 헤드라인 수</string>
+    <string name="menu_about">정보</string>
+    <string name="menu_help">도움말</string>
+    <string name="menu_preferences">설정</string>
+    <string name="menu_publisher">발행자 정보</string>
+    <string name="menu_rss_refresh">뉴스 새로고침</string>
+    <string name="menu_share_label">공유</string>
+    <string name="minute">분</string>
+    <string name="minutes">분</string>
+    <string name="missing_title">제목을 입력하세요</string>
+    <string name="missing_url">유효한 RSS 피드 주소를 입력하세요</string>
+    <string name="move_to_category">카테고리로 이동</string>
+    <string name="msg_backup_ok">백업 성공</string>
+    <string name="msg_bad_answer">피드 서버에서 잘못된 콘텐츠를 받았습니다, 오류 코드: </string>
+    <string name="msg_bad_mimetype">피드 서버에서 잘못된 유형의 콘텐츠를 받았습니다.</string>
+    <string name="msg_cannot_read_backup">백업을 읽을 수 없습니다</string>
+    <string name="msg_cannot_read_file">파일을 읽을 수 없습니다</string>
+    <string name="msg_cannot_write_backup">백업을 쓸 수 없습니다</string>
+    <string name="msg_cannot_write_file">파일을 쓸 수 없습니다</string>
+    <string name="msg_connection_problem">네트워크 오류. 인터넷 연결을 확인하세요.</string>
+    <string name="msg_corrupt_file">애플리케이션이 손상되었습니다. &lt;br>권장 해결 방법:&lt;br>1) 이 애플리케이션 제거&lt;br>2) Google Play에서 이 애플리케이션 재설치</string>
+    <string name="msg_done">완료!</string>
+    <string name="msg_error">오류</string>
+    <string name="msg_export_ok">내보내기 성공</string>
+    <string name="msg_external_storage_notreadble">SD 카드를 읽을 수 없습니다. SD 카드를 확인하세요</string>
+    <string name="msg_external_storage_notwritable">SD 카드에 쓸 수 없습니다. SD 카드를 확인하세요</string>
+    <string name="msg_feedback_sent">피드백 전송됨...</string>
+    <string name="msg_generic_problem">예기치 않은 오류.</string>
+    <string name="msg_http_error">피드 서버에서 반환된 오류: </string>
+    <string name="msg_import_ok">가져오기 성공</string>
+    <string name="msg_missing_backup">백업 파일이 존재하지 않습니다</string>
+    <string name="msg_missing_file">파일이 존재하지 않습니다</string>
+    <string name="msg_missing_file_manager">파일 관리자를 설치하세요</string>
+    <string name="msg_nothing_to_delete">삭제할 항목이 없습니다</string>
+    <string name="msg_permission_denied">권한 거부로 인해 작업이 실패했습니다</string>
+    <string name="msg_publisher">현재 피드의 발행자: &lt;a href="%2$s">%1$s&lt;/a></string>
+    <string name="msg_restore_ok">복원 성공</string>
+    <string name="msg_rss_error">뉴스 피드가 올바르지 않거나 피드 서버를 사용할 수 없습니다.</string>
+    <string name="mtrl_badge_numberless_content_description">새 알림</string>
+    <string name="mtrl_checkbox_state_description_checked">선택됨</string>
+    <string name="mtrl_checkbox_state_description_indeterminate">일부 선택됨</string>
+    <string name="mtrl_checkbox_state_description_unchecked">선택되지 않음</string>
+    <string name="mtrl_chip_close_icon_content_description">%1$s 삭제</string>
+    <string name="mtrl_exceed_max_badge_number_content_description" ns2:ignore="PluralsCandidate">새 알림 %1$d개 초과</string>
+    <string name="mtrl_picker_a11y_next_month">다음 달로 변경</string>
+    <string name="mtrl_picker_a11y_prev_month">이전 달로 변경</string>
+    <string name="mtrl_picker_announce_current_range_selection">시작일 선택: %1$s, 종료일 선택: %2$s</string>
+    <string name="mtrl_picker_announce_current_selection">현재 %1$s 선택됨</string>
+    <string name="mtrl_picker_announce_current_selection_none">없음</string>
+    <string name="mtrl_picker_cancel">취소</string>
+    <string name="mtrl_picker_confirm">확인</string>
+    <string name="mtrl_picker_date_header_selected">%1$s</string>
+    <string name="mtrl_picker_date_header_title">날짜 선택</string>
+    <string name="mtrl_picker_date_header_unselected">선택한 날짜</string>
+    <string name="mtrl_picker_day_of_week_column_header">%1$s</string>
+    <string name="mtrl_picker_end_date_description">종료일: %1$s</string>
+    <string name="mtrl_picker_invalid_format">형식이 잘못되었습니다.</string>
+    <string name="mtrl_picker_invalid_format_example">예: %1$s</string>
+    <string name="mtrl_picker_invalid_format_use">올바른 형식: %1$s</string>
+    <string name="mtrl_picker_invalid_range">날짜 범위가 잘못되었습니다.</string>
+    <string name="mtrl_picker_navigate_to_current_year_description">현재 연도(%1$d)로 이동</string>
+    <string name="mtrl_picker_navigate_to_year_description">%1$d년으로 이동</string>
+    <string name="mtrl_picker_out_of_range">%1$s은 범위를 벗어난 날짜입니다.</string>
+    <string name="mtrl_picker_range_header_only_end_selected">시작일~%1$s</string>
+    <string name="mtrl_picker_range_header_only_start_selected">%1$s~종료일</string>
+    <string name="mtrl_picker_range_header_selected">%1$s~%2$s</string>
+    <string name="mtrl_picker_range_header_title">기간 선택</string>
+    <string name="mtrl_picker_range_header_unselected">시작일~종료일</string>
+    <string name="mtrl_picker_save">저장</string>
+    <string name="mtrl_picker_start_date_description">시작일: %1$s</string>
+    <string name="mtrl_picker_text_input_date_hint">날짜</string>
+    <string name="mtrl_picker_text_input_date_range_end_hint">종료일</string>
+    <string name="mtrl_picker_text_input_date_range_start_hint">시작일</string>
+    <string name="mtrl_picker_text_input_day_abbr">일</string>
+    <string name="mtrl_picker_text_input_month_abbr">월</string>
+    <string name="mtrl_picker_text_input_year_abbr">년</string>
+    <string name="mtrl_picker_today_description">오늘(%1$s)</string>
+    <string name="mtrl_picker_toggle_to_calendar_input_mode">캘린더 입력 모드로 전환</string>
+    <string name="mtrl_picker_toggle_to_day_selection">캘린더 뷰로 전환</string>
+    <string name="mtrl_picker_toggle_to_text_input_mode">텍스트 입력 모드로 전환</string>
+    <string name="mtrl_picker_toggle_to_year_selection">연도별 뷰로 전환</string>
+    <string name="mtrl_picker_toggled_to_day_selection">캘린더 보기로 전환됨</string>
+    <string name="mtrl_picker_toggled_to_year_selection">연도별 보기로 전환됨</string>
+    <string name="mtrl_timepicker_cancel">취소</string>
+    <string name="mtrl_timepicker_confirm">확인</string>
+    <string name="news_feed">뉴스 피드</string>
+    <string name="news_feed_desc">표시할 뉴스 피드 선택</string>
+    <string name="news_settings">뉴스 피드</string>
+    <string name="nightmode">야간 모드</string>
+    <string name="no">아니오</string>
+    <string name="noitems_please_select">항목이 없습니다. 최소한 하나의 항목을 선택하세요</string>
+    <string msgid="6573031135582639649" name="not_set">"설정되지 않음"</string>
+    <string name="now">지금</string>
+    <string name="num_items">항목 수</string>
+    <string name="other">기타</string>
+    <string name="password_toggle_content_description">비밀번호 표시</string>
+    <string msgid="6685851473431805375" name="preference_copied">"\'<ns1:g id="SUMMARY">%1$s</ns1:g>\'이(가) 클립보드에 복사되었습니다."</string>
+    <string name="prefs_fontsize">글꼴 크기</string>
+    <string name="prefs_theme">테마</string>
+    <string name="prefs_theme_chooser">배경</string>
+    <string name="prefs_theme_sub">색상 변경</string>
+    <string name="refresh_timer">업데이트 주기</string>
+    <string name="reset_default">기본값</string>
+    <string name="restore">복원</string>
+    <string msgid="6264217191555673260" name="search_menu_title">"검색"</string>
+    <string name="searchview_clear_text_content_description">텍스트 삭제</string>
+    <string name="searchview_navigation_content_description">뒤로</string>
+    <string name="sel_cat_label">카테고리 선택</string>
+    <string name="sel_feed_label">피드 선택</string>
+    <string name="select_all_user_feeds">모든 사용자 피드 선택</string>
+    <string name="send_fb_label">피드백 보내기</string>
+    <string name="set_preferences">설정</string>
+    <string name="show_help_label">도움말</string>
+    <string name="show_label">설명</string>
+    <string name="side_sheet_accessibility_pane_title">사이드 시트</string>
+    <string name="small_arrow">→</string>
+    <string name="smart_titles">스마트 제목</string>
+    <string msgid="6277540029070332960" name="status_bar_notification_info_overflow">"999+"</string>
+    <string msgid="9167775378838880170" name="summary_collapsed_preference_list">"<ns1:g id="CURRENT_ITEMS">%1$s</ns1:g>, <ns1:g id="ADDED_ITEMS">%2$s</ns1:g>"</string>
+    <string name="textColor">일반 텍스트</string>
+    <string name="tts_play_label">소리내어 읽기</string>
+    <string name="tts_settings_label">텍스트 음성 변환 설정</string>
+    <string name="use_external_browser">외부 브라우저 사용</string>
+    <string msgid="3140233346420563315" name="v7_preference_off">"사용 안함"</string>
+    <string msgid="89551595707643515" name="v7_preference_on">"사용"</string>
+    <string name="widget_error">뉴스를\n사용할 수 없음</string>
+    <string name="widget_loading">뉴스 가져오는 중...</string>
+    <string name="widget_name">News Reader</string>
+    <string name="yes">예</string>
+</resources>

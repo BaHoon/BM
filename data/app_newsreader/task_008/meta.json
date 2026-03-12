@@ -1,0 +1,9 @@
+{
+  "id": "app_008",
+  "name": "newsreader",
+  "app_package": "livio.rssreader",
+  "build_command": "gradlew.bat assembleDebug",
+  "apk_path": "app/build/outputs/apk/debug/app-debug.apk",
+  "prompt": "This is the source code of a news app. I want to provide multi-language settings in the app and include Bengali as a language option.",
+  "eval_script": "test_script.py"
+}

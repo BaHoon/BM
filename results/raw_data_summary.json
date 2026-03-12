@@ -1,0 +1,26 @@
+{
+  "last_updated": "2026-03-12T10:59:39.142166+00:00",
+  "total_runs": 1,
+  "csr_pass": 0,
+  "vsm_pass": 0,
+  "csr_rate": 0.0,
+  "vsm_rate": 0.0,
+  "by_model": {
+    "deepseek-r1": {
+      "total": 1,
+      "csr": 0,
+      "vsm": 0,
+      "csr_rate": 0.0,
+      "vsm_rate": 0.0
+    }
+  },
+  "by_strategy": {
+    "ReAct": {
+      "total": 1,
+      "csr": 0,
+      "vsm": 0,
+      "csr_rate": 0.0,
+      "vsm_rate": 0.0
+    }
+  }
+}

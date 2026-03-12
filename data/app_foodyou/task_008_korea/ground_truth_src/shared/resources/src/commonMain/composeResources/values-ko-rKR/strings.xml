@@ -1,0 +1,386 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="not_available_short">N/A</string>
+    <string name="headline_create_product">제품 만들기</string>
+    <string name="headline_settings">설정</string>
+    <string name="headline_daily_goals">일일 목표</string>
+    <string name="headline_general">일반</string>
+    <string name="headline_macronutrients">다량 영양소</string>
+    <string name="headline_meals">식사</string>
+    <string name="headline_delete_food">음식 삭제</string>
+    <string name="headline_edit_product">제품 편집</string>
+    <string name="headline_permission_required">권한 필요</string>
+    <string name="headline_language">언어</string>
+    <string name="headline_system">시스템</string>
+    <string name="headline_system_language_settings">시스템 언어 설정</string>
+    <string name="headline_secure_screen">화면 보안</string>
+    <string name="headline_about">정보</string>
+    <string name="headline_version">버전</string>
+    <string name="headline_all_day" description="All-day (meal)">하루 종일</string>
+    <string name="headline_time_based_ordering">시간 기반 정렬</string>
+    <string name="headline_incomplete_products">불완전한 제품</string>
+    <string name="headline_product">제품</string>
+    <string name="headline_recipe">레시피</string>
+    <string name="headline_create_recipe">레시피 만들기</string>
+    <string name="headline_ingredients" description="Recipe ingredients">재료</string>
+    <string name="headline_summary">요약</string>
+    <string name="headline_whats_new">새로운 소식</string>
+    <string name="headline_changelog">변경 로그</string>
+    <string name="headline_installed" description="Installed version of the app">설치됨</string>
+    <string name="headline_home" description="Home screen">홈</string>
+    <string name="headline_home_settings" description="Home screen settings">홈 설정</string>
+    <string name="headline_calendar">캘린더</string>
+    <string name="headline_meals_settings">식사 설정</string>
+    <string name="headline_horizontal">가로</string>
+    <string name="headline_vertical">세로</string>
+    <string name="headline_values_per">값 기준</string>
+    <string name="headline_other">기타</string>
+    <string name="headline_vitamins">비타민</string>
+    <string name="headline_minerals">미네랄</string>
+    <string name="headline_supported_URLs" description="URLs that can be used to add products">지원되는 URL</string>
+    <string name="headline_something_went_wrong">죄송합니다! 문제가 발생했습니다</string>
+    <string name="headline_daily_goals_settings">일일 목표 설정</string>
+    <string name="headline_api_key">API 키</string>
+    <string name="headline_source" description="Source of the food product, e.g. Open Food Facts, USDA, Swiss Food Composition Database">출처</string>
+    <string name="headline_features">기능</string>
+    <string name="weight">중량</string>
+    <string name="unit_energy" description="Energy as calories">에너지</string>
+    <string name="unit_kcal">kcal</string>
+    <string name="unit_kilojoules">kJ</string>
+    <plurals name="unit_gram">
+        <item quantity="other">그램</item>
+    </plurals>
+    <plurals name="unit_milliliter">
+        <item quantity="other">밀리리터</item>
+    </plurals>
+    <string name="unit_ounce_short">oz</string>
+    <string name="unit_fluid_ounce_short">fl oz</string>
+    <string name="product_package_weight">포장 중량</string>
+    <string name="product_package">포장</string>
+    <string name="product_serving_weight">1회 제공량 중량</string>
+    <string name="product_serving">1회 제공량</string>
+    <string name="product_name">이름</string>
+    <string name="product_brand">브랜드</string>
+    <string name="product_barcode">바코드</string>
+    <string name="product_link">제품 링크</string>
+    <string name="recipe_servings">인분</string>
+    <string name="description_recipe_servings">이 레시피는 몇 인분을 만드나요</string>
+    <string name="nutriment_proteins">단백질</string>
+    <string name="nutriment_proteins_short">P</string>
+    <string name="nutriment_carbohydrates">탄수화물</string>
+    <string name="nutriment_carbohydrates_short">C</string>
+    <string name="nutriment_sugars">당류</string>
+    <string name="nutriment_fats">지방</string>
+    <string name="nutriment_fats_short">F</string>
+    <string name="nutriment_saturated_fats">포화 지방</string>
+    <string name="nutriment_polyunsaturated_fats">고도 불포화 지방</string>
+    <string name="nutriment_monounsaturated_fats">단일 불포화 지방</string>
+    <string name="nutriment_omega_3">오메가-3 지방산</string>
+    <string name="nutriment_omega_6">오메가-6 지방산</string>
+    <string name="nutriment_salt">소금</string>
+    <string name="nutriment_fiber">식이섬유</string>
+    <string name="nutriment_cholesterol">콜레스테롤</string>
+    <string name="nutriment_caffeine">카페인</string>
+    <string name="nutriment_trans_fats">트랜스 지방</string>
+    <string name="nutriment_added_sugars">첨가당</string>
+    <string name="nutriment_soluble_fiber">수용성 식이섬유</string>
+    <string name="nutriment_insoluble_fiber">불용성 식이섬유</string>
+    <string name="vitamin_a">비타민 A (레티놀)</string>
+    <string name="vitamin_b1">비타민 B1 (티아민)</string>
+    <string name="vitamin_b2">비타민 B2 (리보플라빈)</string>
+    <string name="vitamin_b3">비타민 B3 (니아신)</string>
+    <string name="vitamin_b5">비타민 B5 (판토텐산)</string>
+    <string name="vitamin_b6">비타민 B6 (피리독신)</string>
+    <string name="vitamin_b7">비타민 B7 (비오틴)</string>
+    <string name="vitamin_b9">비타민 B9 (엽산)</string>
+    <string name="vitamin_b12">비타민 B12 (코발라민)</string>
+    <string name="vitamin_c">비타민 C (아스코르브산)</string>
+    <string name="vitamin_d">비타민 D (칼시페롤)</string>
+    <string name="vitamin_e">비타민 E</string>
+    <string name="vitamin_k">비타민 K</string>
+    <string name="mineral_manganese">망간</string>
+    <string name="mineral_magnesium">마그네슘</string>
+    <string name="mineral_potassium">칼륨</string>
+    <string name="mineral_calcium">칼슘</string>
+    <string name="mineral_copper">구리</string>
+    <string name="mineral_zinc">아연</string>
+    <string name="mineral_sodium">나트륨</string>
+    <string name="mineral_iron">철</string>
+    <string name="mineral_phosphorus">인</string>
+    <string name="mineral_selenium">셀레늄</string>
+    <string name="mineral_iodine">요오드</string>
+    <string name="mineral_chromium">크롬</string>
+    <string name="action_search">검색</string>
+    <string name="action_scan_barcode">바코드 스캔</string>
+    <string name="action_add">추가</string>
+    <string name="action_go_back">뒤로 가기</string>
+    <string name="action_tap_to_allow_access">탭하여 액세스 허용</string>
+    <string name="action_create">만들기</string>
+    <string name="action_clear">지우기</string>
+    <string name="action_cancel">취소</string>
+    <string name="action_go_to_settings">설정으로 이동</string>
+    <string name="action_save">저장</string>
+    <string name="action_delete">삭제</string>
+    <string name="action_confirm">확인</string>
+    <string name="action_add_meal">식사 추가</string>
+    <string name="action_edit">편집</string>
+    <string name="action_insert_suggested_search">추천 검색 삽입</string>
+    <string name="action_edit_entry">항목 편집</string>
+    <string name="action_delete_entry">항목 삭제</string>
+    <string name="action_close">닫기</string>
+    <string name="action_discard">폐기</string>
+    <string name="action_translate">번역</string>
+    <string name="action_enable_camera_flash">카메라 플래시 켜기</string>
+    <string name="action_disable_camera_flash">카메라 플래시 끄기</string>
+    <string name="action_prevent_screen_capture">화면 캡처 방지</string>
+    <string name="action_go_to_today">오늘로 이동</string>
+    <string name="action_feature_request_on_github">GitHub에서 기능 요청</string>
+    <string name="action_show_calendar">캘린더 표시</string>
+    <string name="action_reorder">재정렬</string>
+    <string name="action_move_up" description="reorder list item up">위로 이동</string>
+    <string name="action_move_down" description="reorder list item down">아래로 이동</string>
+    <string name="action_use_time_based_ordering">시간 기반 정렬 사용</string>
+    <string name="action_ignore_all_day_meals">하루 종일 식사 무시</string>
+    <string name="action_add_ingredient" description="Add ingredient to the recipe">재료 추가</string>
+    <string name="action_delete_ingredient">재료 삭제</string>
+    <string name="action_download">다운로드</string>
+    <string name="action_paste_url">URL 붙여넣기</string>
+    <string name="action_browse_open_food_facts">Open Food Facts 찾아보기</string>
+    <string name="action_copy">복사</string>
+    <string name="action_choose_other_date">다른 날짜 선택</string>
+    <string name="action_show_more" description="Show more settings/options/advanced settings">더 보기</string>
+    <string name="action_download_product">제품 다운로드</string>
+    <string name="action_copy_and_open_bug_report">버그 리포트 복사 및 열기</string>
+    <string name="action_copy_and_report" description="Copy bug report and report a bug">복사 및 보고</string>
+    <string name="action_show_details">세부정보 표시</string>
+    <string name="action_browse_usda">FoodData Central (USDA) 찾아보기</string>
+    <string name="action_set_key">키 설정</string>
+    <string name="action_obtain_key">키 얻기</string>
+    <string name="action_dont_show_again">다시 표시 안 함</string>
+    <string name="neutral_barcode_scanner_camera_request">바코드를 스캔하려면 카메라에 대한 액세스를 허용하세요</string>
+    <string name="neutral_barcode_scanner_camera_request_rationale">바코드를 스캔하려면 액세스를 허용해야 합니다</string>
+    <string name="neutral_barcode_scanner_camera_request_redirect_to_settings">바코드를 스캔하려면 카메라 권한이 필요합니다. 앱 설정에서 허용해 주세요.</string>
+    <string name="neutral_no_food_found">음식을 찾을 수 없음</string>
+    <plurals name="neutral_remaining_calories">
+        <item quantity="other">%1$d 칼로리 남음</item>
+    </plurals>
+    <plurals name="neutral_remaining_kilojoules">
+        <item quantity="other">%1$d 킬로줄 남음</item>
+    </plurals>
+    <string name="neutral_set_your_daily_goals">일일 영양 목표 설정</string>
+    <string name="neutral_set_your_meal_schedule">식사 일정 설정</string>
+    <string name="neutral_permanently_delete_meal">식사를 영구적으로 삭제하시겠습니까?</string>
+    <string name="neutral_meal_will_be_deleted_permanently" description="Warning message when deleting a meal. User must know that this action is irreversible and will delete all data related to the meal.">식사가 영구적으로 삭제됩니다. 이 식사와 관련된 모든 데이터가 손실됩니다.</string>
+    <string name="neutral_required">필수</string>
+    <string name="neutral_help_translating_the_app">앱 번역 돕기</string>
+    <string name="neutral_copied">정보가 클립보드에 복사됨</string>
+    <string name="neutral_product_created">제품이 생성됨</string>
+    <string name="question_discard_product">제품을 폐기하시겠습니까?</string>
+    <string name="question_discard_changes">변경 사항을 폐기하시겠습니까?</string>
+    <string name="question_discard_recipe">레시피를 폐기하시겠습니까?</string>
+    <string name="error_invalid_number">잘못된 숫자</string>
+    <string name="error_value_cannot_be_negative">값은 음수일 수 없습니다</string>
+    <string name="error_value_must_be_integer">값은 정수여야 합니다</string>
+    <string name="error_value_must_be_positive">값은 양수여야 합니다</string>
+    <string name="error_url_not_found">URL을 찾을 수 없음</string>
+    <string name="error_url_is_not_supported">지원되지 않는 URL</string>
+    <string name="error_failed_to_download_product">제품 다운로드 실패</string>
+    <string name="error_product_not_found">제품을 찾을 수 없음</string>
+    <string name="error_unknown_error">알 수 없는 오류</string>
+    <string name="error_measurement_error">측정 오류, 1회 제공량 및 포장 중량을 확인하세요</string>
+    <string name="error_api_key_is_invalid">API 키가 잘못됨</string>
+    <string name="error_not_a_barcode">바코드가 아님</string>
+    <string name="positive_goal_reached">목표 달성</string>
+    <string name="positive_ok">확인</string>
+    <plurals name="negative_exceeded_by_calories">
+        <item quantity="other">%1$d 칼로리 초과</item>
+    </plurals>
+    <plurals name="negative_exceeded_by_kilojoules">
+        <item quantity="other">%1$d 킬로줄 초과</item>
+    </plurals>
+    <string name="description_delete_food">음식이 영구적으로 삭제됩니다</string>
+    <string name="description_delete_product_entry" description="Tell user that this entry will be deleted only from diary and won't affect the product itself. Product won't be deleted from the database.">이 항목은 일기에서만 삭제됩니다. 언제든지 다시 추가할 수 있습니다.</string>
+    <string name="description_about_setting">앱에 대해 자세히 알아보기</string>
+    <string name="description_time_based_meals_sorting">활성화되면 현재 진행 중인 식사가 먼저 표시됩니다</string>
+    <string name="description_action_ignore_all_day_meals">하루 종일 식사는 목록 끝에 표시됩니다</string>
+    <string name="description_incomplete_nutrition_data">사용된 일부 제품에 이 값이 없으므로 표시된 값이 정확하지 않을 수 있습니다</string>
+    <string name="description_translation_warning">번역은 자원봉사자들이 만듭니다. 완벽하지 않을 수 있으며 일부 번역이 누락될 수 있습니다. 실수를 발견하면 주저하지 말고 개선에 도움을 주세요.</string>
+    <string name="description_home_settings">홈 페이지 맞춤 설정</string>
+    <string name="description_download_product">식품 제품에 대한 링크를 붙여넣고 영양 정보 및 제품 세부 정보를 자동으로 가져옵니다.</string>
+    <string name="description_download_product_hint">텍스트를 붙여넣을 수 있습니다. 첫 번째 URL이 사용됩니다.</string>
+    <string name="description_show_macronutrients_goals">다량 영양소 목표 표시</string>
+    <string name="description_please_wait_while_importing_products">제품을 가져오는 동안 기다려 주세요</string>
+    <string name="description_please_wait_while_exporting_products">제품을 내보내는 동안 기다려 주세요</string>
+    <string name="headline_launcher_icon_by_icons8">Icons8의 런처 아이콘</string>
+    <string name="description_open_food_facts">전 세계의 식품에 대한 협업, 무료 및 공개 데이터베이스</string>
+    <string name="error_open_food_facts_rate_limit">Open Food Facts API 속도 제한 초과</string>
+    <string name="notification_exporting_products">제품 내보내는 중</string>
+    <string name="notification_importing_products">제품 가져오는 중</string>
+    <string name="notification_importing_products_success">제품 가져오기 완료</string>
+    <string name="description_food_data_central_usda">FoodData Central은 USDA의 포괄적인 식품 구성 데이터 소스로 여러 개별 데이터 유형을 제공합니다</string>
+    <string name="error_usda_rate_limit">FoodData Central (USDA) API 속도 제한 초과</string>
+    <string name="error_usda_not_verified">제공된 API 키가 아직 확인되지 않았습니다. 이메일을 확인하여 API 키를 확인하세요.</string>
+    <string name="description_swiss_food_composition_database_short">Swiss Food Composition Database는 1,100개 이상의 일반 식품에 대한 영양 정보를 포함합니다</string>
+    <string name="description2_swiss_food_composition_database">Swiss Food Composition Database는 1,100개 이상의 일반 식품에 대한 영양 정보를 포함합니다. 4개 언어로 제공됩니다. 이러한 제품을 음식 일기로 가져오려면 선호하는 언어를 선택하세요.</string>
+    <string name="headline_external_databases">외부 데이터베이스</string>
+    <string name="description_external_databases">지원되는 데이터베이스 확인</string>
+    <string name="feature_manual_database_import">수동 데이터베이스 가져오기</string>
+    <string name="action_unpack" description="Unpack the recipe ingredients">압축 해제</string>
+    <string name="headline_sponsor">후원</string>
+    <string name="description_sponsor_short_2">앱 성장 지원</string>
+    <string name="headline_source_code">소스 코드</string>
+    <string name="action_write_an_email">이메일 작성</string>
+    <string name="headline_contact">연락처</string>
+    <string name="description_sponsor_contact">후원에 관한 요청이 있으시면 이메일이나 GitHub를 통해 언제든지 저에게 연락하세요.</string>
+    <string name="sponsor_bank_or_card">은행 계좌 또는 신용카드</string>
+    <string name="action_treat_as_liquid">액체로 취급</string>
+    <string name="description_treat_as_liquid">측정할 때 밀리리터 선호</string>
+    <string name="headline_personalization">개인화</string>
+    <string name="description_personalization">경험 맞춤 설정</string>
+    <string name="headline_nutrition_facts">영양 정보</string>
+    <string name="description_personalize_nutrition_facts_short">영양 정보 재배열</string>
+    <string name="action_reset_ordering">순서 재설정</string>
+    <string name="headline_reset_to_default">기본값으로 재설정</string>
+    <string name="action_reset" description="Confirm resetting">재설정</string>
+    <string name="description_reset_nutrition_facts">영양 정보 개인화를 기본값으로 재설정</string>
+    <string name="headline_note">메모</string>
+    <string name="description_add_note">선택적 메모(예: 재료, 비건 상태, 알레르기 유발 물질, 첨가물) 또는 기타 비영양소 세부 정보</string>
+    <string name="action_try_again">다시 시도</string>
+    <string name="description_calories_are_calculated">에너지는 다량 영양소에서 자동으로 계산됩니다. 필요한 경우 이 기능을 비활성화하고 값을 수동으로 입력할 수 있습니다. 알코올은 계산에 포함되지 않습니다.</string>
+    <string name="x_kcal_per_g">%1$s %2$d kcal/g</string>
+    <string name="neutral_an_error_occurred">오류 발생</string>
+    <string name="action_retry">재시도</string>
+    <string name="action_import">가져오기</string>
+    <string name="headline_today" description="Today, date">오늘, %1$s</string>
+    <string name="headline_yesterday" description="Yesterday, date">어제, %1$s</string>
+    <string name="headline_tomorrow" description="Tomorrow, date">내일, %1$s</string>
+    <string name="headline_user" description="User, person who uses the app">사용자</string>
+    <string name="description_food_source">음식 데이터의 출처 지정</string>
+    <string name="error_food_is_missing_required_fields">음식에 필수 필드가 누락되었습니다</string>
+    <string name="headline_preview_release">미리보기 릴리스</string>
+    <string name="description_preview_release">현재 미리보기 버전을 사용하고 있습니다. 불완전하거나 불안정하거나 변경될 수 있습니다.</string>
+    <string name="headline_your_food">나의 음식</string>
+    <string name="headline_filters">필터</string>
+    <string name="headline_choose_ingredient" description="Choose ingredient for the recipe">재료 선택</string>
+    <string name="headline_edit_recipe">레시피 편집</string>
+    <string name="description_delete_ingredient">재료가 레시피에서 제거됩니다</string>
+    <string name="neutral_remote_database_error">원격 데이터베이스에서 제품을 다운로드할 수 없습니다. 이전에 다운로드한 제품은 여전히 볼 수 있습니다.</string>
+    <string name="headline_before_you_start">시작하기 전에</string>
+    <string name="action_agree_and_continue">동의 및 계속</string>
+    <string name="headline_food_database">음식 데이터베이스</string>
+    <string name="description_food_database">자체 약관 및 개인정보 보호정책이 있을 수 있는 선택적 외부 서비스를 사용할지 선택할 수 있습니다</string>
+    <string name="action_skip">건너뛰기</string>
+    <string name="headline_almost_done">거의 완료</string>
+    <string name="headline_preparing_your_food_diary">음식 일기 준비 중</string>
+    <string name="headline_please_wait">잠시만 기다리세요</string>
+    <string name="headline_created">생성됨</string>
+    <string name="headline_imported">가져옴</string>
+    <string name="headline_downloaded">다운로드됨</string>
+    <string name="headline_edited">편집됨</string>
+    <string name="headline_history">기록</string>
+    <string name="headline_anonymous">익명</string>
+    <string name="headline_recent">최근</string>
+    <string name="headline_database">데이터베이스</string>
+    <string name="description_manage_database">데이터베이스 관리</string>
+    <string name="action_done">완료</string>
+    <string name="neutral_measurement_added">알겠습니다! 측정값을 추가했습니다</string>
+    <string name="headline_imported_from_food_you_2">Food You 2에서 가져옴</string>
+    <string name="action_set_goals">목표 설정</string>
+    <string name="headline_pick_the_days">날짜 선택</string>
+    <string name="action_set_separate_goals">각 날짜별로 개별 목표 설정</string>
+    <string name="headline_percentages">백분율</string>
+    <string name="action_import_csv_food_products">CSV 식품 제품 가져오기</string>
+    <string name="description_import_csv_food_products">CSV 파일에서 식품 제품 가져오기</string>
+    <string name="description_import_csv_food_products_hint">정보가 무엇인지 알아야 합니다. 파일의 어느 열이 제품 이름, 브랜드 등인지 알려주세요.</string>
+    <string name="description_import_csv_food_products_hint_2">모든 영양소 값은 100g당 그램 또는 kcal로 제공되어야 합니다</string>
+    <string name="action_export_csv_food_products">CSV 식품 제품 내보내기</string>
+    <string name="description_export_csv_food_products">식품 제품을 CSV 파일로 내보내기</string>
+    <string name="neutral_no_column">열 없음</string>
+    <plurals name="neutral_imported_x_food_products">
+        <item quantity="other">%1$d개의 식품 제품을 가져옴</item>
+    </plurals>
+    <string name="headline_energy_unit">에너지 단위</string>
+    <string name="description_energy_unit">선호하는 에너지 단위 선택</string>
+    <plurals name="neutral_exported_x_food_products">
+        <item quantity="other">%1$d개의 식품 제품을 내보냄</item>
+    </plurals>
+    <string name="headline_auto_calculate_energy">에너지 자동 계산</string>
+    <string name="headline_manual_energy_input">에너지 수동 입력</string>
+    <string name="headline_quick_add">빠른 추가</string>
+    <string name="description_quick_add">빠른 추가를 사용하면 특정 음식을 검색하지 않고도 기록할 수 있습니다. 이미 칼로리 수를 알고 있거나 간단한 추정을 원할 때 식사를 기록하는 빠른 방법입니다.</string>
+    <string name="action_open_poll">설문조사 열기</string>
+    <string name="headline_colors">색상</string>
+    <string name="description_colors">앱 색상 사용자 정의</string>
+    <string name="headline_custom_palette">사용자 정의 팔레트</string>
+    <string name="description_custom_palette">나만의 팔레트 설정</string>
+    <string name="headline_dynamic_colors">동적 색상</string>
+    <string name="description_dynamic_colors">시스템의 색상 적용</string>
+    <string name="headline_palette_style">팔레트 스타일</string>
+    <string name="headline_contrast">대비</string>
+    <string name="headline_amoled">AMOLED</string>
+    <string name="headline_light">밝음</string>
+    <string name="headline_dark">어두움</string>
+    <string name="headline_appearance">모양</string>
+    <string name="headline_theme">테마</string>
+    <string name="headline_pick_a_color">색상 선택</string>
+    <string name="headline_nutrients_colors">영양소 색상</string>
+    <string name="description_nutrients_colors_reset">영양소 색상 설정이 기본값으로 재설정됩니다</string>
+    <string name="headline_sponsorship_goals">목표</string>
+    <string name="description_sponsorship_goals">후원을 통해 이 프로젝트가 착취적인 비즈니스 모델에 의존하지 않고 독립적이고 지속 가능하게 유지되도록 도울 수 있습니다. 많은 상업용 앱은 사용자 데이터를 수집 및 판매하거나, 광고를 타겟팅하거나, 사용자를 중독성 참여 패턴으로 유도하여 수익을 창출합니다. 후원은 이 앱이 개인정보 보호에 친화적이고 투명하며 사용자의 신뢰나 복지를 훼손하지 않으면서 실질적인 가치를 제공하는 데 집중할 수 있도록 보장합니다.</string>
+    <string name="description_x_away_from_next_goal">다음 목표까지 %1$s</string>
+    <string name="headline_sponsors">후원자</string>
+    <string name="description_no_sponsors_this_month">이번 달 후원자 없음</string>
+    <string name="headline_latest" description="Latest, most recent">최신</string>
+    <string name="headline_top_sponsorships" description="Most money contributed">상위</string>
+    <string name="headline_this_month_we_raised">이번 달에 %1$s를 모았습니다</string>
+    <string name="description_sponsors_privacy">Food You는 귀하의 개인정보를 진지하게 다룹니다. 따라서 허용하지 않는 한 외부 서비스에 연결되지 않습니다. 최신 후원자를 보려면 GitHub 서버에서 데이터를 다운로드해야 합니다.</string>
+    <string name="action_allow" description="Allow something">허용</string>
+    <string name="action_next_month">다음 달</string>
+    <string name="action_previous_month">이전 달</string>
+    <string name="headline_sponsor_methods">방법</string>
+    <string name="headline_save_database">데이터베이스 저장</string>
+    <string name="description_save_database">데이터베이스 사본 저장</string>
+    <string name="headline_replace_database">데이터베이스 교체</string>
+    <string name="description_replace_database">이전에 저장한 사본으로 데이터베이스 교체</string>
+    <string name="action_replace">교체</string>
+    <string name="warning_replace_database" description="Warning message shown when user wants to replace their database with a previously saved copy. All uppercase letters are intentional and will be shown in red color.">데이터베이스가 교체되고 모든 현재 데이터가 손실됩니다. 데이터베이스가 교체된 후 앱이 다시 시작됩니다. 앱을 다시 열어야 할 수 있습니다.</string>
+    <string name="action_sign_in">로그인</string>
+    <string name="headline_terms_of_service">서비스 약관</string>
+    <string name="headline_privacy_policy">개인정보 보호정책</string>
+    <string name="error_there_was_an_error_while_signing_in">로그인하는 동안 오류가 발생했습니다</string>
+    <string name="headline_random_theme">무작위 테마</string>
+    <string name="description_random_theme">앱이 시작될 때마다 무작위 테마가 적용됩니다</string>
+    <string name="headline_terms_of_use">이용 약관</string>
+    <string name="onboarding_privacy_tip">이 앱은 오픈 소스이며 사용자를 위해 제작되었습니다. 우리는 귀하의 개인정보를 존중하며, 귀하의 정보는 비공개로 유지됩니다.</string>
+    <string name="headline_add_profile">프로필 추가</string>
+    <string name="headline_how_do_you_want_to_be_called">어떻게 불리길 원하시나요?</string>
+    <string name="headline_profile_name">프로필 이름</string>
+    <string name="headline_profile_picture">프로필 사진</string>
+    <string name="action_continue">계속</string>
+    <string name="headline_welcome_user_message" description="Must be short welcome message">안녕하세요, %1$s님!</string>
+    <string name="headline_data_backup_and_export">데이터 백업 및 내보내기</string>
+    <string name="headline_privacy">개인정보 보호</string>
+    <string name="action_switch_profile">프로필 전환</string>
+    <string name="action_add_profile">프로필 추가</string>
+    <string name="action_refresh">새로고침</string>
+    <string name="description_not_sure_yet">아직 확실하지 않나요? 언제든지 변경할 수 있습니다</string>
+    <string name="question_discard_profile">프로필을 폐기하시겠습니까?</string>
+    <string name="headline_edit_profile">프로필 편집</string>
+    <string name="action_delete_profile">프로필 삭제</string>
+    <string name="headline_delete_profile">프로필 삭제</string>
+    <string name="description_delete_profile">이 프로필이 영구적으로 삭제됩니다. 이와 관련된 모든 데이터가 영원히 손실됩니다.</string>
+    <string name="action_today" description="Set date to today">오늘</string>
+    <string name="action_fill_in_details">세부정보 입력</string>
+    <string name="action_skip_for_now">지금은 건너뛰기</string>
+    <string name="headline_add_more_details">세부정보 더 추가</string>
+    <string name="description_add_more_details_product_form">단백질, 지방, 탄수화물 및 에너지 값을 입력하면 더욱 정확한 영양 정보를 제공할 수 있습니다</string>
+    <string name="headline_favorite">즐겨찾기</string>
+    <string name="action_add_a_photo">사진 추가</string>
+    <string name="action_remove_a_photo">사진 제거</string>
+    <string name="description_values_per">영양 값의 기준이 되는 수량 선택</string>
+    <string name="description_privacy">개인 정보 관리</string>
+    <string name="headline_database_backup">데이터베이스 백업</string>
+    <string name="description_replacing_database">데이터베이스를 교체하는 중입니다. 잠시만 기다려 주세요...</string>
+    <string name="headline_experimental">실험적</string>
+    <string name="description_privacy_policy">데이터 처리 방법 보기</string>
+</resources>

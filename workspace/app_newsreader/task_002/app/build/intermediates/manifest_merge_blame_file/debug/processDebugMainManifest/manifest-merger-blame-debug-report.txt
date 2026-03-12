@@ -1,0 +1,599 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="livio.rssreader"
+4    android:installLocation="auto"
+5    android:versionCode="112"
+6    android:versionName="1.12" >
+7
+8    <uses-sdk
+9        android:minSdkVersion="23"
+10        android:targetSdkVersion="36" />
+11
+12    <uses-permission android:name="android.permission.INTERNET" />
+12-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:3:5-67
+12-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:3:22-64
+13    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+13-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:4:2-75
+13-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:4:19-73
+14    <uses-permission
+14-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:5:5-108
+15        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+15-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:5:22-78
+16        android:maxSdkVersion="29" />
+16-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:5:79-105
+17    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /> <!-- required to access data written before user uninstalls and reinstalls app -->
+17-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:6:5-80
+17-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:6:22-77
+18    <uses-feature
+18-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:7:2-86
+19        android:name="android.hardware.touchscreen"
+19-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:7:16-59
+20        android:required="false" />
+20-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:7:60-84
+21    <!-- uses-feature android:name="android.software.webview" -->
+22    <supports-screens
+22-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:9:2-79
+23        android:largeScreens="true"
+23-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:9:20-47
+24        android:xlargeScreens="true" />
+24-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:9:48-76
+25
+26    <queries>
+26-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:80:5-97:15
+27
+28        <!-- package visibility for FileManager.java -->
+29        <intent>
+29-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:82:9-84:18
+30            <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+30-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:83:13-80
+30-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:83:21-77
+31        </intent>
+32        <intent>
+32-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:85:9-88:18
+33            <action android:name="android.intent.action.GET_CONTENT" />
+33-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:86:13-72
+33-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:86:21-69
+34
+35            <data android:mimeType="*/*" />
+35-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:28:17-86
+35-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:28:45-83
+36        </intent>
+37        <intent>
+37-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:89:9-92:18
+38            <action android:name="android.intent.action.SEND" />
+38-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:90:13-65
+38-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:90:21-62
+39
+40            <data android:mimeType="*/*" />
+40-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:28:17-86
+40-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:28:45-83
+41        </intent>
+42        <!-- package visibility for text to speech -->
+43        <intent>
+43-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:94:9-96:18
+44            <action android:name="android.intent.action.TTS_SERVICE" />
+44-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:95:13-72
+44-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:95:21-69
+45        </intent>
+46    </queries>
+47
+48    <uses-permission android:name="android.permission.WAKE_LOCK" />
+48-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:23:5-68
+48-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:23:22-65
+49    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+49-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:25:5-81
+49-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:25:22-78
+50    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+50-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:26:5-77
+50-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:26:22-74
+51
+52    <permission
+52-->[androidx.core:core:1.13.0] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\fac3093fc400b37ce40f3649451c6993\transformed\core-1.13.0\AndroidManifest.xml:22:5-24:47
+53        android:name="livio.rssreader.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+53-->[androidx.core:core:1.13.0] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\fac3093fc400b37ce40f3649451c6993\transformed\core-1.13.0\AndroidManifest.xml:23:9-81
+54        android:protectionLevel="signature" />
+54-->[androidx.core:core:1.13.0] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\fac3093fc400b37ce40f3649451c6993\transformed\core-1.13.0\AndroidManifest.xml:24:9-44
+55
+56    <uses-permission android:name="livio.rssreader.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+56-->[androidx.core:core:1.13.0] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\fac3093fc400b37ce40f3649451c6993\transformed\core-1.13.0\AndroidManifest.xml:26:5-97
+56-->[androidx.core:core:1.13.0] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\fac3093fc400b37ce40f3649451c6993\transformed\core-1.13.0\AndroidManifest.xml:26:22-94
+57
+58    <application
+58-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:10:5-79:19
+59        android:allowBackup="true"
+59-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:14:18-44
+60        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+60-->[androidx.core:core:1.13.0] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\fac3093fc400b37ce40f3649451c6993\transformed\core-1.13.0\AndroidManifest.xml:28:18-86
+61        android:dataExtractionRules="@xml/data_extraction_rules"
+61-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:13:6-62
+62        android:debuggable="true"
+63        android:extractNativeLibs="false"
+64        android:fullBackupContent="@xml/mybackupscheme"
+64-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:14:45-92
+65        android:hardwareAccelerated="true"
+65-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:10:18-52
+66        android:icon="@mipmap/ic_launcher"
+66-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:10:53-87
+67        android:label="@string/app_name"
+67-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:11:18-50
+68        android:requestLegacyExternalStorage="true"
+68-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:12:54-97
+69        android:supportsRtl="true"
+69-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:11:84-110
+70        android:theme="@style/Theme.App"
+70-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:11:51-83
+71        android:usesCleartextTraffic="true" >
+71-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:12:18-53
+72
+73        <!-- Main activity -->
+74        <activity
+74-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:16:9-33:20
+75            android:name="livio.rssreader.RSSReader"
+75-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:16:19-44
+76            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+76-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:18:19-97
+77            android:exported="true" >
+77-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:17:5-28
+78            <intent-filter>
+78-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:20:13-23:29
+79                <action android:name="android.intent.action.MAIN" />
+79-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:21:17-69
+79-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:21:25-66
+80
+81                <category android:name="android.intent.category.LAUNCHER" />
+81-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:22:17-77
+81-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:22:27-74
+82            </intent-filter>
+83            <intent-filter>
+83-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:24:13-32:29
+84                <action android:name="android.intent.action.VIEW" />
+84-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:25:17-69
+84-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:25:25-66
+85
+86                <category android:name="android.intent.category.DEFAULT" />
+86-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:26:17-76
+86-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:26:27-73
+87                <category android:name="android.intent.category.BROWSABLE" />
+87-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:27:17-78
+87-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:27:27-75
+88
+89                <data
+89-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:28:17-86
+90                    android:mimeType="application/rss+xml"
+90-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:28:45-83
+91                    android:scheme="http" />
+91-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:28:23-44
+92                <data
+92-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:28:17-86
+93                    android:mimeType="application/atom+xml"
+93-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:28:45-83
+94                    android:scheme="http" />
+94-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:28:23-44
+95                <data
+95-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:28:17-86
+96                    android:mimeType="application/rss+xml"
+96-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:28:45-83
+97                    android:scheme="https" />
+97-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:28:23-44
+98                <data
+98-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:28:17-86
+99                    android:mimeType="application/atom+xml"
+99-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:28:45-83
+100                    android:scheme="https" />
+100-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:28:23-44
+101            </intent-filter>
+102        </activity>
+103        <activity
+103-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:34:9-42:20
+104            android:name="livio.rssreader.PreferencesFragXML"
+104-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:34:19-53
+105            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+105-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:35:13-91
+106            android:exported="false"
+106-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:36:13-37
+107            android:label="@string/set_preferences" >
+107-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:37:13-52
+108            <intent-filter>
+108-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:38:13-41:29
+109                <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
+109-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:39:17-88
+109-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:39:25-85
+110
+111                <category android:name="android.intent.category.DEFAULT" />
+111-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:26:17-76
+111-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:26:27-73
+112            </intent-filter>
+113        </activity>
+114        <activity
+114-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:43:9-44:49
+115            android:name="livio.rssreader.SelectCategory"
+115-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:43:19-49
+116            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+116-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:43:75-153
+117            android:exported="false"
+117-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:43:50-74
+118            android:label="@string/sel_cat_label" />
+118-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:44:10-47
+119        <activity
+119-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:45:9-46:50
+120            android:name="livio.rssreader.ListFeeds"
+120-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:45:19-44
+121            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+121-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:45:70-148
+122            android:exported="false"
+122-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:45:45-69
+123            android:label="@string/sel_feed_label" />
+123-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:46:10-48
+124        <activity
+124-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:47:9-48:55
+125            android:name="livio.rssreader.ShowItem"
+125-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:47:19-43
+126            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+126-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:47:69-147
+127            android:exported="false"
+127-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:47:44-68
+128            android:label="@string/show_label" />
+128-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:48:19-53
+129        <activity
+129-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:49:9-50:60
+130            android:name="livio.rssreader.ShowHelp"
+130-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:49:19-43
+131            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+131-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:49:69-147
+132            android:exported="false"
+132-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:49:44-68
+133            android:label="@string/show_help_label" />
+133-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:50:19-58
+134        <activity
+134-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:51:9-55:20
+135            android:name="livio.rssreader.SelectColors"
+135-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:52:13-41
+136            android:configChanges="screenSize|screenLayout|orientation"
+136-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:52:67-126
+137            android:exported="false"
+137-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:52:42-66
+138            android:label="@string/prefs_theme_sub"
+138-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:54:13-52
+139            android:theme="@style/MyDialogTheme" >
+139-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:53:13-49
+140        </activity>
+141        <!-- Widget -->
+142        <receiver
+142-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:57:9-62:20
+143            android:name="livio.rssreader.RSSWidget"
+143-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:57:19-59
+144            android:exported="true"
+144-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:57:60-83
+145            android:label="@string/widget_name" >
+145-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:57:84-119
+146            <intent-filter>
+146-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:58:13-60:29
+147                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+147-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:59:17-84
+147-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:59:25-81
+148            </intent-filter>
+149
+150            <meta-data
+150-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:61:13-103
+151                android:name="android.appwidget.provider"
+151-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:61:24-65
+152                android:resource="@xml/rss_widget" />
+152-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:61:66-100
+153        </receiver>
+154        <!-- Widget dark -->
+155        <receiver
+155-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:64:9-69:20
+156            android:name="livio.rssreader.RSSWidgetDark"
+156-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:64:19-63
+157            android:exported="true"
+157-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:64:64-87
+158            android:label="@string/widget_name" >
+158-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:64:88-123
+159            <intent-filter>
+159-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:58:13-60:29
+160                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+160-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:59:17-84
+160-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:59:25-81
+161            </intent-filter>
+162
+163            <meta-data
+163-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:61:13-103
+164                android:name="android.appwidget.provider"
+164-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:61:24-65
+165                android:resource="@xml/rss_widget_dark" />
+165-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:61:66-100
+166        </receiver>
+167
+168        <provider
+168-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:70:9-78:20
+169            android:name="androidx.core.content.FileProvider"
+169-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:71:13-62
+170            android:authorities="livio.rssreader.FileProvider"
+170-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:72:13-63
+171            android:exported="false"
+171-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:74:13-37
+172            android:grantUriPermissions="true" >
+172-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:73:13-47
+173            <meta-data
+173-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:75:13-77:57
+174                android:name="android.support.FILE_PROVIDER_PATHS"
+174-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:76:17-67
+175                android:resource="@xml/provider_paths" />
+175-->D:\benchmark\benchmark_root\workspace\app_newsreader\task_001\app\src\main\AndroidManifest.xml:77:17-55
+176        </provider>
+177        <provider
+177-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:29:9-37:20
+178            android:name="androidx.startup.InitializationProvider"
+178-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:30:13-67
+179            android:authorities="livio.rssreader.androidx-startup"
+179-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:31:13-68
+180            android:exported="false" >
+180-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:32:13-37
+181            <meta-data
+181-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:34:13-36:52
+182                android:name="androidx.work.WorkManagerInitializer"
+182-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:35:17-68
+183                android:value="androidx.startup" />
+183-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:36:17-49
+184            <meta-data
+184-->[androidx.emoji2:emoji2:1.3.0] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\d6186f023e83ae1b4fc2a67c06e9d1af\transformed\emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
+185                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+185-->[androidx.emoji2:emoji2:1.3.0] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\d6186f023e83ae1b4fc2a67c06e9d1af\transformed\emoji2-1.3.0\AndroidManifest.xml:30:17-75
+186                android:value="androidx.startup" />
+186-->[androidx.emoji2:emoji2:1.3.0] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\d6186f023e83ae1b4fc2a67c06e9d1af\transformed\emoji2-1.3.0\AndroidManifest.xml:31:17-49
+187            <meta-data
+187-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\ecccf903d6e7c8753357e1417b610b72\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:29:13-31:52
+188                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+188-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\ecccf903d6e7c8753357e1417b610b72\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:30:17-78
+189                android:value="androidx.startup" />
+189-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\ecccf903d6e7c8753357e1417b610b72\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:31:17-49
+190            <meta-data
+190-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
+191                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+191-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
+192                android:value="androidx.startup" />
+192-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
+193        </provider>
+194
+195        <service
+195-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:39:9-45:35
+196            android:name="androidx.work.impl.background.systemalarm.SystemAlarmService"
+196-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:40:13-88
+197            android:directBootAware="false"
+197-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:41:13-44
+198            android:enabled="@bool/enable_system_alarm_service_default"
+198-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:42:13-72
+199            android:exported="false" />
+199-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:43:13-37
+200        <service
+200-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:46:9-52:35
+201            android:name="androidx.work.impl.background.systemjob.SystemJobService"
+201-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:47:13-84
+202            android:directBootAware="false"
+202-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:48:13-44
+203            android:enabled="@bool/enable_system_job_service_default"
+203-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:49:13-70
+204            android:exported="true"
+204-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:50:13-36
+205            android:permission="android.permission.BIND_JOB_SERVICE" />
+205-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:51:13-69
+206        <service
+206-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:53:9-59:35
+207            android:name="androidx.work.impl.foreground.SystemForegroundService"
+207-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:54:13-81
+208            android:directBootAware="false"
+208-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:55:13-44
+209            android:enabled="@bool/enable_system_foreground_service_default"
+209-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:56:13-77
+210            android:exported="false" />
+210-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:57:13-37
+211
+212        <receiver
+212-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:61:9-66:35
+213            android:name="androidx.work.impl.utils.ForceStopRunnable$BroadcastReceiver"
+213-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:62:13-88
+214            android:directBootAware="false"
+214-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:63:13-44
+215            android:enabled="true"
+215-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:64:13-35
+216            android:exported="false" />
+216-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:65:13-37
+217        <receiver
+217-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:67:9-77:20
+218            android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$BatteryChargingProxy"
+218-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:68:13-106
+219            android:directBootAware="false"
+219-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:69:13-44
+220            android:enabled="false"
+220-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:70:13-36
+221            android:exported="false" >
+221-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:71:13-37
+222            <intent-filter>
+222-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:73:13-76:29
+223                <action android:name="android.intent.action.ACTION_POWER_CONNECTED" />
+223-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:74:17-87
+223-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:74:25-84
+224                <action android:name="android.intent.action.ACTION_POWER_DISCONNECTED" />
+224-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:75:17-90
+224-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:75:25-87
+225            </intent-filter>
+226        </receiver>
+227        <receiver
+227-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:78:9-88:20
+228            android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$BatteryNotLowProxy"
+228-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:79:13-104
+229            android:directBootAware="false"
+229-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:80:13-44
+230            android:enabled="false"
+230-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:81:13-36
+231            android:exported="false" >
+231-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:82:13-37
+232            <intent-filter>
+232-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:84:13-87:29
+233                <action android:name="android.intent.action.BATTERY_OKAY" />
+233-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:85:17-77
+233-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:85:25-74
+234                <action android:name="android.intent.action.BATTERY_LOW" />
+234-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:86:17-76
+234-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:86:25-73
+235            </intent-filter>
+236        </receiver>
+237        <receiver
+237-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:89:9-99:20
+238            android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$StorageNotLowProxy"
+238-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:90:13-104
+239            android:directBootAware="false"
+239-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:91:13-44
+240            android:enabled="false"
+240-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:92:13-36
+241            android:exported="false" >
+241-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:93:13-37
+242            <intent-filter>
+242-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:95:13-98:29
+243                <action android:name="android.intent.action.DEVICE_STORAGE_LOW" />
+243-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:96:17-83
+243-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:96:25-80
+244                <action android:name="android.intent.action.DEVICE_STORAGE_OK" />
+244-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:97:17-82
+244-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:97:25-79
+245            </intent-filter>
+246        </receiver>
+247        <receiver
+247-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:100:9-109:20
+248            android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$NetworkStateProxy"
+248-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:101:13-103
+249            android:directBootAware="false"
+249-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:102:13-44
+250            android:enabled="false"
+250-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:103:13-36
+251            android:exported="false" >
+251-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:104:13-37
+252            <intent-filter>
+252-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:106:13-108:29
+253                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
+253-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:107:17-79
+253-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:107:25-76
+254            </intent-filter>
+255        </receiver>
+256        <receiver
+256-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:110:9-121:20
+257            android:name="androidx.work.impl.background.systemalarm.RescheduleReceiver"
+257-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:111:13-88
+258            android:directBootAware="false"
+258-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:112:13-44
+259            android:enabled="false"
+259-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:113:13-36
+260            android:exported="false" >
+260-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:114:13-37
+261            <intent-filter>
+261-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:116:13-120:29
+262                <action android:name="android.intent.action.BOOT_COMPLETED" />
+262-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:117:17-79
+262-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:117:25-76
+263                <action android:name="android.intent.action.TIME_SET" />
+263-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:118:17-73
+263-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:118:25-70
+264                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+264-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:119:17-81
+264-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:119:25-78
+265            </intent-filter>
+266        </receiver>
+267        <receiver
+267-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:122:9-131:20
+268            android:name="androidx.work.impl.background.systemalarm.ConstraintProxyUpdateReceiver"
+268-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:123:13-99
+269            android:directBootAware="false"
+269-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:124:13-44
+270            android:enabled="@bool/enable_system_alarm_service_default"
+270-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:125:13-72
+271            android:exported="false" >
+271-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:126:13-37
+272            <intent-filter>
+272-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:128:13-130:29
+273                <action android:name="androidx.work.impl.background.systemalarm.UpdateProxies" />
+273-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:129:17-98
+273-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:129:25-95
+274            </intent-filter>
+275        </receiver>
+276        <receiver
+276-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:132:9-142:20
+277            android:name="androidx.work.impl.diagnostics.DiagnosticsReceiver"
+277-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:133:13-78
+278            android:directBootAware="false"
+278-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:134:13-44
+279            android:enabled="true"
+279-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:135:13-35
+280            android:exported="true"
+280-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:136:13-36
+281            android:permission="android.permission.DUMP" >
+281-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:137:13-57
+282            <intent-filter>
+282-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:139:13-141:29
+283                <action android:name="androidx.work.diagnostics.REQUEST_DIAGNOSTICS" />
+283-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:140:17-88
+283-->[androidx.work:work-runtime:2.10.5] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\8f9355f25be273642923bb57baf280d4\transformed\work-runtime-2.10.5\AndroidManifest.xml:140:25-85
+284            </intent-filter>
+285        </receiver>
+286
+287        <uses-library
+287-->[androidx.window:window:1.0.0] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\7e3b48e8a459c3ff140a784f5ffbe75e\transformed\window-1.0.0\AndroidManifest.xml:25:9-27:40
+288            android:name="androidx.window.extensions"
+288-->[androidx.window:window:1.0.0] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\7e3b48e8a459c3ff140a784f5ffbe75e\transformed\window-1.0.0\AndroidManifest.xml:26:13-54
+289            android:required="false" />
+289-->[androidx.window:window:1.0.0] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\7e3b48e8a459c3ff140a784f5ffbe75e\transformed\window-1.0.0\AndroidManifest.xml:27:13-37
+290        <uses-library
+290-->[androidx.window:window:1.0.0] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\7e3b48e8a459c3ff140a784f5ffbe75e\transformed\window-1.0.0\AndroidManifest.xml:28:9-30:40
+291            android:name="androidx.window.sidecar"
+291-->[androidx.window:window:1.0.0] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\7e3b48e8a459c3ff140a784f5ffbe75e\transformed\window-1.0.0\AndroidManifest.xml:29:13-51
+292            android:required="false" />
+292-->[androidx.window:window:1.0.0] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\7e3b48e8a459c3ff140a784f5ffbe75e\transformed\window-1.0.0\AndroidManifest.xml:30:13-37
+293
+294        <receiver
+294-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
+295            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+295-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
+296            android:directBootAware="false"
+296-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
+297            android:enabled="true"
+297-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
+298            android:exported="true"
+298-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
+299            android:permission="android.permission.DUMP" >
+299-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
+300            <intent-filter>
+300-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
+301                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+301-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
+301-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
+302            </intent-filter>
+303            <intent-filter>
+303-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
+304                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+304-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
+304-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
+305            </intent-filter>
+306            <intent-filter>
+306-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
+307                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+307-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
+307-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
+308            </intent-filter>
+309            <intent-filter>
+309-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
+310                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+310-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
+310-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\36feae32d1d24e0fc4a62bf9fe982d26\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
+311            </intent-filter>
+312        </receiver>
+313
+314        <service
+314-->[androidx.room:room-runtime:2.6.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\ad72cdb894a1060e797fb32925b0975d\transformed\room-runtime-2.6.1\AndroidManifest.xml:24:9-28:63
+315            android:name="androidx.room.MultiInstanceInvalidationService"
+315-->[androidx.room:room-runtime:2.6.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\ad72cdb894a1060e797fb32925b0975d\transformed\room-runtime-2.6.1\AndroidManifest.xml:25:13-74
+316            android:directBootAware="true"
+316-->[androidx.room:room-runtime:2.6.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\ad72cdb894a1060e797fb32925b0975d\transformed\room-runtime-2.6.1\AndroidManifest.xml:26:13-43
+317            android:exported="false" />
+317-->[androidx.room:room-runtime:2.6.1] C:\Users\yihanliu\.gradle\caches\9.0-milestone-1\transforms\ad72cdb894a1060e797fb32925b0975d\transformed\room-runtime-2.6.1\AndroidManifest.xml:27:13-37
+318    </application>
+319
+320</manifest>

@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:ns1="urn:oasis:names:tc:xliff:document:1.2">
+    <string-array name="categories_list">
+        <item>Negócios</item>
+        <item>Entretenimento</item>
+        <item>Moda</item>
+        <item>Estilo de vida</item>
+        <item>Música</item>
+        <item>Notícias</item>
+        <item>Política</item>
+        <item>Ciência</item>
+        <item>Esporte</item>
+        <item>Tecnologia</item>
+    </string-array>
+    <string-array name="connectivityArray">
+        <item>Wi-Fi e rede móvel</item>
+        <item>Wi-Fi</item>
+    </string-array>
+    <string-array name="entries_list_preference">
+        <item translatable="false">Deutsch</item>
+        <item translatable="false">English</item>
+        <item translatable="false">Español</item>
+        <item translatable="false">Français</item>
+        <item translatable="false">Italiano</item>
+        <item translatable="false">한국어</item>
+        <item translatable="false">Português</item>
+        <item translatable="false">Русский</item>
+    </string-array>
+    <string-array name="prefs_theme_names">
+        <item>Branco</item>
+        <item>Claro</item>
+        <item>Escuro</item>
+        <item>Preto</item>
+    </string-array>
+    <string-array name="refreshTimerArray">
+        <item>15 minutos</item>
+        <item>30 minutos</item>
+        <item>1 hora</item>
+        <item>3 horas</item>
+        <item>24 horas</item>
+    </string-array>
+    <string msgid="5976598919945601918" name="abc_action_bar_home_description">"Navegar para a página inicial"</string>
+    <string msgid="8388173803310557296" name="abc_action_bar_up_description">"Navegar para cima"</string>
+    <string msgid="3937310113216875497" name="abc_action_menu_overflow_description">"Mais opções"</string>
+    <string msgid="4692188335987374352" name="abc_action_mode_done">"Concluído"</string>
+    <string msgid="1189761859438369441" name="abc_activity_chooser_view_see_all">"Ver tudo"</string>
+    <string msgid="2165779757652331008" name="abc_activitychooserview_choose_application">"Selecionar um app"</string>
+    <string msgid="4215997306490295099" name="abc_capital_off">"DESATIVADO"</string>
+    <string msgid="884982626291842264" name="abc_capital_on">"ATIVADO"</string>
+    <string msgid="8833365367933412986" name="abc_menu_alt_shortcut_label">"Alt+"</string>
+    <string msgid="2223301931652355242" name="abc_menu_ctrl_shortcut_label">"Ctrl+"</string>
+    <string msgid="838001238306846836" name="abc_menu_delete_shortcut_label">"delete"</string>
+    <string msgid="7986526966204849475" name="abc_menu_enter_shortcut_label">"enter"</string>
+    <string msgid="375214403600139847" name="abc_menu_function_shortcut_label">"Function+"</string>
+    <string msgid="4192209724446364286" name="abc_menu_meta_shortcut_label">"Meta+"</string>
+    <string msgid="4741552369836443843" name="abc_menu_shift_shortcut_label">"Shift+"</string>
+    <string msgid="5473865519181928982" name="abc_menu_space_shortcut_label">"espaço"</string>
+    <string msgid="6180552449598693998" name="abc_menu_sym_shortcut_label">"Sym+"</string>
+    <string msgid="5520303668377388990" name="abc_prepend_shortcut_label">"Menu+"</string>
+    <string msgid="7208076849092622260" name="abc_search_hint">"Pesquisar…"</string>
+    <string msgid="3741173234950517107" name="abc_searchview_description_clear">"Limpar consulta"</string>
+    <string msgid="693312494995508443" name="abc_searchview_description_query">"Consulta de pesquisa"</string>
+    <string msgid="3417662926640357176" name="abc_searchview_description_search">"Pesquisar"</string>
+    <string msgid="1486535517437947103" name="abc_searchview_description_submit">"Enviar consulta"</string>
+    <string msgid="2293578557972875415" name="abc_searchview_description_voice">"Pesquisa por voz"</string>
+    <string msgid="8875138169939072951" name="abc_shareactionprovider_share_with">"Compartilhar com"</string>
+    <string msgid="9055268688411532828" name="abc_shareactionprovider_share_with_application">"Compartilhar com <ns1:g id="APPLICATION_NAME">%s</ns1:g>"</string>
+    <string msgid="1656852541809559762" name="abc_toolbar_collapse_description">"Recolher"</string>
+    <string name="ago">atrás</string>
+    <string name="app_descrip">Leitor de notícias simples e rápido na web</string>
+    <string name="app_name">News Reader</string>
+    <string name="auto">Automático</string>
+    <string name="backup">Backup</string>
+    <string name="backup_hint">Existem dados não salvos, você deseja fazer backup?</string>
+    <string msgid="881409763997275156" name="call_notification_answer_action">"Atender"</string>
+    <string msgid="8793775615905189152" name="call_notification_answer_video_action">"Vídeo"</string>
+    <string msgid="3229508546291798546" name="call_notification_decline_action">"Recusar"</string>
+    <string msgid="2659457946726154263" name="call_notification_hang_up_action">"Desligar"</string>
+    <string msgid="6107532579223922871" name="call_notification_incoming_text">"Chamada recebida"</string>
+    <string msgid="8623827134497363134" name="call_notification_ongoing_text">"Chamada em andamento"</string>
+    <string msgid="59049573811482460" name="call_notification_screening_text">"Filtrando uma ligação recebida"</string>
+    <string name="color_picker_default_title">Selecione uma cor</string>
+    <string msgid="6083905920877235314" name="copy">"Copiar"</string>
+    <string name="copy_label">Copiar</string>
+    <string name="credits">Credits</string>
+    <string name="credits_text">This application includes the following items:&lt;br>&lt;br>&lt;b>Android Support&lt;/b> libraries distributed under the Apache License 2.0, http://www.apache.org/licenses</string>
+    <string name="default_feed_language_code">pt</string>
+    <string name="delete">Apagar</string>
+    <string name="dialog_title_list_preference">Idioma de notícias</string>
+    <string name="display">Display</string>
+    <string name="dlg_add_category">Insert new category</string>
+    <string name="dlg_add_feed">Insert new user feed</string>
+    <string name="dlg_cat_description_hint">Short description of the category</string>
+    <string name="dlg_cat_title_hint">Title of the category</string>
+    <string name="dlg_edit_category">Edit category</string>
+    <string name="dlg_edit_feed">Edit user feed</string>
+    <string name="dlg_rss_hint">Address of a valid rss feed</string>
+    <string name="dlg_title_hint">Title of the feed</string>
+    <string name="download_images">Download de imagens</string>
+    <string name="exit">Saída</string>
+    <string msgid="2427401033573778270" name="expand_button_title">"Avançado"</string>
+    <string name="export_label">Export</string>
+    <string name="ext_storage">Armazenamento externo</string>
+    <string name="feeds_language">Idioma de notícias</string>
+    <string name="full_story">Artigo completo</string>
+    <string name="genericColor">Cor genérico</string>
+    <string name="go_next_label">Próximo artigo</string>
+    <string name="go_prev_label">Artigo anterior</string>
+    <string name="hour">hora</string>
+    <string name="hours">horas</string>
+    <string name="hyperlinkColor">Texto de hyperlink</string>
+    <string name="import_label">Import</string>
+    <string name="import_opml">Importar ficheiro OPML</string>
+    <string name="local_storage">Armazenamento local</string>
+    <string name="max_titles">Max number of headlines</string>
+    <string name="menu_about">About</string>
+    <string name="menu_help">Ajuda</string>
+    <string name="menu_preferences">Configurações</string>
+    <string name="menu_publisher">Publisher information</string>
+    <string name="menu_rss_refresh">Atualizar</string>
+    <string name="menu_share_label">Partilhar</string>
+    <string name="minute">minuto</string>
+    <string name="minutes">minutos</string>
+    <string name="missing_title">Please enter a title</string>
+    <string name="missing_url">Please enter a valid rss feed address</string>
+    <string name="move_to_category">Mover para categoria</string>
+    <string name="msg_backup_ok">Backup com êxito</string>
+    <string name="msg_bad_answer">Invalid content received from the feed server, error code: </string>
+    <string name="msg_bad_mimetype">Incorrect type of content received from the feed server.</string>
+    <string name="msg_cannot_read_backup">Não pode ler o backup</string>
+    <string name="msg_cannot_read_file">Não é possível ler o arquivo</string>
+    <string name="msg_cannot_write_backup">Não pode escrever o backup</string>
+    <string name="msg_cannot_write_file">Não é possível gravar arquivo</string>
+    <string name="msg_connection_problem">Erro na rede. Verifique sua conexão a internet.</string>
+    <string name="msg_corrupt_file">O banco de dados offline está corrompido. &lt;br>Solução sugerida:&lt;br>1) Desinstalar este aplicativo &lt;br> 2) Re-instalar esta aplicação do Google Play</string>
+    <string name="msg_done">Feito!</string>
+    <string name="msg_error">Erro</string>
+    <string name="msg_export_ok">Exportação bem sucedida</string>
+    <string name="msg_external_storage_notreadble">Não pode ler o cartão SD</string>
+    <string name="msg_external_storage_notwritable">Não pode escrever para o cartão SD</string>
+    <string name="msg_feedback_sent">Feedback sent...</string>
+    <string name="msg_generic_problem">Erro inesperado.</string>
+    <string name="msg_http_error">Error returned by the feed server: </string>
+    <string name="msg_import_ok">Importação bem sucedida</string>
+    <string name="msg_missing_backup">Arquivo de backup não existe</string>
+    <string name="msg_missing_file">Arquivo não existe</string>
+    <string name="msg_missing_file_manager">Por favor, instale um Gerenciador de arquivos</string>
+    <string name="msg_nothing_to_delete">Nada a deletar</string>
+    <string name="msg_permission_denied">A operação falhou devido a permissão negada</string>
+    <string name="msg_publisher">Publisher of current feed: &lt;a href="%2$s">%1$s&lt;/a></string>
+    <string name="msg_restore_ok">Restauração bem-sucedida</string>
+    <string name="msg_rss_error">O feed de notícias está incorreto ou o servidor de feed não está disponível.</string>
+    <string name="news_feed">News Feed</string>
+    <string name="news_feed_desc">Selecione o feed de notícias</string>
+    <string name="news_settings">News Feeds</string>
+    <string name="nightmode">Modo noturno</string>
+    <string name="no">Não</string>
+    <string name="noitems_please_select">Nenhum item, seleccione pelo menos um item</string>
+    <string msgid="6573031135582639649" name="not_set">"Não definido"</string>
+    <string name="now">agora</string>
+    <string name="num_items">Número de itens</string>
+    <string name="other">Outro</string>
+    <string msgid="6685851473431805375" name="preference_copied">"\"<ns1:g id="SUMMARY">%1$s</ns1:g>\" copiado para a área de transferência."</string>
+    <string name="prefs_fontsize">Tamanho da letra</string>
+    <string name="prefs_theme">Esquema de cor</string>
+    <string name="prefs_theme_chooser">Fundo</string>
+    <string name="prefs_theme_sub">Alterar cores</string>
+    <string name="refresh_timer">Período de atualização</string>
+    <string name="reset_default">Predefinido</string>
+    <string name="restore">Restaurar</string>
+    <string msgid="6264217191555673260" name="search_menu_title">"Pesquisar"</string>
+    <string name="sel_cat_label">Selecione categoria</string>
+    <string name="sel_feed_label">Selecione feed</string>
+    <string name="select_all_user_feeds">Selecione todos os feeds de utilizadores</string>
+    <string name="send_fb_label">Send feedback</string>
+    <string name="set_preferences">Configurações</string>
+    <string name="show_help_label">Ajuda</string>
+    <string name="show_label">Descrição</string>
+    <string name="small_arrow">→</string>
+    <string name="smart_titles">Smart titles</string>
+    <string msgid="6277540029070332960" name="status_bar_notification_info_overflow">"999+"</string>
+    <string msgid="9167775378838880170" name="summary_collapsed_preference_list">"<ns1:g id="CURRENT_ITEMS">%1$s</ns1:g>, <ns1:g id="ADDED_ITEMS">%2$s</ns1:g>"</string>
+    <string name="textColor">Texto normal</string>
+    <string name="tts_play_label">Ler em voz alta</string>
+    <string name="tts_settings_label">Configurações da conversão de texto em voz</string>
+    <string name="use_external_browser">Use o navegador externo</string>
+    <string msgid="3140233346420563315" name="v7_preference_off">"DESATIVADO"</string>
+    <string msgid="89551595707643515" name="v7_preference_on">"ATIVADO"</string>
+    <string name="widget_error">Nenhuma notícia\ndisponível</string>
+    <string name="widget_loading">Buscando novidades...</string>
+    <string name="widget_name">News Reader</string>
+    <string name="yes">Sim</string>
+</resources>

@@ -1,0 +1,15 @@
+<b>Food You</b> is een krachtige, open-source voeding tracker, gebouwd met een modern Material You uiterlijk. Het helpt je om niet alleen calorieën bij te houden, maar jouw hele voedingsinname - met betrouwbare voedingsdata en een flexibel en modulair interface.
+
+<b>Functies:</b>
+<ul>
+    <li><b>Material You ontwerp:</b> Dynamisch thema dat zich aanpast aan uw apparaat voor een naadloze visuele ervaring.</li>
+    <li><b>Uitgebreide voeding databases:</b> Krijg toegang tot voedingsgegevens van Open Food Facts, USDA FoodCentral en de Swiss Food Composition Database.</li>
+    <li><b>Volledige voedingsregistratie:</b> Houdt calorieën, macros, vitaminen, mineralen en meer bij.</li>
+    <li><b>Recepten maken:</b> Maak aangepaste recepten met automatische voedingsberekeningen.</li>
+    <li><b>Dagelijkse doelen: </b> Stel persoonlijke voedingsdoelen en volg deze. </li>
+    <li><b>Aanpasbaar Home scherm:</b> Pas jouw Home scherm aan met kaarten, volledig naar jouw behoeften.</li>
+</ul>
+
+Begin vandaag nog met het bijhouden van jouw voeding met Food You - netjes, compleet en helemaal van jou.
+
+Launcher icoon gemaakt door <a href="https://icons8.com/" target="_blank" rel="nofollow noopener noreferrer">Icons8</a>

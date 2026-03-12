@@ -1,0 +1,8 @@
+{
+  "id": "app_005",
+  "name": "foodyou",
+  "app_package": "com.maksimowiczm.foodyou",  "target_activity": "com.maksimowiczm.foodyou.app.infrastructure.android.MainActivity",  "build_command": "gradlew.bat :app:assembleDebug",
+  "apk_path": "app/build/outputs/apk/debug/app-debug.apk",
+  "prompt": "This is the source code of a healthy diet app. I hope to add a menu called **“Notification Settings”** in the settings. It should provide a complete notification management feature within the app, allowing users to enable or disable notification reminders directly in the app’s settings without relying on the phone system’s notification management.",
+  "eval_script": "test_script.py"
+}

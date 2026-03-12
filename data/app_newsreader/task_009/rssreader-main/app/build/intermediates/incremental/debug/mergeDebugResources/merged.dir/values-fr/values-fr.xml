@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:ns1="urn:oasis:names:tc:xliff:document:1.2" xmlns:ns2="http://schemas.android.com/tools">
+    <string-array name="categories_list">
+        <item>Finance</item>
+        <item>Spectacle</item>
+        <item>Mode</item>
+        <item>Mode de vie</item>
+        <item>Musique</item>
+        <item>Nouvelles</item>
+        <item>Politique</item>
+        <item>Science</item>
+        <item>Sport</item>
+        <item>Technologie</item>
+    </string-array>
+    <string-array name="connectivityArray">
+        <item>Wi-Fi et réseau mobile</item>
+        <item>Wi-Fi uniquement</item>
+    </string-array>
+    <string-array name="entries_list_preference">
+        <item translatable="false">Deutsch</item>
+        <item translatable="false">English</item>
+        <item translatable="false">Español</item>
+        <item translatable="false">Français</item>
+        <item translatable="false">Italiano</item>
+        <item translatable="false">한국어</item>
+        <item translatable="false">Português</item>
+        <item translatable="false">Русский</item>
+    </string-array>
+    <string-array name="prefs_theme_names">
+        <item>Blanc</item>
+        <item>Clair</item>
+        <item>Foncé</item>
+        <item>Noir</item>
+    </string-array>
+    <string-array name="refreshTimerArray">
+        <item>15 minutes</item>
+        <item>30 minutes</item>
+        <item>1 heure</item>
+        <item>3 heures</item>
+        <item>24 heures</item>
+    </string-array>
+    <plurals name="mtrl_badge_content_description">
+    <item quantity="one">%d nouvelle notification</item>
+    <item quantity="other">%d nouvelles notifications</item>
+  </plurals>
+    <string msgid="5976598919945601918" name="abc_action_bar_home_description">"Revenir à l\'accueil"</string>
+    <string msgid="8388173803310557296" name="abc_action_bar_up_description">"Revenir en haut de la page"</string>
+    <string msgid="3937310113216875497" name="abc_action_menu_overflow_description">"Autres options"</string>
+    <string msgid="4692188335987374352" name="abc_action_mode_done">"OK"</string>
+    <string msgid="1189761859438369441" name="abc_activity_chooser_view_see_all">"Tout afficher"</string>
+    <string msgid="2165779757652331008" name="abc_activitychooserview_choose_application">"Sélectionner une application"</string>
+    <string msgid="4215997306490295099" name="abc_capital_off">"NON"</string>
+    <string msgid="884982626291842264" name="abc_capital_on">"OUI"</string>
+    <string msgid="8833365367933412986" name="abc_menu_alt_shortcut_label">"Alt+"</string>
+    <string msgid="2223301931652355242" name="abc_menu_ctrl_shortcut_label">"Ctrl+"</string>
+    <string msgid="838001238306846836" name="abc_menu_delete_shortcut_label">"supprimer"</string>
+    <string msgid="7986526966204849475" name="abc_menu_enter_shortcut_label">"entrée"</string>
+    <string msgid="375214403600139847" name="abc_menu_function_shortcut_label">"Fonction+"</string>
+    <string msgid="4192209724446364286" name="abc_menu_meta_shortcut_label">"Méta+"</string>
+    <string msgid="4741552369836443843" name="abc_menu_shift_shortcut_label">"Maj+"</string>
+    <string msgid="5473865519181928982" name="abc_menu_space_shortcut_label">"espace"</string>
+    <string msgid="6180552449598693998" name="abc_menu_sym_shortcut_label">"Sym+"</string>
+    <string msgid="5520303668377388990" name="abc_prepend_shortcut_label">"Menu+"</string>
+    <string msgid="7208076849092622260" name="abc_search_hint">"Rechercher…"</string>
+    <string msgid="3741173234950517107" name="abc_searchview_description_clear">"Effacer la requête"</string>
+    <string msgid="693312494995508443" name="abc_searchview_description_query">"Requête de recherche"</string>
+    <string msgid="3417662926640357176" name="abc_searchview_description_search">"Rechercher"</string>
+    <string msgid="1486535517437947103" name="abc_searchview_description_submit">"Envoyer la requête"</string>
+    <string msgid="2293578557972875415" name="abc_searchview_description_voice">"Recherche vocale"</string>
+    <string msgid="8875138169939072951" name="abc_shareactionprovider_share_with">"Partager avec"</string>
+    <string msgid="9055268688411532828" name="abc_shareactionprovider_share_with_application">"Partager avec <ns1:g id="APPLICATION_NAME">%s</ns1:g>"</string>
+    <string msgid="1656852541809559762" name="abc_toolbar_collapse_description">"Réduire"</string>
+    <string name="ago">auparavant</string>
+    <string name="app_descrip">Lecteur de nouvelles web simple et rapide</string>
+    <string name="app_name">News Reader</string>
+    <string name="auto">Automatique</string>
+    <string name="backup">Sauvegarder</string>
+    <string name="backup_hint">Il y a des données non sauvegardées, voulez-vous sauvegarder?</string>
+    <string name="bottomsheet_action_collapse">Réduire la bottom sheet</string>
+    <string name="bottomsheet_action_expand">Développer la bottom sheet</string>
+    <string name="bottomsheet_action_expand_halfway">Développer en entier</string>
+    <string name="bottomsheet_drag_handle_content_description">Poignée de déplacement</string>
+    <string msgid="881409763997275156" name="call_notification_answer_action">"Répondre"</string>
+    <string msgid="8793775615905189152" name="call_notification_answer_video_action">"Vidéo"</string>
+    <string msgid="3229508546291798546" name="call_notification_decline_action">"Refuser"</string>
+    <string msgid="2659457946726154263" name="call_notification_hang_up_action">"Raccrocher"</string>
+    <string msgid="6107532579223922871" name="call_notification_incoming_text">"Appel entrant"</string>
+    <string msgid="8623827134497363134" name="call_notification_ongoing_text">"Appel en cours"</string>
+    <string msgid="59049573811482460" name="call_notification_screening_text">"Filtrage d\'un appel entrant"</string>
+    <string name="character_counter_content_description">Caractères saisis %1$d sur %2$d</string>
+    <string name="character_counter_overflowed_content_description">Nombre maximal de caractères dépassé : %1$d sur %2$d</string>
+    <string name="clear_text_end_icon_content_description">Effacer le texte</string>
+    <string name="color_picker_default_title">Sélectionner une couleur</string>
+    <string msgid="6083905920877235314" name="copy">"Copier"</string>
+    <string name="copy_label">Copier</string>
+    <string name="credits">Credits</string>
+    <string name="credits_text">This application includes the following items:&lt;br>&lt;br>&lt;b>Android Support&lt;/b> libraries distributed under the Apache License 2.0, http://www.apache.org/licenses</string>
+    <string name="default_feed_language_code">fr</string>
+    <string name="delete">Effacer</string>
+    <string name="dialog_title_list_preference">Langue de nouvelles</string>
+    <string name="display">Display</string>
+    <string name="dlg_add_category">Insert new category</string>
+    <string name="dlg_add_feed">Insert new user feed</string>
+    <string name="dlg_cat_description_hint">Short description of the category</string>
+    <string name="dlg_cat_title_hint">Title of the category</string>
+    <string name="dlg_edit_category">Edit category</string>
+    <string name="dlg_edit_feed">Edit user feed</string>
+    <string name="dlg_rss_hint">Address of a valid rss feed</string>
+    <string name="dlg_title_hint">Title of the feed</string>
+    <string name="download_images">Télécharger des images</string>
+    <string name="error_a11y_label">Erreur : Non valide</string>
+    <string name="error_icon_content_description">Erreur</string>
+    <string name="exit">Quitter</string>
+    <string msgid="2427401033573778270" name="expand_button_title">"Paramètres avancés"</string>
+    <string name="export_label">Export</string>
+    <string name="exposed_dropdown_menu_content_description">Afficher le menu déroulant</string>
+    <string name="ext_storage">Stockage Externe</string>
+    <string name="feeds_language">Langue de nouvelles</string>
+    <string name="full_story">Article complet</string>
+    <string name="genericColor">Couleur générique</string>
+    <string name="go_next_label">Article suivant</string>
+    <string name="go_prev_label">Article précédent</string>
+    <string name="hour">heure</string>
+    <string name="hours">heures</string>
+    <string name="hyperlinkColor">Text d\'hyperlien</string>
+    <string name="icon_content_description">Icône de la boîte de dialogue</string>
+    <string name="import_label">Import</string>
+    <string name="import_opml">Importer un fichier OPML</string>
+    <string name="item_view_role_description">Onglet</string>
+    <string name="local_storage">Stockage local</string>
+    <string name="m3_loading_indicator_content_description">Chargement…</string>
+    <string name="material_clock_toggle_content_description">Sélectionner le format AM ou PM</string>
+    <string name="material_hour_24h_suffix">%1$s heures</string>
+    <string name="material_hour_selection">Sélectionnez une heure</string>
+    <string name="material_hour_suffix">%1$s h</string>
+    <string name="material_minute_selection">Sélectionner des minutes</string>
+    <string name="material_minute_suffix">%1$s min</string>
+    <string name="material_slider_range_end">Fin de plage</string>
+    <string name="material_slider_range_start">Début de plage</string>
+    <string name="material_slider_value">Valeur</string>
+    <string name="material_timepicker_am">AM</string>
+    <string name="material_timepicker_clock_mode_description">Passer en mode horloge pour la saisie de l\'heure.</string>
+    <string name="material_timepicker_hour">Heure</string>
+    <string name="material_timepicker_minute">Minute</string>
+    <string name="material_timepicker_pm">PM</string>
+    <string name="material_timepicker_select_time">Sélectionner l\'heure</string>
+    <string name="material_timepicker_text_input_mode_description">Passer en mode saisie de texte pour la saisie de l\'heure.</string>
+    <string name="max_titles">Max number of headlines</string>
+    <string name="menu_about">About</string>
+    <string name="menu_help">Aide</string>
+    <string name="menu_preferences">Paramètres</string>
+    <string name="menu_publisher">Publisher information</string>
+    <string name="menu_rss_refresh">Actualiser</string>
+    <string name="menu_share_label">Partage</string>
+    <string name="minute">minute</string>
+    <string name="minutes">minutes</string>
+    <string name="missing_title">Please enter a title</string>
+    <string name="missing_url">Please enter a valid rss feed address</string>
+    <string name="move_to_category">Déplacer vers la catégorie</string>
+    <string name="msg_backup_ok">Sauvegarde réussie</string>
+    <string name="msg_bad_answer">Invalid content received from the feed server, error code: </string>
+    <string name="msg_bad_mimetype">Incorrect type of content received from the feed server.</string>
+    <string name="msg_cannot_read_backup">Ne peut lire le support</string>
+    <string name="msg_cannot_read_file">Impossible de lire le fichier</string>
+    <string name="msg_cannot_write_backup">Ne peut pas écrire la sauvegarde</string>
+    <string name="msg_cannot_write_file">Impossible d\'écrire le fichier</string>
+    <string name="msg_connection_problem">Erreur de connexion. S\'il vous plaît vérifier votre connexion à Internet.</string>
+    <string name="msg_corrupt_file">La base de données hors ligne est corrompu. &lt;br>Solution proposée:&lt;br>1) Désinstaller cette application&lt;br>2) Re-installer cette application à partir de Google Play</string>
+    <string name="msg_done">Fait!</string>
+    <string name="msg_error">Erreur</string>
+    <string name="msg_export_ok">Exportation réussie</string>
+    <string name="msg_external_storage_notreadble">Impossible de lire la carte SD</string>
+    <string name="msg_external_storage_notwritable">Impossible d\'écrire sur carte SD</string>
+    <string name="msg_feedback_sent">Feedback sent...</string>
+    <string name="msg_generic_problem">Erreur inattendue.</string>
+    <string name="msg_http_error">Error returned by the feed server: </string>
+    <string name="msg_import_ok">Importation réussie</string>
+    <string name="msg_missing_backup">Le fichier de sauvegarde n\'existe pas</string>
+    <string name="msg_missing_file">Le fichier n\'existe pas</string>
+    <string name="msg_missing_file_manager">Veuillez installer un gestionnaire de fichiers</string>
+    <string name="msg_nothing_to_delete">Rien à supprimer</string>
+    <string name="msg_permission_denied">L\'opération a échoué à cause de permission refusée</string>
+    <string name="msg_publisher">Publisher of current feed: &lt;a href="%2$s">%1$s&lt;/a></string>
+    <string name="msg_restore_ok">Restauration réussie</string>
+    <string name="msg_rss_error">Le flux de nouvelles est incorrect ou le serveur de nouvelles est indisponible.</string>
+    <string name="mtrl_badge_numberless_content_description">Nouvelle notification</string>
+    <string name="mtrl_checkbox_state_description_checked">Cochée</string>
+    <string name="mtrl_checkbox_state_description_indeterminate">Partiellement cochée</string>
+    <string name="mtrl_checkbox_state_description_unchecked">Non cochée</string>
+    <string name="mtrl_chip_close_icon_content_description">Supprimer %1$s</string>
+    <string name="mtrl_exceed_max_badge_number_content_description" ns2:ignore="PluralsCandidate">Plus de %1$d nouvelles notifications</string>
+    <string name="mtrl_picker_a11y_next_month">Passer au mois suivant</string>
+    <string name="mtrl_picker_a11y_prev_month">Passer au mois précédent</string>
+    <string name="mtrl_picker_announce_current_range_selection">Date de début sélectionnée : %1$s – Date de fin sélectionnée : %2$s</string>
+    <string name="mtrl_picker_announce_current_selection">Sélection actuelle : %1$s</string>
+    <string name="mtrl_picker_announce_current_selection_none">aucune</string>
+    <string name="mtrl_picker_cancel">Annuler</string>
+    <string name="mtrl_picker_confirm">OK</string>
+    <string name="mtrl_picker_date_header_selected">%1$s</string>
+    <string name="mtrl_picker_date_header_title">Sélectionnez une date</string>
+    <string name="mtrl_picker_date_header_unselected">Date sélectionnée</string>
+    <string name="mtrl_picker_day_of_week_column_header">%1$s</string>
+    <string name="mtrl_picker_end_date_description">Date de fin : %1$s</string>
+    <string name="mtrl_picker_invalid_format">Format incorrect.</string>
+    <string name="mtrl_picker_invalid_format_example">Exemple : %1$s</string>
+    <string name="mtrl_picker_invalid_format_use">Utiliser %1$s</string>
+    <string name="mtrl_picker_invalid_range">Plage non valide.</string>
+    <string name="mtrl_picker_navigate_to_current_year_description">Accéder à l\'année en cours : %1$d</string>
+    <string name="mtrl_picker_navigate_to_year_description">Accéder à l\'année %1$d</string>
+    <string name="mtrl_picker_out_of_range">Hors limite : %1$s</string>
+    <string name="mtrl_picker_range_header_only_end_selected">Date de début – %1$s</string>
+    <string name="mtrl_picker_range_header_only_start_selected">%1$s – Date de fin</string>
+    <string name="mtrl_picker_range_header_selected">%1$s - %2$s</string>
+    <string name="mtrl_picker_range_header_title">Sélectionnez une période</string>
+    <string name="mtrl_picker_range_header_unselected">Date de début – Date de fin</string>
+    <string name="mtrl_picker_save">Enregistrer</string>
+    <string name="mtrl_picker_start_date_description">Date de début : %1$s</string>
+    <string name="mtrl_picker_text_input_date_hint">Date</string>
+    <string name="mtrl_picker_text_input_date_range_end_hint">Date de fin</string>
+    <string name="mtrl_picker_text_input_date_range_start_hint">Date de début</string>
+    <string name="mtrl_picker_text_input_day_abbr">j</string>
+    <string name="mtrl_picker_text_input_month_abbr">m</string>
+    <string name="mtrl_picker_text_input_year_abbr">a</string>
+    <string name="mtrl_picker_today_description">Aujourd\'hui : %1$s</string>
+    <string name="mtrl_picker_toggle_to_calendar_input_mode">Passer au mode de saisie Agenda</string>
+    <string name="mtrl_picker_toggle_to_day_selection">Passer à la vue d\'agenda</string>
+    <string name="mtrl_picker_toggle_to_text_input_mode">Passer au mode de saisie Texte</string>
+    <string name="mtrl_picker_toggle_to_year_selection">Passer à la vue des années</string>
+    <string name="mtrl_picker_toggled_to_day_selection">Vue \"Agenda\" activée</string>
+    <string name="mtrl_picker_toggled_to_year_selection">Vue \"Année\" activée</string>
+    <string name="mtrl_timepicker_cancel">Annuler</string>
+    <string name="mtrl_timepicker_confirm">OK</string>
+    <string name="news_feed">News Feed</string>
+    <string name="news_feed_desc">Sélectionnez le flux des nouvelles</string>
+    <string name="news_settings">News Feeds</string>
+    <string name="nightmode">Mode Nuit</string>
+    <string name="no">Non</string>
+    <string name="noitems_please_select">Aucun élément, veuillez sélectionner au moins un élément</string>
+    <string msgid="6573031135582639649" name="not_set">"Non définie"</string>
+    <string name="now">maintenant</string>
+    <string name="num_items">Nombre d\'éléments</string>
+    <string name="other">Autre</string>
+    <string name="password_toggle_content_description">Afficher le mot de passe</string>
+    <string msgid="6685851473431805375" name="preference_copied">"\"<ns1:g id="SUMMARY">%1$s</ns1:g>\" copié dans le presse-papier."</string>
+    <string name="prefs_fontsize">Police de caractères</string>
+    <string name="prefs_theme">Couleurs</string>
+    <string name="prefs_theme_chooser">Fond</string>
+    <string name="prefs_theme_sub">Changer les couleurs</string>
+    <string name="refresh_timer">Période de mise à jour</string>
+    <string name="reset_default">Défaut</string>
+    <string name="restore">Restaurer</string>
+    <string msgid="6264217191555673260" name="search_menu_title">"Rechercher"</string>
+    <string name="searchview_clear_text_content_description">Effacer le texte</string>
+    <string name="searchview_navigation_content_description">Retour</string>
+    <string name="sel_cat_label">Choisir une catégorie</string>
+    <string name="sel_feed_label">Choisir un feed</string>
+    <string name="select_all_user_feeds">Sélectionner tous les feeds</string>
+    <string name="send_fb_label">Send feedback</string>
+    <string name="set_preferences">Paramètres</string>
+    <string name="show_help_label">Aide</string>
+    <string name="show_label">Description</string>
+    <string name="side_sheet_accessibility_pane_title">Feuille latérale</string>
+    <string name="small_arrow">→</string>
+    <string name="smart_titles">Titres smart</string>
+    <string msgid="6277540029070332960" name="status_bar_notification_info_overflow">"999+"</string>
+    <string msgid="9167775378838880170" name="summary_collapsed_preference_list">"<ns1:g id="CURRENT_ITEMS">%1$s</ns1:g>, <ns1:g id="ADDED_ITEMS">%2$s</ns1:g>"</string>
+    <string name="textColor">Texte normal</string>
+    <string name="tts_play_label">Lire à haute voix</string>
+    <string name="tts_settings_label">Paramètres de la synthèse vocale</string>
+    <string name="use_external_browser">Utiliser un navigateur externe</string>
+    <string msgid="3140233346420563315" name="v7_preference_off">"DÉSACTIVÉ"</string>
+    <string msgid="89551595707643515" name="v7_preference_on">"ACTIVÉ"</string>
+    <string name="widget_error">Aucune nouvelle\ndisponible</string>
+    <string name="widget_loading">Récupérer les nouvelles...</string>
+    <string name="widget_name">News Reader</string>
+    <string name="yes">Oui</string>
+</resources>

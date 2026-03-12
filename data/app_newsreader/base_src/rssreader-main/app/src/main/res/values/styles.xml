@@ -1,0 +1,43 @@
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Base application light theme. -->
+    <style name="Base.Theme.App" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryVariant">@color/primarydark</item>
+        <item name="colorAccent">@color/primary</item>
+        <!--item name="android:windowOptOutEdgeToEdgeEnforcement" tools:ignore="NewApi">true</item><!- workaround per evitare l'applicazione di edge-to-edge -->
+    </style>
+
+    <!-- Application themes. -->
+    <style name="Theme.App" parent="Base.Theme.App">
+        <item name="android:textCursorDrawable">@null</item>
+        <item name="dialogCornerRadius">@dimen/dialogCornerRadius</item>
+        <item name="appBarLayoutStyle">@style/Widget.App.AppBarLayout</item>
+        <item name="toolbarStyle">@style/Widget.App.Toolbar</item>
+        <item name="android:statusBarColor">@color/primarydark</item>
+        <!-- Transparent system bars for edge-to-edge.
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+         -->
+    </style>
+
+    <style name="MyDialogTheme" parent="@style/Theme.Material3.DayNight.Dialog.Alert">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryVariant">@color/primarydark</item>
+        <item name="colorAccent">@color/primary</item>
+        <item name="dialogCornerRadius">@dimen/dialogCornerRadius</item>
+    </style>
+
+    <!--App customized section-->
+    <style name="Widget.App.Toolbar" parent="Widget.Material3.Toolbar">
+        <item name="android:background">@color/primary</item>
+    </style>
+
+    <style name="Widget.App.AppBarLayout" parent="Widget.Material3.AppBarLayout">
+        <item name="android:background">@color/primary</item>
+    </style>
+
+    <style name="PrimaryTextAppearance" parent="TextAppearance.AppCompat.Medium">
+        <item name="android:textColor">?android:textColorPrimary</item>
+    </style>
+
+</resources>

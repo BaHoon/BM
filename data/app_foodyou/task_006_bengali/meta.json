@@ -1,0 +1,8 @@
+{
+  "id": "app_006",
+  "name": "foodyou",
+  "app_package": "com.maksimowiczm.foodyou",  "target_activity": "com.maksimowiczm.foodyou.app.infrastructure.android.MainActivity",  "build_command": "gradlew.bat assembleDebug",
+  "apk_path": "app/build/outputs/apk/debug/app-debug.apk",
+  "prompt": "This is the source code of a healthy diet app. I hope to add **Bengali** as a language option in the app’s language settings.",
+  "eval_script": "test_script.py"
+}

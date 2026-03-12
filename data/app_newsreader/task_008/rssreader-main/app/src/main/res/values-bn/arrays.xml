@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="categories_list">
+        <item>ব্যবসা</item>
+        <item>বিনোদন</item>
+        <item>ফ্যাশন</item>
+        <item>জীবনযাত্রা</item>
+        <item>সঙ্গীত</item>
+        <item>সংবাদ</item>
+        <item>রাজনীতি</item>
+        <item>বিজ্ঞান</item>
+        <item>খেলাধুলা</item>
+        <item>প্রযুক্তি</item>
+    </string-array>
+
+    <string-array name="prefs_theme_names">
+        <item>সাদা</item>
+        <item>হালকা</item>
+        <item>গাঢ়</item>
+        <item>কালো</item>
+    </string-array>
+
+    <string-array name="refreshTimerArray">
+        <item>১৫ মিনিট</item>
+        <item>৩০ মিনিট</item>
+        <item>১ ঘন্টা</item>  
+        <item>৩ ঘন্টা</item>  
+        <item>২৪ ঘন্টা</item>
+    </string-array>
+
+    <string-array name="connectivityArray">
+        <item>Wi-Fi এবং মোবাইল নেটওয়ার্ক</item>
+        <item>শুধুমাত্র Wi-Fi</item>
+    </string-array>
+
+</resources>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    
+    <!-- Simple clear skull for small display -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,3C8,3 5,6 5,9.5c0,2.5 1,4 1.5,5c0.3,0.6 0.5,1.2 0.5,1.8v2.2c0,0.8 0.7,1.5 1.5,1.5h1v-2c0,-0.3 0.2,-0.5 0.5,-0.5s0.5,0.2 0.5,0.5v2h1v-2c0,-0.3 0.2,-0.5 0.5,-0.5s0.5,0.2 0.5,0.5v2h1v-2c0,-0.3 0.2,-0.5 0.5,-0.5s0.5,0.2 0.5,0.5v2h1c0.8,0 1.5,-0.7 1.5,-1.5v-2.2c0,-0.6 0.2,-1.2 0.5,-1.8c0.5,-1 1.5,-2.5 1.5,-5C19,6 16,3 12,3z"/>
+    
+    <!-- Eye sockets -->
+    <path
+        android:fillColor="#4A0E4E"
+        android:pathData="M8.5,9C7.7,9 7,9.8 7,11c0,1.2 0.7,2 1.5,2S10,12.2 10,11C10,9.8 9.3,9 8.5,9z"/>
+    <path
+        android:fillColor="#4A0E4E"
+        android:pathData="M15.5,9c-0.8,0 -1.5,0.8 -1.5,2c0,1.2 0.7,2 1.5,2S17,12.2 17,11C17,9.8 16.3,9 15.5,9z"/>
+    
+    <!-- Nose -->
+    <path
+        android:fillColor="#4A0E4E"
+        android:pathData="M12,13.5l-0.8,1.2h1.6z"/>
+</vector>

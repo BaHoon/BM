@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "livio.rssreader.app-mergeDebugResources-49:/values-sw600dp-land-v13/values-sw600dp-land-v13.xml",
+            "map": [
+                {
+                    "source": "D:\\news9\\rssreader-main\\app\\src\\main\\res\\values-sw600dp-land\\bools.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "48",
+                        "endOffsets": "99"
+                    }
+                }
+            ]
+        }
+    ]
+}

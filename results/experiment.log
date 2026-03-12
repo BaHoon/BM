@@ -1,0 +1,2 @@
+2026-03-12 18:59:39 [ERROR] Exception in run: litellm.InternalServerError: InternalServerError: OpenAIException - read tcp 172.17.0.2:51162->192.168.216.202:7088: read: connection reset by peer (request id: 202603121851248015279610638930)
+2026-03-12 18:59:39 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=1338.3s

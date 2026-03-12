@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Pink background -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#FFB6C1"/>
+        </shape>
+    </item>
+    
+    <!-- Skull pattern using vector drawable - more visible -->
+    
+    <!-- Top Left Skull -->
+    <item
+        android:width="80dp"
+        android:height="80dp"
+        android:top="40dp"
+        android:left="30dp"
+        android:drawable="@drawable/skull_pattern_dark"/>
+    
+    <!-- Top Right Skull -->
+    <item
+        android:width="70dp"
+        android:height="70dp"
+        android:top="100dp"
+        android:right="35dp"
+        android:drawable="@drawable/skull_pattern_dark"/>
+    
+    <!-- Center Large Skull -->
+    <item
+        android:width="100dp"
+        android:height="100dp"
+        android:gravity="center"
+        android:top="-120dp"
+        android:drawable="@drawable/skull_pattern_light"/>
+    
+    <!-- Bottom Left Skull -->
+    <item
+        android:width="75dp"
+        android:height="75dp"
+        android:bottom="110dp"
+        android:left="50dp"
+        android:drawable="@drawable/skull_pattern_dark"/>
+    
+    <!-- Bottom Right Skull -->
+    <item
+        android:width="85dp"
+        android:height="85dp"
+        android:bottom="50dp"
+        android:right="40dp"
+        android:drawable="@drawable/skull_pattern_dark"/>
+    
+    <!-- Additional small skulls for pattern -->
+    <item
+        android:width="50dp"
+        android:height="50dp"
+        android:top="250dp"
+        android:left="120dp"
+        android:drawable="@drawable/skull_pattern_light"/>
+    
+    <item
+        android:width="60dp"
+        android:height="60dp"
+        android:bottom="240dp"
+        android:right="90dp"
+        android:drawable="@drawable/skull_pattern_light"/>
+</layer-list>

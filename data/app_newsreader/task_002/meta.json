@@ -1,0 +1,9 @@
+{
+  "id": "app_002",
+  "name": "newsreader",
+  "app_package": "livio.rssreader",
+  "build_command": "gradlew.bat assembleDebug",
+  "apk_path": "app/build/outputs/apk/debug/app-debug.apk",
+  "prompt": "This is the source code of a news app. I want the theme settings to provide a color-blind mode or a high-contrast mode. The UI should use highly distinguishable colors such as red, yellow, and blue, so users with color vision deficiencies can clearly differentiate interface elements.",
+  "eval_script": "test_script.py"
+}

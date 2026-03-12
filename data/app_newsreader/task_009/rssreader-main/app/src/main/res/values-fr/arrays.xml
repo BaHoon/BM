@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="entries_list_preference">
+        <item translatable="false">Deutsch</item>
+        <item translatable="false">English</item>
+        <item translatable="false">Español</item>
+        <item translatable="false">Français</item>
+        <item translatable="false">Italiano</item>
+        <item translatable="false">한국어</item>
+        <item translatable="false">Português</item>
+        <item translatable="false">Русский</item>
+    </string-array>
+
+    <string-array name="categories_list">
+        <item>Finance</item>
+        <item>Spectacle</item>
+        <item>Mode</item>
+        <item>Mode de vie</item>
+        <item>Musique</item>
+        <item>Nouvelles</item>
+        <item>Politique</item>
+        <item>Science</item>
+        <item>Sport</item>
+        <item>Technologie</item>
+    </string-array>
+
+    <string-array name="prefs_theme_names">
+        <item>Blanc</item>
+        <item>Clair</item>
+        <item>Foncé</item>
+        <item>Noir</item>
+    </string-array>
+
+    <string-array name="refreshTimerArray">
+        <item>15 minutes</item>
+        <item>30 minutes</item>
+        <item>1 heure</item>
+        <item>3 heures</item>
+        <item>24 heures</item>
+    </string-array>
+
+    <string-array name="connectivityArray">
+        <item>Wi-Fi et réseau mobile</item>
+        <item>Wi-Fi uniquement</item>
+    </string-array>
+
+</resources>

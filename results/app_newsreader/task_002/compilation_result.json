@@ -1,0 +1,14 @@
+{
+  "combined_id": "app_newsreader/task_002",
+  "app_name": "app_newsreader",
+  "task_id": "task_002",
+  "success": true,
+  "return_code": 0,
+  "elapsed_time": 32.750977516174316,
+  "apk_exists": true,
+  "apk_path": "D:\\benchmark\\benchmark_root\\workspace\\app_newsreader\\task_002\\app\\build\\outputs\\apk\\debug\\app-debug.apk",
+  "apk_size_mb": 7.21,
+  "timestamp": "2026-03-12T11:13:37.297045",
+  "timeout_used": 900,
+  "timed_out": false
+}

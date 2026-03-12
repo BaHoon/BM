@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="categories_list">
+        <item>Finance</item>
+        <item>Spectacle</item>
+        <item>Mode</item>
+        <item>Mode de vie</item>
+        <item>Musique</item>
+        <item>Nouvelles</item>
+        <item>Politique</item>
+        <item>Science</item>
+        <item>Sport</item>
+        <item>Technologie</item>
+    </string-array>
+    <string-array name="connectivityArray">
+        <item>Wi-Fi et réseau mobile</item>
+        <item>Wi-Fi uniquement</item>
+    </string-array>
+    <string-array name="entries_list_preference">
+        <item translatable="false">Deutsch</item>
+        <item translatable="false">English</item>
+        <item translatable="false">Español</item>
+        <item translatable="false">Français</item>
+        <item translatable="false">Italiano</item>
+        <item translatable="false">한국어</item>
+        <item translatable="false">Português</item>
+        <item translatable="false">Русский</item>
+    </string-array>
+    <string-array name="prefs_theme_names">
+        <item>Blanc</item>
+        <item>Clair</item>
+        <item>Foncé</item>
+        <item>Noir</item>
+    </string-array>
+    <string-array name="refreshTimerArray">
+        <item>15 minutes</item>
+        <item>30 minutes</item>
+        <item>1 heure</item>
+        <item>3 heures</item>
+        <item>24 heures</item>
+    </string-array>
+    <string name="ago">auparavant</string>
+    <string name="app_descrip">Lecteur de nouvelles web simple et rapide</string>
+    <string name="app_name">News Reader</string>
+    <string name="auto">Automatique</string>
+    <string name="backup">Sauvegarder</string>
+    <string name="backup_hint">Il y a des données non sauvegardées, voulez-vous sauvegarder?</string>
+    <string name="color_picker_default_title">Sélectionner une couleur</string>
+    <string name="copy_label">Copier</string>
+    <string name="credits">Credits</string>
+    <string name="credits_text">This application includes the following items:&lt;br>&lt;br>&lt;b>Android Support&lt;/b> libraries distributed under the Apache License 2.0, http://www.apache.org/licenses</string>
+    <string name="default_feed_language_code">fr</string>
+    <string name="delete">Effacer</string>
+    <string name="dialog_title_list_preference">Langue de nouvelles</string>
+    <string name="display">Display</string>
+    <string name="dlg_add_category">Insert new category</string>
+    <string name="dlg_add_feed">Insert new user feed</string>
+    <string name="dlg_cat_description_hint">Short description of the category</string>
+    <string name="dlg_cat_title_hint">Title of the category</string>
+    <string name="dlg_edit_category">Edit category</string>
+    <string name="dlg_edit_feed">Edit user feed</string>
+    <string name="dlg_rss_hint">Address of a valid rss feed</string>
+    <string name="dlg_title_hint">Title of the feed</string>
+    <string name="download_images">Télécharger des images</string>
+    <string name="exit">Quitter</string>
+    <string name="export_label">Export</string>
+    <string name="ext_storage">Stockage Externe</string>
+    <string name="feeds_language">Langue de nouvelles</string>
+    <string name="full_story">Article complet</string>
+    <string name="genericColor">Couleur générique</string>
+    <string name="go_next_label">Article suivant</string>
+    <string name="go_prev_label">Article précédent</string>
+    <string name="hour">heure</string>
+    <string name="hours">heures</string>
+    <string name="hyperlinkColor">Text d\'hyperlien</string>
+    <string name="import_label">Import</string>
+    <string name="import_opml">Importer un fichier OPML</string>
+    <string name="local_storage">Stockage local</string>
+    <string name="max_titles">Max number of headlines</string>
+    <string name="menu_about">About</string>
+    <string name="menu_help">Aide</string>
+    <string name="menu_preferences">Paramètres</string>
+    <string name="menu_publisher">Publisher information</string>
+    <string name="menu_rss_refresh">Actualiser</string>
+    <string name="menu_share_label">Partage</string>
+    <string name="minute">minute</string>
+    <string name="minutes">minutes</string>
+    <string name="missing_title">Please enter a title</string>
+    <string name="missing_url">Please enter a valid rss feed address</string>
+    <string name="move_to_category">Déplacer vers la catégorie</string>
+    <string name="msg_backup_ok">Sauvegarde réussie</string>
+    <string name="msg_bad_answer">Invalid content received from the feed server, error code: </string>
+    <string name="msg_bad_mimetype">Incorrect type of content received from the feed server.</string>
+    <string name="msg_cannot_read_backup">Ne peut lire le support</string>
+    <string name="msg_cannot_read_file">Impossible de lire le fichier</string>
+    <string name="msg_cannot_write_backup">Ne peut pas écrire la sauvegarde</string>
+    <string name="msg_cannot_write_file">Impossible d\'écrire le fichier</string>
+    <string name="msg_connection_problem">Erreur de connexion. S\'il vous plaît vérifier votre connexion à Internet.</string>
+    <string name="msg_corrupt_file">La base de données hors ligne est corrompu. &lt;br>Solution proposée:&lt;br>1) Désinstaller cette application&lt;br>2) Re-installer cette application à partir de Google Play</string>
+    <string name="msg_done">Fait!</string>
+    <string name="msg_error">Erreur</string>
+    <string name="msg_export_ok">Exportation réussie</string>
+    <string name="msg_external_storage_notreadble">Impossible de lire la carte SD</string>
+    <string name="msg_external_storage_notwritable">Impossible d\'écrire sur carte SD</string>
+    <string name="msg_feedback_sent">Feedback sent...</string>
+    <string name="msg_generic_problem">Erreur inattendue.</string>
+    <string name="msg_http_error">Error returned by the feed server: </string>
+    <string name="msg_import_ok">Importation réussie</string>
+    <string name="msg_missing_backup">Le fichier de sauvegarde n\'existe pas</string>
+    <string name="msg_missing_file">Le fichier n\'existe pas</string>
+    <string name="msg_missing_file_manager">Veuillez installer un gestionnaire de fichiers</string>
+    <string name="msg_nothing_to_delete">Rien à supprimer</string>
+    <string name="msg_permission_denied">L\'opération a échoué à cause de permission refusée</string>
+    <string name="msg_publisher">Publisher of current feed: &lt;a href="%2$s">%1$s&lt;/a></string>
+    <string name="msg_restore_ok">Restauration réussie</string>
+    <string name="msg_rss_error">Le flux de nouvelles est incorrect ou le serveur de nouvelles est indisponible.</string>
+    <string name="news_feed">News Feed</string>
+    <string name="news_feed_desc">Sélectionnez le flux des nouvelles</string>
+    <string name="news_settings">News Feeds</string>
+    <string name="nightmode">Mode Nuit</string>
+    <string name="no">Non</string>
+    <string name="noitems_please_select">Aucun élément, veuillez sélectionner au moins un élément</string>
+    <string name="now">maintenant</string>
+    <string name="num_items">Nombre d\'éléments</string>
+    <string name="other">Autre</string>
+    <string name="prefs_fontsize">Police de caractères</string>
+    <string name="prefs_theme">Couleurs</string>
+    <string name="prefs_theme_chooser">Fond</string>
+    <string name="prefs_theme_sub">Changer les couleurs</string>
+    <string name="refresh_timer">Période de mise à jour</string>
+    <string name="reset_default">Défaut</string>
+    <string name="restore">Restaurer</string>
+    <string name="sel_cat_label">Choisir une catégorie</string>
+    <string name="sel_feed_label">Choisir un feed</string>
+    <string name="select_all_user_feeds">Sélectionner tous les feeds</string>
+    <string name="send_fb_label">Send feedback</string>
+    <string name="set_preferences">Paramètres</string>
+    <string name="show_help_label">Aide</string>
+    <string name="show_label">Description</string>
+    <string name="small_arrow">→</string>
+    <string name="smart_titles">Titres smart</string>
+    <string name="textColor">Texte normal</string>
+    <string name="tts_play_label">Lire à haute voix</string>
+    <string name="tts_settings_label">Paramètres de la synthèse vocale</string>
+    <string name="use_external_browser">Utiliser un navigateur externe</string>
+    <string name="widget_error">Aucune nouvelle\ndisponible</string>
+    <string name="widget_loading">Récupérer les nouvelles...</string>
+    <string name="widget_name">News Reader</string>
+    <string name="yes">Oui</string>
+</resources>

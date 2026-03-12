@@ -1,0 +1,45 @@
+name: Bug Report
+
+description: Report an issue with the application.
+
+title: "[Bug]: "
+
+labels: ["bug", "triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug! Please fill out the details below.
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Describe the bug
+      description: Provide a clear and concise description of the issue.
+      placeholder: Explain the problem you encountered.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: Describe what you expected to happen.
+      placeholder: The app should...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior
+      description: Describe what actually happened.
+      placeholder: Instead, the app...
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add screenshots, videos, or other details that might help.
+      placeholder: Provide any extra information.

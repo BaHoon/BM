@@ -1,0 +1,14 @@
+{
+  "combined_id": "app_foodyou/task_005_notice",
+  "app_name": "app_foodyou",
+  "task_id": "task_005_notice",
+  "success": true,
+  "return_code": 0,
+  "elapsed_time": 27.466086387634277,
+  "apk_exists": true,
+  "apk_path": "D:\\benchmark\\benchmark_root\\workspace\\app_foodyou\\task_005_notice\\app\\build\\outputs\\apk\\debug\\app-debug.apk",
+  "apk_size_mb": 89.15,
+  "timestamp": "2026-03-07T15:05:28.428511",
+  "timeout_used": 900,
+  "timed_out": false
+}
