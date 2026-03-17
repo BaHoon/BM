@@ -34,8 +34,21 @@ _DEFAULT_RETRY_BASE_SLEEP = 2.0
 _TONGJI_BASE_URL = "https://llmapi.tongji.edu.cn/v1"
 _TONGJI_API_KEY  = "BP8ZCuCm6fQ9Sptm4f8e3d307cB94f4cB4A5F1A6964a6657"
 
+
 # 凡是 model 名以此前缀开头的，都路由到同济端点
 _TONGJI_MODEL_PREFIX = "tongji/"
+
+
+def _resolve_tongji_model(model: str) -> Optional[str]:
+    """返回应通过同济 OpenAI-Compatible 端点访问的真实模型名。"""
+    if model.startswith(_TONGJI_MODEL_PREFIX):
+        return model[len(_TONGJI_MODEL_PREFIX):]
+
+    # 默认将 OpenAI 兼容模型也路由到同济 base_url。
+    if "/" not in model and model.startswith(("gpt-", "o1", "o3", "o4", "DeepSeek", "deepseek")):
+        return model
+
+    return None
 
 # --------------------------------------------------------------------------- #
 #  预定义模型别名（便于 CLI 传参）
@@ -49,7 +62,7 @@ MODEL_ALIASES: dict[str, str] = {
     "gemini-flash":    "gemini/gemini-2.5-flash",
     "gemini-pro":      "gemini/gemini-2.5-pro",
     "gemini":          "gemini/gemini-2.5-flash",
-    # 同济 DeepSeek 端点
+    #   # 同济 DeepSeek 端点
     "deepseek":        "tongji/DeepSeek-R1",
     "deepseek-r1":     "tongji/DeepSeek-R1",
     "DeepSeek-R1":     "tongji/DeepSeek-R1",
@@ -99,7 +112,7 @@ STRATEGY_SYSTEM_PROMPTS: dict[str, str] = {
 class LLMClient:
     """统一 LLM 调用客户端，支持多模态（图片）输入用于 Feedback Loop。"""
 
-    def __init__(self, model: str = "gemini/gemini-2.5-flash", strategy: str = "ReAct"):
+    def __init__(self, model: str = "deepseek-r1", strategy: str = "ReAct"):
         """
         Args:
             model:    模型名称，可用 MODEL_ALIASES 中的简写。
@@ -154,12 +167,11 @@ class LLMClient:
             "temperature": temperature,
             "max_tokens":  max_tokens,
         }
+        tongji_model = _resolve_tongji_model(self.model)
         if self.model.startswith("gemini"):
             call_params["custom_llm_provider"] = "gemini"
-        elif self.model.startswith(_TONGJI_MODEL_PREFIX):
-            # 同济 OpenAI-Compatible 端点：去掉前缀后作为真正的 model 名
-            real_model = self.model[len(_TONGJI_MODEL_PREFIX):]
-            call_params["model"]    = f"openai/{real_model}"
+        elif tongji_model:
+            call_params["model"]    = f"openai/{tongji_model}"
             call_params["api_base"] = _TONGJI_BASE_URL
             call_params["api_key"]  = _TONGJI_API_KEY
 
@@ -211,11 +223,11 @@ class LLMClient:
             "temperature": temperature,
             "max_tokens":  512,
         }
+        tongji_model = _resolve_tongji_model(self.model)
         if self.model.startswith("gemini"):
             call_params["custom_llm_provider"] = "gemini"
-        elif self.model.startswith(_TONGJI_MODEL_PREFIX):
-            real_model = self.model[len(_TONGJI_MODEL_PREFIX):]
-            call_params["model"]    = f"openai/{real_model}"
+        elif tongji_model:
+            call_params["model"]    = f"openai/{tongji_model}"
             call_params["api_base"] = _TONGJI_BASE_URL
             call_params["api_key"]  = _TONGJI_API_KEY
 
@@ -270,6 +282,9 @@ class LLMClient:
 
     def _validate_api_keys(self):
         """启动时检查必要的 API Key 是否已设置，仅打印警告。"""
+        if _resolve_tongji_model(self.model):
+            return
+
         checks = {
             "gpt":    ("OPENAI_API_KEY",  "https://platform.openai.com/api-keys"),
             "claude": ("ANTHROPIC_API_KEY", "https://console.anthropic.com/"),

@@ -451,7 +451,7 @@ def parse_args():
     )
     parser.add_argument("--top-k",       type=int, default=5)
     parser.add_argument("--vlm-model",   default="gpt-4o",
-                        help="VLM 视觉评分模型（默认 gpt-4o）")
+                        help="VLM 视觉评分模型（默认 gpt-4o，经 Tongji base_url 路由）")
     parser.add_argument("--feedback-loop",  action="store_true",
                         help="开启 RQ5 反馈闭环（最多 feedback-rounds 次自修正）")
     parser.add_argument("--feedback-rounds", type=int, default=2)

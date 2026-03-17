@@ -322,8 +322,8 @@ def main():
     parser = argparse.ArgumentParser(description="Agent_Runner — 实验核心执行脚本")
     parser.add_argument("app_name",  help="应用名称，如 app_foodyou")
     parser.add_argument("task_id",   help="任务ID，如 task_001_theme")
-    parser.add_argument("--model",    default="gemini/gemini-2.5-flash",
-                        help="底座模型（默认 gemini/gemini-2.5-flash）")
+    parser.add_argument("--model",    default="deepseek-r1",
+                        help="底座模型（默认 deepseek-r1，经 Tongji base_url 路由）")
     parser.add_argument("--strategy", default="ReAct",
                         choices=["direct", "ReAct", "tool_planning"],
                         help="Agent 策略（默认 ReAct）")

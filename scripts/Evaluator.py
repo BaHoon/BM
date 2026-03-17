@@ -332,7 +332,8 @@ def main():
     parser.add_argument("task_id")
     parser.add_argument("--apk",          default=None, help="APK 文件路径")
     parser.add_argument("--screenshots",  default=None, nargs="+", help="截图路径列表")
-    parser.add_argument("--vlm-model",    default="gpt-4o")
+    parser.add_argument("--vlm-model",    default="gpt-4o",
+                        help="VLM 模型（默认 gpt-4o，经 Tongji base_url 路由）")
     args = parser.parse_args()
 
     ev = Evaluator(vlm_model=args.vlm_model)
