@@ -1,2 +1,11 @@
 2026-03-12 18:59:39 [ERROR] Exception in run: litellm.InternalServerError: InternalServerError: OpenAIException - read tcp 172.17.0.2:51162->192.168.216.202:7088: read: connection reset by peer (request id: 202603121851248015279610638930)
 2026-03-12 18:59:39 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=1338.3s
+2026-03-16 19:44:18 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=242.1s
+2026-03-17 10:21:33 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=376.2s
+2026-03-17 11:07:23 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=2262.4s
+2026-03-17 11:23:19 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=248.0s
+2026-03-17 11:35:12 [ERROR] Exception in run: 
+2026-03-17 11:35:12 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=474.8s
+2026-03-17 13:30:44 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ✓ CSR+VSM  latency=670.0s
+2026-03-17 13:43:12 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=479.2s
+2026-03-17 13:51:29 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=14.4s

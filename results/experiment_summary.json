@@ -1,10 +1,5 @@
 {
-  "last_updated": "2026-03-17T05:51:29.444962+00:00",
   "total_runs": 1,
-  "csr_pass": 0,
-  "vsm_pass": 0,
-  "csr_rate": 0.0,
-  "vsm_rate": 0.0,
   "by_model": {
     "deepseek-r1": {
       "total": 1,
@@ -22,5 +17,8 @@
       "csr_rate": 0.0,
       "vsm_rate": 0.0
     }
+  },
+  "error_distribution": {
+    "llm_api_error": 1
   }
 }
