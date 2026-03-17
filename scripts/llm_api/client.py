@@ -28,6 +28,29 @@ litellm.set_verbose = False
 _DEFAULT_RETRY_TIMES = 3
 _DEFAULT_RETRY_BASE_SLEEP = 2.0
 
+
+def _load_repo_env_file() -> None:
+    """从仓库根目录加载 .env（仅填充未设置的环境变量）。"""
+    env_path = Path(__file__).resolve().parents[2] / ".env"
+    if not env_path.exists():
+        return
+
+    try:
+        for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = value
+    except Exception as exc:
+        print(f"[LLMClient] warning: failed to load .env: {exc}")
+
+
+_load_repo_env_file()
+
 # --------------------------------------------------------------------------- #
 #  同济 OpenAI-Compatible 端点配置
 # --------------------------------------------------------------------------- #
