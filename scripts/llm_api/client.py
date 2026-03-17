@@ -31,8 +31,14 @@ _DEFAULT_RETRY_BASE_SLEEP = 2.0
 # --------------------------------------------------------------------------- #
 #  同济 OpenAI-Compatible 端点配置
 # --------------------------------------------------------------------------- #
-_TONGJI_BASE_URL = "https://llmapi.tongji.edu.cn/v1"
-_TONGJI_API_KEY  = "BP8ZCuCm6fQ9Sptm4f8e3d307cB94f4cB4A5F1A6964a6657"
+_TONGJI_BASE_URL = os.getenv("TONGJI_BASE_URL", "https://llmapi.tongji.edu.cn/v1")
+_TONGJI_API_KEY  = os.getenv("TONGJI_API_KEY")
+
+if not _TONGJI_API_KEY:
+    raise RuntimeError(
+        "TONGJI_API_KEY environment variable not set. "
+        "Please export TONGJI_API_KEY=your_api_key before running."
+    )
 
 
 # 凡是 model 名以此前缀开头的，都路由到同济端点

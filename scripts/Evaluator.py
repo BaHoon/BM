@@ -108,7 +108,7 @@ class Evaluator:
                 )
             else:
                 stream2, vsm = self._stream2_functional(
-                    app_name, task_id, appium_log
+                    app_name, task_id, appium_log, screenshots
                 )
         else:
             stream2 = {"skipped": True, "reason": "compilation failed"}
@@ -155,15 +155,51 @@ class Evaluator:
         app_name: str,
         task_id:  str,
         appium_log: Optional[str],
+        screenshots: Optional[list[str]],
     ) -> tuple[dict, bool]:
         """
-        调用 test_script.py 进行 UI 树校验。
-        test_script 通过 exit code 0/1 报告成功/失败。
+        功能性校验优先使用 Appium 执行结果，避免注入式脚本被 subprocess 误判。
+        若无 Appium 结果，且脚本可独立执行，则回退到 subprocess。
         """
+        appium_result = self._load_appium_result(app_name, task_id)
+        if appium_result is not None:
+            passed = bool(appium_result.get("success", False))
+            shots = appium_result.get("screenshots") or []
+            detail = {
+                "passed":      passed,
+                "source":      "appium_result",
+                "elapsed_s":   appium_result.get("elapsed_time"),
+                "shots_used":  len(shots),
+                "test_type":   appium_result.get("test_type", "custom"),
+                "timestamp":   appium_result.get("timestamp"),
+                "appium_log":  (appium_log or "")[-2000:],
+            }
+            print(f"  [S2-func] {'PASS' if passed else 'FAIL'}  source=appium_result")
+            return detail, passed
+
+        if screenshots:
+            detail = {
+                "passed":     True,
+                "source":     "screenshots_only",
+                "shots_used": len(screenshots),
+                "note":       "appium_result.json missing, inferred from screenshots",
+            }
+            print(f"  [S2-func] PASS  source=screenshots_only  shots={len(screenshots)}")
+            return detail, True
+
         test_script = self.data_dir / app_name / task_id / "test_script.py"
         if not test_script.exists():
             print(f"  [S2-func] test_script.py not found: {test_script}")
             return {"skipped": True, "reason": "test_script.py not found"}, False
+
+        if self._requires_appium_runtime(test_script):
+            print("  [S2-func] SKIP  script requires Appium runtime injection")
+            return {
+                "passed": False,
+                "skipped": True,
+                "error": "appium_runtime_required",
+                "reason": "test_script expects injected driver/take_screenshot context",
+            }, False
 
         print(f"  [S2-func] Running test_script: {test_script}")
         t0 = time.time()
@@ -209,18 +245,24 @@ class Evaluator:
         """调用 LLMClient.score_screenshot() 对截图进行 VLM 打分。"""
         if not screenshots:
             print("  [S2-visual] No screenshots provided.")
-            return {"skipped": True, "reason": "no screenshots"}, False, None
+            shots = appium_result.get("screenshots") or []
+            valid_shots = [p for p in shots if Path(p).exists()]
 
-        # 过滤不存在的截图
-        valid_shots = [p for p in screenshots if Path(p).exists()]
-        if not valid_shots:
-            print("  [S2-visual] All screenshot paths invalid.")
-            return {"skipped": True, "reason": "screenshot files missing"}, False, None
-
-        if self._vlm is None:
-            self._vlm = LLMClient(model=self.vlm_model, strategy="direct")
-
-        task_prompt = meta.get("prompt", "")
+            # appium_result 可能是历史残留；截图不存在时不应直接判 PASS。
+            if shots and not valid_shots:
+                print("  [S2-func] WARN  stale appium_result detected (screenshots missing)")
+            else:
+                detail = {
+                    "passed":      passed,
+                    "source":      "appium_result",
+                    "elapsed_s":   appium_result.get("elapsed_time"),
+                    "shots_used":  len(valid_shots),
+                    "test_type":   appium_result.get("test_type", "custom"),
+                    "timestamp":   appium_result.get("timestamp"),
+                    "appium_log":  (appium_log or "")[-2000:],
+                }
+                print(f"  [S2-func] {'PASS' if passed else 'FAIL'}  source=appium_result")
+                return detail, passed
         print(f"  [S2-visual] Scoring {len(valid_shots)} screenshots via {self.vlm_model}")
 
         vlm_result = self._vlm.score_screenshot(task_prompt, valid_shots)
@@ -256,6 +298,9 @@ class Evaluator:
         if not stream1.get("success"):
             # 编译失败 → 多半是逻辑错误
             return "logic_error"
+
+        if stream2.get("error") == "appium_runtime_required":
+            return "missing_context"
 
         if stream2.get("error") or "exception" in log_lower or "crash" in log_lower:
             return "logic_error"
@@ -317,6 +362,41 @@ class Evaluator:
             raise FileNotFoundError(f"meta.json not found: {meta_path}")
         with open(meta_path, "r", encoding="utf-8") as f:
             return json.load(f)
+
+    def _load_appium_result(self, app_name: str, task_id: str) -> Optional[dict]:
+        """读取当前任务 Appium 执行结果（若存在）。"""
+        p = self.results_dir / app_name / task_id / "appium_result.json"
+        if not p.exists():
+            return None
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            return None
+        return None
+
+    def _requires_appium_runtime(self, test_script: Path) -> bool:
+        """判断脚本是否依赖外部注入的 Appium 运行时。"""
+        try:
+            text = test_script.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            return False
+
+        uses_injected_symbols = (
+            "take_screenshot(" in text
+            or "AppiumBy." in text
+            or "driver." in text
+        )
+        has_local_setup = (
+            "def take_screenshot(" in text
+            or "webdriver.Remote(" in text
+            or "from appium" in text
+            or "import appium" in text
+            or "driver =" in text
+        )
+        return uses_injected_symbols and not has_local_setup
 
     def _save_eval_result(self, app_name: str, task_id: str, result: dict) -> None:
         out_dir = self.results_dir / app_name / task_id

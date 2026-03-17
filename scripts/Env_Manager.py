@@ -29,7 +29,7 @@ class EnvManager:
     """工作空间生命周期管理器：重置 → 编译 → APK 路径查询。"""
 
     # Gradle 编译命令（Windows vs Unix）
-    _GRADLE_CMD_WIN  = "gradlew.bat assembleDebug"
+    _GRADLE_CMD_WIN  = ".\\gradlew.bat assembleDebug"
     _GRADLE_CMD_UNIX = "./gradlew assembleDebug"
 
     # 忽略复制的目录/文件（缓存、构建产物）
@@ -112,14 +112,15 @@ class EnvManager:
                 f"Workspace not found: {workspace_path}. Run reset_workspace() first."
             )
 
+        project_root = self._resolve_gradle_project_root(workspace_path)
         cmd = self._GRADLE_CMD_WIN if os.name == "nt" else self._GRADLE_CMD_UNIX
-        print(f"[EnvManager] Building: {cmd}  (cwd={workspace_path})")
+        print(f"[EnvManager] Building: {cmd}  (cwd={project_root})")
 
         t0 = time.time()
         try:
             proc = subprocess.run(
                 cmd,
-                cwd=workspace_path,
+                cwd=project_root,
                 shell=True,
                 capture_output=True,
                 text=True,
@@ -179,11 +180,12 @@ class EnvManager:
 
     def _stop_gradle_daemon(self, workspace_path: Path) -> None:
         """尝试停止 Gradle daemon，防止文件锁阻碍删除。"""
-        cmd = "gradlew.bat --stop" if os.name == "nt" else "./gradlew --stop"
+        project_root = self._resolve_gradle_project_root(workspace_path)
+        cmd = ".\\gradlew.bat --stop" if os.name == "nt" else "./gradlew --stop"
         try:
             subprocess.run(
                 cmd,
-                cwd=workspace_path,
+                cwd=project_root,
                 shell=True,
                 capture_output=True,
                 timeout=30,
@@ -191,6 +193,21 @@ class EnvManager:
             time.sleep(1)
         except Exception:
             pass
+
+    def _resolve_gradle_project_root(self, workspace_path: Path) -> Path:
+        """定位真实 Gradle 根目录（包含 gradlew/gradlew.bat）。"""
+        wrapper = "gradlew.bat" if os.name == "nt" else "gradlew"
+
+        if (workspace_path / wrapper).exists():
+            return workspace_path
+
+        # 兼容 base_src 下再嵌套一层项目目录（如 rssreader-main）
+        candidates = list(workspace_path.glob(f"*/{wrapper}"))
+        if candidates:
+            return candidates[0].parent
+
+        # 找不到时退回原路径，保持原有行为（后续由 subprocess 报错）
+        return workspace_path
 
     def _check_apk(
         self, app_name: str, task_id: str
@@ -202,10 +219,27 @@ class EnvManager:
         try:
             meta = self._load_meta(app_name, task_id)
             rel  = meta.get("apk_path", "app/build/outputs/apk/debug/app-debug.apk")
-            full = self.workspace_dir / app_name / task_id / rel
+            workspace_task = self.workspace_dir / app_name / task_id
+
+            # 1) 兼容既有配置：相对 task 根目录
+            full = workspace_task / rel
             if full.exists():
                 size_mb = round(full.stat().st_size / 1024 / 1024, 2)
                 return full, True, size_mb
+
+            # 2) 兼容嵌套工程：相对真实 Gradle 根目录
+            project_root = self._resolve_gradle_project_root(workspace_task)
+            nested_full = project_root / rel
+            if nested_full.exists():
+                size_mb = round(nested_full.stat().st_size / 1024 / 1024, 2)
+                return nested_full, True, size_mb
+
+            # 3) 兜底：扫描常见产物名
+            candidates = list(workspace_task.glob("**/app/build/outputs/apk/debug/app-debug.apk"))
+            if candidates:
+                apk = candidates[0]
+                size_mb = round(apk.stat().st_size / 1024 / 1024, 2)
+                return apk, True, size_mb
         except Exception:
             pass
         return None, False, 0.0
