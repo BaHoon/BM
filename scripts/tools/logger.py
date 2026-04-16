@@ -46,6 +46,11 @@ class ExperimentRecord:
     csr:              Optional[bool] = None        # Compilation Success Rate
     vsm:              Optional[bool] = None        # Visual / Script Match
     vlm_score:        Optional[int]  = None        # VLM 打分 0-10（仅视觉任务）
+    l1_score:         Optional[int]  = None
+    l2_score:         Optional[int]  = None
+    l3_score:         Optional[int]  = None
+    total_score:      Optional[int]  = None
+    recall:           Optional[float]= None
     latency_s:        float          = 0.0         # 端到端耗时（秒）
     error_category:   Optional[str]  = None        # "logic_error" | "missing_context" | "vague_req" | None
     retrieved_files:  list           = field(default_factory=list)

@@ -25,6 +25,8 @@ from appium.webdriver.common.by import AppiumBy
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+from tools.task_config import find_task_config
+
 
 class AppiumRunner:
     """Appium 自动化测试执行器。"""
@@ -100,6 +102,7 @@ class AppiumRunner:
         t0 = time.time()
         screenshots = []
         log = ""
+        ui_xml_path = None
 
         try:
             # 步骤 1: 验证 ADB 设备
@@ -113,22 +116,30 @@ class AppiumRunner:
                     "timestamp": datetime.now().isoformat(),
                 }
 
+            test_script_path = self.data_dir / app_name / task_id / "test_script.py"
+
+            # 新结构：若 test_script.py 不存在，则回退到统一 navigation 配置
+            if not test_script_path.exists():
+                found = find_task_config(self.data_dir, app_name=app_name, task_id=task_id)
+                if found:
+                    task_key, task_cfg = found
+                    task_cfg = dict(task_cfg)
+                    task_cfg.setdefault("task_key", task_key)
+                    return self.run_navigation_test(task_cfg, apk_path, timeout=timeout)
+                return {
+                    "success": False,
+                    "elapsed_time": round(time.time() - t0, 2),
+                    "screenshots": [],
+                    "log": f"test_script not found and no unified config found: {test_script_path}",
+                    "test_type": "custom",
+                    "timestamp": datetime.now().isoformat(),
+                }
+
             # 步骤 2: 启动应用（通过 Appium）
             self.driver = self._create_driver(apk_path, app_name, task_id)
             print(f"[AppiumRunner] Application started: {app_name}")
 
             # 步骤 3: 加载并执行 test_script
-            test_script_path = self.data_dir / app_name / task_id / "test_script.py"
-            if not test_script_path.exists():
-                self.driver.quit()
-                return {
-                    "success": False,
-                    "elapsed_time": round(time.time() - t0, 2),
-                    "screenshots": [],
-                    "log": f"test_script not found: {test_script_path}",
-                    "test_type": "custom",
-                    "timestamp": datetime.now().isoformat(),
-                }
 
             # 创建截图保存目录
             screenshot_dir = self.results_dir / app_name / task_id / "screenshots"
@@ -170,29 +181,171 @@ class AppiumRunner:
             exec(test_code, globals_dict)
             print(f"[AppiumRunner] test_script completed successfully")
 
+            ui_xml_path = self._dump_current_ui_xml(app_name, task_id)
+
             elapsed = round(time.time() - t0, 2)
-            return {
+            result = {
                 "success": True,
                 "elapsed_time": elapsed,
                 "screenshots": screenshots,
                 "log": f"Test passed. {len(screenshots)} screenshots captured.",
                 "test_type": "custom",
+                "ui_xml_path": ui_xml_path,
                 "timestamp": datetime.now().isoformat(),
             }
+            self._save_appium_result(app_name, task_id, result)
+            return result
 
         except Exception as exc:
             elapsed = round(time.time() - t0, 2)
             error_msg = f"{type(exc).__name__}: {str(exc)}"
             print(f"[AppiumRunner] Test failed: {error_msg}")
-            return {
+            result = {
                 "success": False,
                 "elapsed_time": elapsed,
                 "screenshots": screenshots,
                 "log": error_msg,
                 "test_type": "custom",
+                "ui_xml_path": ui_xml_path,
                 "timestamp": datetime.now().isoformat(),
             }
+            self._save_appium_result(app_name, task_id, result)
+            return result
 
+        finally:
+            if self.driver:
+                try:
+                    self.driver.quit()
+                except Exception:
+                    pass
+
+    def run_navigation_test(self, task_cfg: Dict, apk_path: str, timeout: int = 300) -> Dict:
+        """
+        通用导航测试执行器：按 navigation_steps 执行，最后做 target_ui_verification。
+        """
+        t0 = time.time()
+        screenshots: List[str] = []
+        task_id = task_cfg.get("task_id", "unknown_task")
+        app_name = task_cfg.get("app_name", "app_foodyou")
+        task_key = task_cfg.get("task_key", task_id)
+        package_name = task_cfg.get("app_package") or "com.example.app"
+        target_activity = task_cfg.get("target_activity")
+
+        try:
+            if not self._verify_adb_device():
+                return {
+                    "success": False,
+                    "elapsed_time": round(time.time() - t0, 2),
+                    "screenshots": [],
+                    "log": "ADB device not available",
+                    "test_type": "navigation_config",
+                    "timestamp": datetime.now().isoformat(),
+                }
+
+            self.driver = self._create_driver_with_package(
+                apk_path=apk_path,
+                package_name=package_name,
+                target_activity=target_activity,
+            )
+
+            screenshot_dir = self.results_dir / app_name / task_id / "screenshots"
+            screenshot_dir.mkdir(parents=True, exist_ok=True)
+
+            def take_screenshot(name: str) -> str:
+                ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                file_name = f"{name}_{ts}.png"
+                file_path = screenshot_dir / file_name
+                self.driver.save_screenshot(str(file_path))
+                screenshots.append(str(file_path))
+                return str(file_path)
+
+            take_screenshot("00_launched")
+
+            steps = task_cfg.get("navigation_steps", []) or []
+            for idx, step in enumerate(steps, start=1):
+                action = str(step.get("action", "")).strip().lower()
+                optional = bool(step.get("optional", action.endswith("_optional")))
+                xpath = step.get("xpath")
+
+                if action in {"click", "click_optional"}:
+                    element = self._find_element_by_xpath(xpath, timeout_s=8)
+                    if element is None:
+                        if optional:
+                            continue
+                        raise RuntimeError(f"step {idx} click failed: {xpath}")
+                    element.click()
+                    take_screenshot(f"{idx:02d}_click")
+                    continue
+
+                if action == "input":
+                    element = self._find_element_by_xpath(xpath, timeout_s=8)
+                    if element is None:
+                        if optional:
+                            continue
+                        raise RuntimeError(f"step {idx} input failed: {xpath}")
+                    element.clear()
+                    element.send_keys(str(step.get("text", "")))
+                    take_screenshot(f"{idx:02d}_input")
+                    continue
+
+                if action == "swipe":
+                    repeat = int(step.get("repeat", 1))
+                    sx = int(step.get("start_x", 500))
+                    sy = int(step.get("start_y", 1500))
+                    ex = int(step.get("end_x", 500))
+                    ey = int(step.get("end_y", 500))
+                    duration_ms = int(step.get("duration_ms", 400))
+                    for _ in range(max(1, repeat)):
+                        self.driver.swipe(sx, sy, ex, ey, duration_ms)
+                    take_screenshot(f"{idx:02d}_swipe")
+                    continue
+
+                if action == "sleep":
+                    time.sleep(float(step.get("seconds", 1.0)))
+                    continue
+
+                if optional:
+                    continue
+                raise RuntimeError(f"Unsupported action at step {idx}: {action}")
+
+            verify = task_cfg.get("target_ui_verification", {}) or {}
+            verify_type = str(verify.get("type", "")).lower()
+            verify_action = str(verify.get("action", "exists")).lower()
+            verify_value = verify.get("value")
+
+            passed = False
+            if verify_type == "xpath" and verify_action == "exists" and verify_value:
+                passed = self._find_element_by_xpath(str(verify_value), timeout_s=8) is not None
+
+            ui_xml_path = self._dump_current_ui_xml(app_name, task_id)
+
+            take_screenshot("99_verification")
+            elapsed = round(time.time() - t0, 2)
+            result = {
+                "success": bool(passed),
+                "elapsed_time": elapsed,
+                "screenshots": screenshots,
+                "log": f"navigation config={task_key}, passed={passed}",
+                "test_type": "navigation_config",
+                "ui_xml_path": ui_xml_path,
+                "timestamp": datetime.now().isoformat(),
+            }
+            self._save_appium_result(app_name, task_id, result)
+            return result
+
+        except Exception as exc:
+            elapsed = round(time.time() - t0, 2)
+            result = {
+                "success": False,
+                "elapsed_time": elapsed,
+                "screenshots": screenshots,
+                "log": f"{type(exc).__name__}: {exc}",
+                "test_type": "navigation_config",
+                "ui_xml_path": None,
+                "timestamp": datetime.now().isoformat(),
+            }
+            self._save_appium_result(app_name, task_id, result)
+            return result
         finally:
             if self.driver:
                 try:
@@ -276,6 +429,12 @@ class AppiumRunner:
                 except Exception as e:
                     print(f"[AppiumRunner] Warning: Failed to read meta.json: {e}")
 
+            if not package_name:
+                found = find_task_config(self.data_dir, app_name=app_name, task_id=task_id)
+                if found:
+                    _, cfg = found
+                    package_name = cfg.get("app_package")
+
         # 备用包名映射（如果 meta.json 不可用）
         if not package_name:
             package_map = {
@@ -287,13 +446,25 @@ class AppiumRunner:
         
         print(f"[AppiumRunner] Package name: {package_name}")
 
+        return self._create_driver_with_package(
+            apk_path=apk_path,
+            package_name=package_name,
+            target_activity=(f"{package_name}.MainActivity"),
+        )
+
+    def _create_driver_with_package(
+        self,
+        apk_path: str,
+        package_name: str,
+        target_activity: Optional[str] = None,
+    ) -> webdriver.Remote:
         # 构建 Desired Capabilities
         options = AppiumOptions()
         options.platform_name = "Android"
         options.device_name = self.ADB_DEVICE
         options.app = apk_path
         options.app_package = package_name
-        options.app_activity = f"{package_name}.MainActivity"
+        options.app_activity = target_activity or f"{package_name}.MainActivity"
         options.automation_name = "UiAutomator2"
         options.auto_grant_permissions = True
         options.new_command_timeout = 300
@@ -304,6 +475,39 @@ class AppiumRunner:
         driver.implicitly_wait(10)
 
         return driver
+
+    def _find_element_by_xpath(self, xpath: Optional[str], timeout_s: int = 5):
+        if not xpath:
+            return None
+        end_t = time.time() + timeout_s
+        while time.time() < end_t:
+            try:
+                return self.driver.find_element(AppiumBy.XPATH, xpath)
+            except Exception:
+                time.sleep(0.3)
+        return None
+
+    def _dump_current_ui_xml(self, app_name: str, task_id: str) -> Optional[str]:
+        if not self.driver:
+            return None
+        try:
+            out_dir = self.results_dir / app_name / task_id
+            out_dir.mkdir(parents=True, exist_ok=True)
+            out_path = out_dir / "ui_tree.xml"
+            out_path.write_text(self.driver.page_source or "", encoding="utf-8")
+            return str(out_path)
+        except Exception:
+            return None
+
+    def _save_appium_result(self, app_name: str, task_id: str, result: Dict) -> None:
+        try:
+            out_dir = self.results_dir / app_name / task_id
+            out_dir.mkdir(parents=True, exist_ok=True)
+            (out_dir / "appium_result.json").write_text(
+                json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+        except Exception:
+            pass
 
     def __del__(self):
         """清理：关闭驱动和 Appium 进程。"""

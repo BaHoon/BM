@@ -7,6 +7,7 @@ Appium-Python-Client>=4.0.0
 # Optional retriever backend (scripts/tools/retriever.py, strategy=tfidf)
 numpy>=1.24.0
 scikit-learn>=1.3.0
+lxml>=5.2.0
 
 # Data utility script under FoodYou dev tools
 pandas>=2.0.0
