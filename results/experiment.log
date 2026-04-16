@@ -9,3 +9,79 @@
 2026-03-17 13:30:44 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ✓ CSR+VSM  latency=670.0s
 2026-03-17 13:43:12 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=479.2s
 2026-03-17 13:51:29 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=14.4s
+2026-03-17 15:06:55 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=1064.6s
+2026-03-17 15:47:03 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=252.6s
+2026-03-17 16:09:07 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=1096.2s
+2026-03-17 16:28:47 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=577.1s
+2026-03-17 16:41:44 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=618.2s
+2026-03-23 22:37:48 [INFO] [app_foodyou/task_001_theme] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=183.4s
+2026-03-23 22:56:42 [ERROR] Exception in run: 'str' object has no attribute 'decode'
+2026-03-23 22:56:42 [INFO] [app_foodyou/task_003_delete] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=1134.9s
+2026-03-23 23:05:15 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=512.1s
+2026-03-23 23:16:18 [INFO] [app_foodyou/task_006_bengali] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=663.5s
+2026-03-23 23:24:42 [INFO] [app_foodyou/task_007_share] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=503.9s
+2026-03-23 23:33:18 [INFO] [app_foodyou/task_008_korea] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=515.6s
+2026-03-23 23:40:27 [ERROR] Exception in run: 
+2026-03-23 23:40:27 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=429.1s
+2026-03-23 23:44:32 [INFO] [app_foodyou/task_001_theme] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=139.9s
+2026-03-24 00:01:02 [INFO] [app_foodyou/task_003_delete] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=989.5s
+2026-03-24 00:10:00 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=538.8s
+2026-03-24 00:24:03 [ERROR] Exception in run: 
+2026-03-24 00:24:03 [INFO] [app_foodyou/task_006_bengali] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=842.4s
+2026-03-24 10:13:27 [INFO] [app_foodyou/task_001_theme] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=376.5s
+2026-03-24 10:18:26 [ERROR] Exception in run: 
+2026-03-24 10:18:26 [INFO] [app_foodyou/task_003_delete] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=298.6s
+2026-03-24 10:36:19 [INFO] [app_foodyou/task_001_theme] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=829.5s
+2026-03-24 10:43:11 [INFO] [app_foodyou/task_003_delete] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=412.2s
+2026-03-24 10:51:43 [ERROR] Exception in run: 
+2026-03-24 10:51:43 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=511.9s
+2026-03-24 10:54:38 [INFO] [app_foodyou/task_001_theme] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=3.5s
+2026-03-24 11:02:36 [INFO] [app_foodyou/task_003_delete] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=478.1s
+2026-03-24 11:08:36 [ERROR] Exception in run: 
+2026-03-24 11:08:36 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=360.0s
+2026-03-24 11:18:29 [INFO] [app_foodyou/task_001_theme] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=333.3s
+2026-03-24 11:18:34 [INFO] [app_foodyou/task_003_delete] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=4.7s
+2026-03-25 22:17:51 [INFO] [app_foodyou/task_001_theme] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=27.4s
+2026-03-25 22:27:11 [INFO] [app_foodyou/task_003_delete] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=559.5s
+2026-03-25 22:37:44 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=633.3s
+2026-03-25 22:42:38 [INFO] [app_foodyou/task_006_bengali] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=294.4s
+2026-03-25 23:00:04 [INFO] [app_foodyou/task_007_share] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=1045.4s
+2026-03-25 23:02:09 [INFO] [app_foodyou/task_008_korea] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=125.4s
+2026-03-25 23:11:17 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=547.3s
+2026-03-25 23:32:02 [INFO] [app_newsreader/task_002] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=1245.1s
+2026-03-26 10:21:11 [INFO] [app_foodyou/task_001_theme] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=159.7s
+2026-03-26 10:29:51 [INFO] [app_foodyou/task_003_delete] model=deepseek-r1 strategy=ReAct attempt=1 ✓ CSR+VSM  latency=519.5s
+2026-03-26 10:39:24 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✓ CSR+VSM  latency=572.9s
+2026-03-26 10:55:05 [INFO] [app_foodyou/task_006_bengali] model=deepseek-r1 strategy=ReAct attempt=1 ✓ CSR+VSM  latency=941.0s
+2026-03-26 11:03:09 [INFO] [app_foodyou/task_007_share] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=483.8s
+2026-03-26 11:15:58 [INFO] [app_foodyou/task_008_korea] model=deepseek-r1 strategy=ReAct attempt=1 ✓ CSR+VSM  latency=769.3s
+2026-03-26 11:37:40 [INFO] [app_newsreader/task_001] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=1302.5s
+2026-03-30 13:28:33 [INFO] [app_newsreader/task_002] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=352249.1s
+2026-03-30 13:45:52 [INFO] [app_foodyou/task_001_theme] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=657.9s
+2026-03-30 14:03:45 [INFO] [app_foodyou/task_003_delete] model=deepseek-r1 strategy=ReAct attempt=1 ✓ CSR+VSM  latency=1072.9s
+2026-03-30 14:15:59 [ERROR] Exception in run: 
+2026-03-30 14:15:59 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=734.2s
+2026-03-30 22:39:43 [ERROR] Exception in run: 'str' object has no attribute 'decode'
+2026-03-30 22:39:43 [INFO] [app_foodyou/task_001_theme] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=1485.8s
+2026-03-30 22:49:16 [INFO] [app_foodyou/task_003_delete] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=572.9s
+2026-03-30 22:56:15 [ERROR] Exception in run: 
+2026-03-30 22:56:15 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=418.7s
+2026-03-31 10:23:28 [INFO] [app_foodyou/task_001_theme] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=902.4s
+2026-03-31 10:32:42 [INFO] [app_foodyou/task_003_delete] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=554.1s
+2026-03-31 10:41:39 [ERROR] Exception in run: 
+2026-03-31 10:41:39 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=537.2s
+2026-03-31 16:16:44 [INFO] [app_foodyou/task_001_theme] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=363.8s
+2026-03-31 16:25:53 [INFO] [app_foodyou/task_003_delete] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=549.3s
+2026-03-31 16:37:38 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=704.3s
+2026-03-31 16:39:52 [INFO] [app_foodyou/task_006_bengali] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=134.1s
+2026-03-31 16:48:33 [INFO] [app_foodyou/task_007_share] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=521.5s
+2026-03-31 16:51:03 [INFO] [app_foodyou/task_008_korea] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=149.2s
+2026-03-31 16:59:32 [INFO] [app_foodyou/task_001_theme] model=deepseek-r1 strategy=direct attempt=1 ~ CSR only  latency=494.1s
+2026-03-31 17:02:42 [INFO] [app_foodyou/task_001_theme] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=189.7s
+2026-03-31 17:12:53 [INFO] [app_foodyou/task_001_theme] model=deepseek-r1 strategy=tool_planning attempt=1 ~ CSR only  latency=611.0s
+2026-03-31 17:22:13 [INFO] [app_foodyou/task_003_delete] model=deepseek-r1 strategy=direct attempt=1 ~ CSR only  latency=560.0s
+2026-03-31 17:32:30 [INFO] [app_foodyou/task_003_delete] model=deepseek-r1 strategy=ReAct attempt=1 ~ CSR only  latency=616.8s
+2026-03-31 17:42:20 [INFO] [app_foodyou/task_003_delete] model=deepseek-r1 strategy=tool_planning attempt=1 ~ CSR only  latency=589.8s
+2026-03-31 17:53:40 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=direct attempt=1 ~ CSR only  latency=680.5s
+2026-03-31 17:53:46 [ERROR] Exception in run: 
+2026-03-31 17:53:46 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=5.7s
