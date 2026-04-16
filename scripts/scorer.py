@@ -10,7 +10,11 @@ from pathlib import Path
 from typing import Optional
 
 from llm_api.client import LLMClient
-from tools.task_config import find_task_config, synthesize_meta_from_task_config
+from tools.task_config import (
+    find_golden_mapping,
+    find_task_config,
+    synthesize_meta_from_task_config,
+)
 
 
 _CODE_EXTS = {
@@ -45,7 +49,7 @@ class Scorer:
         appium_result: Optional[dict],
     ) -> dict:
         meta = self._load_meta(app_name, task_id)
-        recall = self._compute_file_recall(app_name, task_id)
+        recall = self._compute_file_recall(app_name, task_id, meta.get("task_key"))
 
         l1 = self._score_l1(agent_result, compile_result, recall)
         l2 = self._score_l2(meta, appium_result, recall, l1)
@@ -185,12 +189,21 @@ class Scorer:
         all_keys = set(a) | set(b)
         return {k for k in all_keys if a.get(k) != b.get(k)}
 
-    def _compute_file_recall(self, app_name: str, task_id: str) -> float:
+    def _compute_file_recall(self, app_name: str, task_id: str, task_key: Optional[str] = None) -> float:
         base_root = self._resolve_project_root(self.data_dir / app_name / "base_src")
-        gt_root = self._resolve_project_root(self.data_dir / app_name / task_id / "ground_truth_src")
         ws_root = self._resolve_project_root(self.workspace_dir / app_name / task_id)
 
-        g = self._diff_files(base_root, gt_root)
+        golden = find_golden_mapping(self.data_dir, app_name=app_name, task_key=task_key)
+        if golden and isinstance(golden.get("modified_files"), list):
+            g = {
+                str(p).replace("\\", "/")
+                for p in golden.get("modified_files", [])
+                if str(p).strip()
+            }
+        else:
+            gt_root = self._resolve_project_root(self.data_dir / app_name / task_id / "ground_truth_src")
+            g = self._diff_files(base_root, gt_root)
+
         m = self._diff_files(base_root, ws_root)
         if not g:
             return 0.0
@@ -215,7 +228,7 @@ class Scorer:
         if not nodes:
             return False
 
-        expected = verify.get("expected_attrs") or {}
+        expected = verify.get("expected_attributes") or verify.get("expected_attrs") or {}
         if not expected:
             return True
 

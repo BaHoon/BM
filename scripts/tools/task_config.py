@@ -1,9 +1,26 @@
 #!/usr/bin/env python3
-"""Utilities for loading unified task configuration files."""
+"""Utilities for loading unified task configuration files and golden mappings."""
 
 import json
 from pathlib import Path
 from typing import Optional, Tuple
+
+
+def _normalize_task_key(value: str) -> str:
+    return "".join(ch for ch in str(value).lower() if ch.isalnum())
+
+
+def _merge_entry(base: dict, patch: dict) -> dict:
+    """Shallow-merge nested dict fields for one task entry."""
+    merged = dict(base)
+    for k, v in patch.items():
+        if isinstance(v, dict) and isinstance(merged.get(k), dict):
+            nested = dict(merged[k])
+            nested.update(v)
+            merged[k] = nested
+        else:
+            merged[k] = v
+    return merged
 
 
 def _load_unified_configs(app_dir: Path) -> dict:
@@ -13,7 +30,13 @@ def _load_unified_configs(app_dir: Path) -> dict:
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
             if isinstance(data, dict):
-                merged.update(data)
+                for key, cfg in data.items():
+                    if not isinstance(cfg, dict):
+                        continue
+                    if key in merged and isinstance(merged[key], dict):
+                        merged[key] = _merge_entry(merged[key], cfg)
+                    else:
+                        merged[key] = dict(cfg)
         except Exception:
             continue
 
@@ -27,7 +50,10 @@ def _load_unified_configs(app_dir: Path) -> dict:
             # 仅吸收当前 app 的任务，避免跨应用串扰
             for key, cfg in data.items():
                 if isinstance(cfg, dict) and cfg.get("app_name", "app_foodyou") == app_dir.name:
-                    merged[key] = cfg
+                    if key in merged and isinstance(merged[key], dict):
+                        merged[key] = _merge_entry(merged[key], cfg)
+                    else:
+                        merged[key] = dict(cfg)
         except Exception:
             continue
     return merged
@@ -53,6 +79,13 @@ def find_task_config(
             if isinstance(cfg, dict) and cfg.get("task_id") == task_id:
                 return key, cfg
 
+    # 容错：支持用 domain key 的不同命名风格匹配
+    norm_key = _normalize_task_key(task_key or "") if task_key else ""
+    if norm_key:
+        for key, cfg in entries.items():
+            if _normalize_task_key(key) == norm_key:
+                return key, cfg
+
     return None
 
 
@@ -75,6 +108,7 @@ def list_task_configs(data_dir: Path, app_name: Optional[str] = None) -> list[Tu
                 continue
             tid = cfg.get("task_id")
             if not tid:
+                # 允许只提供 target_ui_verification 的增量条目；由调用方决定是否使用
                 continue
             rows.append((app_dir.name, tid, task_key, cfg))
 
@@ -94,4 +128,35 @@ def synthesize_meta_from_task_config(cfg: dict) -> dict:
         "eval_type": cfg.get("eval_type", "functional"),
         "task_key": cfg.get("task_key"),
         "task_id": cfg.get("task_id"),
+        "target_ui_verification": cfg.get("target_ui_verification"),
     }
+
+
+def find_golden_mapping(
+    data_dir: Path,
+    app_name: str,
+    task_key: Optional[str] = None,
+) -> Optional[dict]:
+    """Find one task golden mapping entry from [app]_golden_mapping.json files."""
+    app_dir = data_dir / app_name
+    if not app_dir.exists():
+        return None
+
+    candidates = list(sorted(app_dir.glob("*golden_mapping.json")))
+    candidates += list(sorted(app_dir.parent.parent.glob("*golden_mapping.json")))
+
+    if not task_key:
+        return None
+
+    target = _normalize_task_key(task_key)
+    for path in candidates:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(payload, dict):
+                continue
+            for key, value in payload.items():
+                if _normalize_task_key(key) == target and isinstance(value, dict):
+                    return value
+        except Exception:
+            continue
+    return None
