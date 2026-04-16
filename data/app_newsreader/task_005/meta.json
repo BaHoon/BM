@@ -1,9 +1,0 @@
-{
-  "id": "app_005",
-  "name": "newsreader",
-  "app_package": "livio.rssreader",
-  "build_command": "gradlew.bat assembleDebug",
-  "apk_path": "app/build/outputs/apk/debug/app-debug.apk",
-  "prompt": "This is the source code of a news app. I want the app to provide multiple page-turning animation effects for users to choose from.",
-  "eval_script": "test_script.py"
-}

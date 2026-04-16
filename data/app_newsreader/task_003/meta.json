@@ -1,9 +1,0 @@
-{
-  "id": "app_003",
-  "name": "newsreader",
-  "app_package": "livio.rssreader",
-  "build_command": "gradlew.bat assembleDebug",
-  "apk_path": "app/build/outputs/apk/debug/app-debug.apk",
-  "prompt": "This is the source code of a news app. I want to add a setting that allows users to upload and set a global app background image, so they can choose a custom background image from their phone.",
-  "eval_script": "test_script.py"
-}

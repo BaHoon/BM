@@ -1,1 +1,0 @@
-Minimalistic yet powerful news reader with text to speech capability
