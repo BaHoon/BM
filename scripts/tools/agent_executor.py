@@ -186,32 +186,46 @@ class ToolRuntime:
         if not pattern:
             raise ToolExecutionError("pattern is required")
 
+        search_root = self._resolve_path(str(args.get("path", ".")))
+        if not search_root.exists() or not search_root.is_dir():
+            raise ToolExecutionError(f"directory not found: {search_root}")
+
         include = str(args.get("include", "**/*"))
         max_hits = int(args.get("max_hits", 50))
         is_regex = bool(args.get("is_regex", False))
+        include_patterns = [p.strip() for p in re.split(r"[;,]", include) if p.strip()] or ["**/*"]
+        normalized_patterns: list[str] = []
+        for p in include_patterns:
+            if p.startswith("**/") or "/" in p or "\\" in p:
+                normalized_patterns.append(p.replace("\\", "/"))
+            else:
+                normalized_patterns.append(f"**/{p}")
 
         hits = []
         compiled = re.compile(pattern, re.IGNORECASE) if is_regex else None
 
-        for p in self.root.glob(include):
-            if not p.is_file():
-                continue
-            try:
-                text = p.read_text(encoding="utf-8", errors="replace").splitlines()
-            except Exception:
-                continue
-            for i, line in enumerate(text, start=1):
-                ok = bool(compiled.search(line)) if compiled else (pattern.lower() in line.lower())
-                if ok:
-                    hits.append(
-                        {
-                            "path": str(p.relative_to(self.root)).replace("\\", "/"),
-                            "line": i,
-                            "content": line[:300],
-                        }
-                    )
-                    if len(hits) >= max_hits:
-                        break
+        for include_pattern in normalized_patterns:
+            for p in search_root.glob(include_pattern):
+                if not p.is_file():
+                    continue
+                try:
+                    text = p.read_text(encoding="utf-8", errors="replace").splitlines()
+                except Exception:
+                    continue
+                for i, line in enumerate(text, start=1):
+                    ok = bool(compiled.search(line)) if compiled else (pattern.lower() in line.lower())
+                    if ok:
+                        hits.append(
+                            {
+                                "path": str(p.relative_to(self.root)).replace("\\", "/"),
+                                "line": i,
+                                "content": line[:300],
+                            }
+                        )
+                        if len(hits) >= max_hits:
+                            break
+                if len(hits) >= max_hits:
+                    break
             if len(hits) >= max_hits:
                 break
 

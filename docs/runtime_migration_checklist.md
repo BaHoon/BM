@@ -45,7 +45,7 @@ python scripts/Experiment_Launcher.py --model deepseek-r1 --strategy direct ReAc
 Single task:
 
 ```bash
-python global_evaluator.py FoodYou_Thm_01 --model deepseek-r1 --strategy ReAct
+python scripts/global_evaluator.py FoodYou_Thm_01 --model deepseek-r1 --strategy ReAct
 ```
 
 ## 5) CI/CD Notes

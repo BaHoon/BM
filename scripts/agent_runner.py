@@ -32,6 +32,8 @@ from tools.task_config import find_task_config, synthesize_meta_from_task_config
 # --------------------------------------------------------------------------- #
 _MAX_FEEDBACK_ROUNDS = 2   # RQ5：最多自动修复轮次
 _MAX_AGENT_STEPS = 10      # ReAct / Tool-Planning 最大工具交互轮次
+_MAX_RESPONSE_RECOVERY_RETRIES = 2  # 对空/过短/无代码块响应的自动恢复重试次数
+_MIN_VALID_RESPONSE_CHARS = 200
 
 
 class AgentRunner:
@@ -166,26 +168,46 @@ class AgentRunner:
                 "Call Env_Manager.reset_workspace() first."
             )
 
-        if self.strategy == "direct":
-            return self._run_direct_once(
-                app_name=app_name,
-                task_id=task_id,
-                task_prompt=task_prompt,
-                workspace_path=workspace_path,
-                feedback_screenshots=feedback_screenshots,
-                feedback_log=feedback_log,
-                attempt=attempt,
-            )
+        retries = 0
+        while True:
+            if self.strategy == "direct":
+                result = self._run_direct_once(
+                    app_name=app_name,
+                    task_id=task_id,
+                    task_prompt=task_prompt,
+                    workspace_path=workspace_path,
+                    feedback_screenshots=feedback_screenshots,
+                    feedback_log=feedback_log,
+                    attempt=attempt,
+                )
+            else:
+                result = self._run_tool_agent_loop(
+                    app_name=app_name,
+                    task_id=task_id,
+                    task_prompt=task_prompt,
+                    workspace_path=workspace_path,
+                    feedback_screenshots=feedback_screenshots,
+                    feedback_log=feedback_log,
+                    attempt=attempt,
+                )
 
-        return self._run_tool_agent_loop(
-            app_name=app_name,
-            task_id=task_id,
-            task_prompt=task_prompt,
-            workspace_path=workspace_path,
-            feedback_screenshots=feedback_screenshots,
-            feedback_log=feedback_log,
-            attempt=attempt,
-        )
+            if result.get("success"):
+                result["response_retries"] = retries
+                return result
+
+            llm_response = str(result.get("llm_response", "") or "")
+            if retries >= _MAX_RESPONSE_RECOVERY_RETRIES:
+                result["response_retries"] = retries
+                return result
+            if not self._should_retry_response_quality(llm_response):
+                result["response_retries"] = retries
+                return result
+
+            retries += 1
+            print(
+                f"[AgentRunner] Retry due to low-quality LLM response "
+                f"({retries}/{_MAX_RESPONSE_RECOVERY_RETRIES})"
+            )
 
     def _run_direct_once(
         self,
@@ -299,7 +321,7 @@ class AgentRunner:
             final_response = model_text
             messages.append({"role": "assistant", "content": model_text})
 
-            if "[FINAL_PATCH]" in model_text:
+            if self._looks_like_final_patch(model_text):
                 if self.strategy == "tool_planning" and plan_loaded:
                     if planner.summary().get("remaining_steps"):
                         obs = {
@@ -319,7 +341,7 @@ class AgentRunner:
                 obs = {
                     "ok": False,
                     "error": "invalid_action_format",
-                    "hint": "Reply with JSON action object or final patch with [FINAL_PATCH].",
+                    "hint": "Reply with JSON action object or final patch with code blocks.",
                 }
                 messages.append({"role": "user", "content": self._format_observation(obs)})
                 trace.append({"step": step_index, "kind": "invalid_format", "observation": obs})
@@ -399,7 +421,7 @@ class AgentRunner:
             trace.append({"step": step_index, "kind": "unsupported", "action": payload, "observation": obs})
             final_error = "unsupported_action"
 
-        if "[FINAL_PATCH]" not in final_response or not self._validate_agent_output(final_response):
+        if not self._validate_agent_output(final_response):
             self._save_llm_response(app_name, task_id, attempt, final_response, retrieved_paths)
             return {
                 "success": False,
@@ -618,6 +640,21 @@ class AgentRunner:
 
         return blocks
 
+    def _looks_like_final_patch(self, llm_response: str) -> bool:
+        if "[FINAL_PATCH]" in llm_response:
+            return True
+        return bool(self._extract_code_blocks(llm_response))
+
+    def _should_retry_response_quality(self, llm_response: str) -> bool:
+        text = (llm_response or "").strip()
+        if not text:
+            return True
+        if len(text) < _MIN_VALID_RESPONSE_CHARS:
+            return True
+        if not self._extract_code_blocks(text):
+            return True
+        return False
+
     def _write_to_workspace(
         self,
         workspace_path: Path,
@@ -663,13 +700,8 @@ class AgentRunner:
         )
 
     def _validate_agent_output(self, llm_response: str) -> bool:
-        """Validate final patch marker and ensure at least one code block exists."""
-        if "[FINAL_PATCH]" not in llm_response:
-            return False
-
-        if not re.search(r"```filepath:[^\n]+\n", llm_response):
-            return False
-        return True
+        """Validate final output by checking presence of at least one writable code block."""
+        return bool(self._extract_code_blocks(llm_response))
 
 
 def main():

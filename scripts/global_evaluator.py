@@ -3,15 +3,19 @@
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).resolve().parent.parent
+SCRIPTS_DIR = ROOT / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
 
-from scripts.agent_runner import AgentRunner
-from scripts.Env_Manager import EnvManager
-from scripts.appium_runner import AppiumRunner
-from scripts.scorer import Scorer
-from scripts.tools.task_config import find_task_config
+from agent_runner import AgentRunner
+from Env_Manager import EnvManager
+from appium_runner import AppiumRunner
+from scorer import Scorer
+from tools.task_config import find_task_config
 
 
 def run_global_task(task_key: str, config_path: Path, model: str, strategy: str) -> dict:
@@ -97,7 +101,7 @@ def main() -> int:
     parser.add_argument("task_key", help="Task key in unified JSON, e.g. FoodYou_Thm_01")
     parser.add_argument(
         "--config",
-        default="FoodYou_ui_verification.json",
+        default="data/app_foodyou/FoodYou_ui_verification.json",
         help="Path to unified JSON config",
     )
     parser.add_argument("--model", default="deepseek-r1", help="LLM model alias")

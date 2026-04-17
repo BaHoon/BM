@@ -231,7 +231,13 @@ class LLMClient:
             f"prompt_chars={sum(len(str(m.get('content', ''))) for m in messages)}"
         )
         response = self._completion_with_retry(call_params)
-        content: str = response.choices[0].message.content
+        raw_content = response.choices[0].message.content
+        if raw_content is None:
+            content = ""
+        elif isinstance(raw_content, str):
+            content = raw_content
+        else:
+            content = str(raw_content)
         print(f"[LLMClient] response_chars={len(content)}")
         return content
 
@@ -284,7 +290,8 @@ class LLMClient:
             call_params["api_key"]  = _TONGJI_API_KEY
 
         response = self._completion_with_retry(call_params)
-        raw = response.choices[0].message.content.strip()
+        raw_content = response.choices[0].message.content
+        raw = (raw_content or "").strip() if isinstance(raw_content, str) else str(raw_content)
         return _parse_json_safe(raw, default={"score": 0, "passed": False, "reason": raw})
 
     # ----------------------------------------------------------------------- #

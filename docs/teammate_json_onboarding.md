@@ -86,7 +86,7 @@ Notes:
 Run one task:
 
 ```bash
-python global_evaluator.py FoodYou_Thm_01 --model deepseek-r1 --strategy ReAct
+python scripts/global_evaluator.py FoodYou_Thm_01 --model deepseek-r1 --strategy ReAct
 ```
 
 Run batch:
