@@ -17,6 +17,7 @@ Env_Manager.py - Workspace 重置与编译管理
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -36,6 +37,10 @@ class EnvManager:
 
     # 忽略复制的目录/文件（缓存、构建产物）
     _IGNORE_DIRS = {"build", ".gradle", ".idea", ".kotlin", "cache", ".cxx"}
+    _JDK_ENV_KEYS = {
+        17: ("JDK17_HOME", "JAVA17_HOME"),
+        21: ("JDK21_HOME", "JAVA21_HOME"),
+    }
 
     def __init__(
         self,
@@ -119,10 +124,22 @@ class EnvManager:
         cmd = meta.get("build_command") or (
             self._GRADLE_CMD_WIN if os.name == "nt" else self._GRADLE_CMD_UNIX
         )
+        required_java = self._detect_required_java_version(project_root)
+        jdk_home = self._resolve_jdk_home(required_java)
+        if jdk_home:
+            print(f"[EnvManager] Java required={required_java}, switching JAVA_HOME -> {jdk_home}")
+        else:
+            print(f"[EnvManager] Java required={required_java}, no explicit JDK home found, using current JAVA_HOME")
         print(f"[EnvManager] Building: {cmd}  (cwd={project_root})")
 
         t0 = time.time()
         try:
+            run_env = os.environ.copy()
+            if jdk_home:
+                run_env["JAVA_HOME"] = str(jdk_home)
+                jdk_bin = str(Path(jdk_home) / "bin")
+                run_env["PATH"] = jdk_bin + os.pathsep + run_env.get("PATH", "")
+
             proc = subprocess.run(
                 cmd,
                 cwd=project_root,
@@ -132,6 +149,7 @@ class EnvManager:
                 timeout=timeout,
                 encoding="utf-8",
                 errors="replace",
+                env=run_env,
             )
             elapsed = round(time.time() - t0, 2)
             stdout  = proc.stdout or ""
@@ -139,7 +157,11 @@ class EnvManager:
             rc      = proc.returncode
         except subprocess.TimeoutExpired as exc:
             elapsed = round(time.time() - t0, 2)
-            stdout  = (exc.stdout or b"").decode("utf-8", errors="replace")
+            raw_timeout_stdout = exc.stdout or ""
+            if isinstance(raw_timeout_stdout, bytes):
+                stdout = raw_timeout_stdout.decode("utf-8", errors="replace")
+            else:
+                stdout = str(raw_timeout_stdout)
             stderr  = f"TIMEOUT after {timeout}s"
             rc      = -1
 
@@ -158,6 +180,8 @@ class EnvManager:
             "apk_exists":    apk_exists,
             "apk_path":      str(apk_path) if apk_path else None,
             "apk_size_mb":   apk_size,
+            "java_required": required_java,
+            "java_home_used": str(jdk_home) if jdk_home else None,
             "stdout":        stdout[-8000:],   # 保留后 8000 字符避免过大
             "stderr":        stderr[-4000:],
             "error_summary": error_summary,
@@ -169,6 +193,70 @@ class EnvManager:
         # 保存编译日志
         self._save_compile_log(app_name, task_id, result)
         return result
+
+    def _detect_required_java_version(self, project_root: Path) -> int:
+        """Detect required Java version from Gradle/Kotlin build scripts, default 17."""
+        version = 17
+        patterns_21 = [
+            r"VERSION_21",
+            r"JVM_21",
+            r"languageVersion\s*=\s*JavaLanguageVersion\.of\(\s*21\s*\)",
+            r"sourceCompatibility\s*=\s*JavaVersion\.VERSION_21",
+            r"targetCompatibility\s*=\s*JavaVersion\.VERSION_21",
+            r"sourceCompatibility\s*=\s*21",
+            r"targetCompatibility\s*=\s*21",
+            r"jvmTarget\s*=\s*\"?21\"?",
+            r"--release\s+21",
+        ]
+        combined = re.compile("|".join(patterns_21), flags=re.IGNORECASE)
+
+        for ext in ("*.gradle", "*.kts", "gradle.properties"):
+            files = list(project_root.rglob(ext)) if "*" in ext else [project_root / ext]
+            for f in files:
+                if not f.exists() or not f.is_file():
+                    continue
+                try:
+                    text = f.read_text(encoding="utf-8", errors="replace")
+                except Exception:
+                    continue
+                if combined.search(text):
+                    return 21
+        return version
+
+    def _resolve_jdk_home(self, java_version: int) -> Optional[Path]:
+        """Resolve JDK home for required version from env vars and common install locations."""
+        keys = self._JDK_ENV_KEYS.get(java_version, ())
+        for key in keys:
+            value = os.environ.get(key)
+            if value and Path(value).exists():
+                return Path(value)
+
+        # If current JAVA_HOME already matches requested version, reuse it.
+        current_java_home = os.environ.get("JAVA_HOME")
+        if current_java_home:
+            p = Path(current_java_home)
+            if p.exists() and str(java_version) in p.name:
+                return p
+
+        if os.name == "nt":
+            candidates = [
+                Path(f"C:/Program Files/Java/jdk-{java_version}"),
+                Path(f"C:/Program Files/Java/jdk-{java_version}.0.0"),
+                Path(f"C:/Program Files/Eclipse Adoptium/jdk-{java_version}"),
+                Path(f"C:/Program Files/Microsoft/jdk-{java_version}"),
+            ]
+            for c in candidates:
+                if c.exists():
+                    return c
+
+            # Fuzzy fallback under common Java install directory.
+            java_dir = Path("C:/Program Files/Java")
+            if java_dir.exists():
+                for c in sorted(java_dir.glob(f"*{java_version}*")):
+                    if c.is_dir() and (c / "bin").exists():
+                        return c
+
+        return None
 
     def get_apk_path(self, app_name: str, task_id: str) -> Optional[Path]:
         """返回 APK 完整路径（不存在返回 None）。"""
