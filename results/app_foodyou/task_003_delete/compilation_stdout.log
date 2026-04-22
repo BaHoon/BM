@@ -1,0 +1,159 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.13/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+Configuration on demand is an incubating feature.
+Calculating task graph as no cached configuration is available for tasks: :app:assembleDebug
+Type-safe project accessors is an incubating feature.
+> Task :shared:resources:androidPreBuild UP-TO-DATE
+> Task :app:generateAndroidDebugBuildConfigClasses SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :shared:barcodescanner:preBuild UP-TO-DATE
+> Task :shared:barcodescanner:preDebugBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :shared:resources:preAndroidMainBuild UP-TO-DATE
+> Task :app:convertXmlValueResourcesForAndroidDebug NO-SOURCE
+> Task :shared:resources:convertXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :shared:barcodescanner:convertXmlValueResourcesForCommonMain NO-SOURCE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :shared:barcodescanner:copyNonXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :shared:barcodescanner:copyNonXmlValueResourcesForAndroidDebug NO-SOURCE
+> Task :app:copyNonXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :app:convertXmlValueResourcesForCommonMain NO-SOURCE
+> Task :app:copyNonXmlValueResourcesForAndroidDebug NO-SOURCE
+> Task :app:convertXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :shared:barcodescanner:convertXmlValueResourcesForAndroidDebug NO-SOURCE
+> Task :shared:barcodescanner:convertXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :shared:barcodescanner:copyNonXmlValueResourcesForCommonMain NO-SOURCE
+> Task :shared:barcodescanner:prepareComposeResourcesTaskForAndroidMain NO-SOURCE
+> Task :app:prepareComposeResourcesTaskForAndroidMain NO-SOURCE
+> Task :shared:barcodescanner:prepareComposeResourcesTaskForAndroidDebug NO-SOURCE
+> Task :shared:barcodescanner:prepareComposeResourcesTaskForCommonMain NO-SOURCE
+> Task :app:prepareComposeResourcesTaskForAndroidDebug NO-SOURCE
+> Task :shared:resources:copyNonXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :app:generateResourceAccessorsForAndroidDebug NO-SOURCE
+> Task :app:generateResourceAccessorsForAndroidMain NO-SOURCE
+> Task :shared:resources:prepareComposeResourcesTaskForAndroidMain NO-SOURCE
+> Task :app:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:barcodescanner:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:resources:kmpPartiallyResolvedDependenciesChecker
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:barcodescanner:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:barcodescanner:generateResourceAccessorsForAndroidMain NO-SOURCE
+> Task :shared:barcodescanner:generateResourceAccessorsForCommonMain NO-SOURCE
+> Task :shared:barcodescanner:generateResourceAccessorsForAndroidDebug NO-SOURCE
+> Task :shared:resources:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:resources:generateResourceAccessorsForAndroidMain NO-SOURCE
+> Task :app:createDebugCompatibleScreenManifests
+> Task :shared:resources:generateAndroidMainEmptyResourceFiles
+> Task :app:generateDebugResValues FROM-CACHE
+> Task :shared:barcodescanner:generateDebugResValues FROM-CACHE
+> Task :app:generateBuildConfigClasses FROM-CACHE
+> Task :shared:barcodescanner:copyDebugComposeResourcesToAndroidAssets
+> Task :shared:barcodescanner:processDebugNavigationResources FROM-CACHE
+> Task :shared:resources:processAndroidMainManifest FROM-CACHE
+> Task :shared:barcodescanner:javaPreCompileDebug FROM-CACHE
+> Task :shared:barcodescanner:processDebugManifest FROM-CACHE
+> Task :app:debugAssetsCopyForAGP NO-SOURCE
+> Task :app:extractDeepLinksDebug FROM-CACHE
+> Task :shared:barcodescanner:generateDebugResources FROM-CACHE
+> Task :shared:barcodescanner:debugAssetsCopyForAGP NO-SOURCE
+> Task :shared:barcodescanner:extractDeepLinksDebug FROM-CACHE
+> Task :app:javaPreCompileDebug FROM-CACHE
+> Task :shared:resources:generateAndroidMainAssets UP-TO-DATE
+> Task :app:desugarDebugFileDependencies FROM-CACHE
+> Task :shared:barcodescanner:packageDebugResources FROM-CACHE
+> Task :shared:resources:copyNonXmlValueResourcesForCommonMain
+> Task :shared:barcodescanner:compileDebugLibraryResources FROM-CACHE
+> Task :app:copyNonXmlValueResourcesForCommonMain
+> Task :app:generateDebugResources FROM-CACHE
+> Task :shared:resources:writeAndroidMainAarMetadata
+> Task :app:prepareComposeResourcesTaskForCommonMain
+> Task :shared:barcodescanner:parseDebugLocalResources FROM-CACHE
+> Task :shared:barcodescanner:generateExpectResourceCollectorsForCommonMain
+> Task :shared:barcodescanner:generateComposeResClass
+> Task :shared:barcodescanner:generateActualResourceCollectorsForAndroidMain
+> Task :app:generateComposeResClass
+> Task :shared:resources:generateExpectResourceCollectorsForCommonMain
+> Task :shared:resources:generateComposeResClass
+> Task :app:generateExpectResourceCollectorsForCommonMain
+> Task :shared:barcodescanner:generateDebugRFile FROM-CACHE
+> Task :app:generateResourceAccessorsForCommonMain
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
+> Task :app:generateActualResourceCollectorsForAndroidMain
+> Task :app:mergeDebugShaders
+> Task :shared:resources:mergeAndroidMainJniLibFolders
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :shared:resources:mergeAndroidMainNativeLibs NO-SOURCE
+> Task :app:copyDebugComposeResourcesToAndroidAssets
+> Task :app:packageDebugResources FROM-CACHE
+> Task :app:validateSigningDebug
+> Task :shared:resources:copyAndroidMainJniLibsProjectOnly
+> Task :shared:barcodescanner:writeDebugAarMetadata
+> Task :shared:barcodescanner:mergeDebugJniLibFolders
+> Task :shared:barcodescanner:mergeDebugNativeLibs NO-SOURCE
+> Task :app:mergeDebugJniLibFolders
+> Task :shared:barcodescanner:copyDebugJniLibsProjectOnly
+> Task :shared:barcodescanner:mergeDebugShaders
+> Task :shared:barcodescanner:compileDebugShaders NO-SOURCE
+> Task :shared:barcodescanner:generateDebugAssets UP-TO-DATE
+> Task :shared:barcodescanner:mergeDebugAssets
+> Task :app:processDebugNavigationResources FROM-CACHE
+> Task :app:compileDebugNavigationResources FROM-CACHE
+> Task :app:parseDebugLocalResources FROM-CACHE
+> Task :shared:barcodescanner:dataBindingMergeDependencyArtifactsDebug
+> Task :app:processDebugMainManifest FROM-CACHE
+> Task :app:processDebugManifest FROM-CACHE
+> Task :app:processDebugManifestForPackage FROM-CACHE
+> Task :shared:resources:convertXmlValueResourcesForCommonMain
+> Task :shared:resources:prepareComposeResourcesTaskForCommonMain
+> Task :app:checkDebugAarMetadata
+> Task :app:checkDebugDuplicateClasses
+> Task :app:mergeDebugNativeLibs
+> Task :shared:resources:copyAndroidMainComposeResourcesToAndroidAssets
+> Task :shared:resources:packageAndroidMainResources FROM-CACHE
+> Task :shared:resources:parseAndroidMainLocalResources FROM-CACHE
+> Task :shared:resources:compileAndroidMainLibraryResources FROM-CACHE
+> Task :shared:resources:generateAndroidMainRFile FROM-CACHE
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so, libsqlite3x.so. Run with --info option to learn more.
+
+> Task :shared:barcodescanner:dataBindingGenBaseClassesDebug FROM-CACHE
+> Task :app:mapDebugSourceSetPaths
+> Task :shared:resources:generateResourceAccessorsForCommonMain
+> Task :shared:resources:generateActualResourceCollectorsForAndroidMain
+> Task :shared:resources:mergeAndroidMainAssets
+> Task :app:mergeDebugResources FROM-CACHE
+> Task :shared:resources:compileAndroidMain FROM-CACHE
+> Task :shared:resources:processAndroidMainJavaRes
+> Task :shared:resources:bundleLibRuntimeToDirAndroidMain
+> Task :app:processDebugResources FROM-CACHE
+> Task :shared:resources:bundleAndroidMainClassesToCompileJar
+> Task :shared:resources:bundleAndroidMainClassesToRuntimeJar
+> Task :app:mergeDebugAssets
+> Task :app:mergeExtDexDebug FROM-CACHE
+> Task :shared:barcodescanner:compileDebugKotlinAndroid FROM-CACHE
+> Task :app:compressDebugAssets FROM-CACHE
+> Task :shared:barcodescanner:processDebugJavaRes
+> Task :shared:barcodescanner:compileDebugJavaWithJavac FROM-CACHE
+> Task :shared:barcodescanner:bundleLibRuntimeToJarDebug
+> Task :shared:barcodescanner:bundleLibCompileToJarDebug
+> Task :shared:barcodescanner:bundleLibRuntimeToDirDebug
+> Task :app:mergeLibDexDebug FROM-CACHE
+> Task :app:kspDebugKotlinAndroid FROM-CACHE
+> Task :app:compileDebugKotlinAndroid FROM-CACHE
+> Task :app:compileDebugJavaWithJavac NO-SOURCE
+> Task :app:copyRoomSchemas NO-SOURCE
+> Task :app:processDebugJavaRes
+> Task :app:dexBuilderDebug FROM-CACHE
+> Task :app:mergeDebugGlobalSynthetics FROM-CACHE
+> Task :app:mergeProjectDexDebug FROM-CACHE
+> Task :app:mergeDebugJavaResource
+> Task :app:packageDebug
+> Task :app:assembleDebug
+> Task :app:createDebugApkListingFileRedirect
+
+BUILD SUCCESSFUL in 29s
+99 actionable tasks: 57 executed, 42 from cache
+Configuration cache entry stored.

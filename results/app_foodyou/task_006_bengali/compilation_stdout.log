@@ -1,0 +1,258 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.13/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+Configuration on demand is an incubating feature.
+Calculating task graph as no cached configuration is available for tasks: assembleDebug
+Type-safe project accessors is an incubating feature.
+> Task :shared:barcodescanner:preBuild UP-TO-DATE
+> Task :app:generateAndroidDebugBuildConfigClasses SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :shared:resources:androidPreBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :shared:resources:preAndroidMainBuild UP-TO-DATE
+> Task :shared:barcodescanner:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :shared:resources:convertXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :app:convertXmlValueResourcesForAndroidDebug NO-SOURCE
+> Task :app:copyNonXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :shared:barcodescanner:copyNonXmlValueResourcesForAndroidDebug NO-SOURCE
+> Task :app:convertXmlValueResourcesForCommonMain NO-SOURCE
+> Task :shared:barcodescanner:copyNonXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :shared:barcodescanner:copyNonXmlValueResourcesForCommonMain NO-SOURCE
+> Task :app:convertXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :shared:barcodescanner:convertXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :app:copyNonXmlValueResourcesForAndroidDebug NO-SOURCE
+> Task :shared:barcodescanner:convertXmlValueResourcesForAndroidDebug NO-SOURCE
+> Task :shared:barcodescanner:convertXmlValueResourcesForCommonMain NO-SOURCE
+> Task :app:prepareComposeResourcesTaskForAndroidMain NO-SOURCE
+> Task :shared:barcodescanner:prepareComposeResourcesTaskForCommonMain NO-SOURCE
+> Task :shared:barcodescanner:prepareComposeResourcesTaskForAndroidDebug NO-SOURCE
+> Task :app:prepareComposeResourcesTaskForAndroidDebug NO-SOURCE
+> Task :shared:barcodescanner:prepareComposeResourcesTaskForAndroidMain NO-SOURCE
+> Task :shared:resources:copyNonXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :app:generateResourceAccessorsForAndroidMain NO-SOURCE
+> Task :app:generateResourceAccessorsForAndroidDebug NO-SOURCE
+> Task :shared:resources:prepareComposeResourcesTaskForAndroidMain NO-SOURCE
+> Task :shared:barcodescanner:kmpPartiallyResolvedDependenciesChecker
+> Task :app:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:resources:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:barcodescanner:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:barcodescanner:generateResourceAccessorsForAndroidMain NO-SOURCE
+> Task :shared:barcodescanner:generateResourceAccessorsForCommonMain NO-SOURCE
+> Task :shared:barcodescanner:generateResourceAccessorsForAndroidDebug NO-SOURCE
+> Task :shared:resources:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:resources:generateResourceAccessorsForAndroidMain NO-SOURCE
+> Task :app:createDebugCompatibleScreenManifests
+> Task :shared:resources:generateAndroidMainEmptyResourceFiles
+> Task :app:generateBuildConfigClasses FROM-CACHE
+> Task :app:generateDebugResValues FROM-CACHE
+> Task :shared:barcodescanner:generateDebugResValues FROM-CACHE
+> Task :shared:barcodescanner:copyDebugComposeResourcesToAndroidAssets
+> Task :shared:barcodescanner:processDebugNavigationResources FROM-CACHE
+> Task :shared:barcodescanner:javaPreCompileDebug FROM-CACHE
+> Task :shared:resources:processAndroidMainManifest FROM-CACHE
+> Task :shared:barcodescanner:processDebugManifest FROM-CACHE
+> Task :app:debugAssetsCopyForAGP NO-SOURCE
+> Task :app:extractDeepLinksDebug FROM-CACHE
+> Task :app:javaPreCompileDebug FROM-CACHE
+> Task :shared:barcodescanner:extractDeepLinksDebug FROM-CACHE
+> Task :shared:resources:generateAndroidMainAssets UP-TO-DATE
+> Task :shared:barcodescanner:debugAssetsCopyForAGP NO-SOURCE
+> Task :shared:barcodescanner:generateDebugResources FROM-CACHE
+> Task :app:desugarDebugFileDependencies FROM-CACHE
+> Task :shared:barcodescanner:packageDebugResources FROM-CACHE
+> Task :shared:barcodescanner:compileDebugLibraryResources FROM-CACHE
+> Task :app:generateComposeResClass
+> Task :shared:barcodescanner:generateExpectResourceCollectorsForCommonMain
+> Task :shared:barcodescanner:generateComposeResClass
+> Task :shared:barcodescanner:generateActualResourceCollectorsForAndroidMain
+> Task :shared:resources:generateExpectResourceCollectorsForCommonMain
+> Task :shared:resources:generateComposeResClass
+> Task :app4:preBuild UP-TO-DATE
+> Task :app4:preDebugBuild UP-TO-DATE
+> Task :app4:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app4:kmpPartiallyResolvedDependenciesChecker
+> Task :app4:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app4:convertXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :app4:copyNonXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :app4:prepareComposeResourcesTaskForAndroidMain NO-SOURCE
+> Task :app4:generateResourceAccessorsForAndroidMain NO-SOURCE
+> Task :app4:convertXmlValueResourcesForCommonMain NO-SOURCE
+> Task :app4:copyNonXmlValueResourcesForCommonMain NO-SOURCE
+> Task :app:writeDebugAppMetadata
+> Task :shared:barcodescanner:parseDebugLocalResources FROM-CACHE
+> Task :app4:prepareComposeResourcesTaskForCommonMain NO-SOURCE
+> Task :app4:generateResourceAccessorsForCommonMain NO-SOURCE
+> Task :app4:generateComposeResClass
+> Task :shared:barcodescanner:generateDebugRFile FROM-CACHE
+> Task :app4:generateActualResourceCollectorsForAndroidMain
+> Task :app4:convertXmlValueResourcesForAndroidDebug NO-SOURCE
+> Task :app4:copyNonXmlValueResourcesForAndroidDebug NO-SOURCE
+> Task :app4:prepareComposeResourcesTaskForAndroidDebug NO-SOURCE
+> Task :app4:generateDebugBuildConfig FROM-CACHE
+> Task :app4:generateResourceAccessorsForAndroidDebug NO-SOURCE
+> Task :app:writeDebugSigningConfigVersions
+> Task :app:copyNonXmlValueResourcesForCommonMain
+> Task :app4:generateDebugResValues FROM-CACHE
+> Task :app4:copyDebugComposeResourcesToAndroidAssets
+> Task :app:generateDebugResources
+> Task :app4:generateExpectResourceCollectorsForCommonMain
+> Task :app4:extractDeepLinksDebug FROM-CACHE
+> Task :app:generateExpectResourceCollectorsForCommonMain
+> Task :app4:javaPreCompileDebug FROM-CACHE
+> Task :app4:debugAssetsCopyForAGP NO-SOURCE
+> Task :app4:createDebugCompatibleScreenManifests
+> Task :app4:desugarDebugFileDependencies FROM-CACHE
+> Task :app4:generateDebugResources FROM-CACHE
+> Task :app:prepareComposeResourcesTaskForCommonMain
+> Task :app:generateResourceAccessorsForCommonMain
+> Task :app:validateSigningDebug
+> Task :app:generateActualResourceCollectorsForAndroidMain
+> Task :app4:validateSigningDebug
+> Task :app4:writeDebugAppMetadata
+> Task :app4:writeDebugSigningConfigVersions
+> Task :shared:barcodescanner:extractDeepLinksForAarDebug FROM-CACHE
+> Task :shared:barcodescanner:prepareDebugArtProfile
+> Task :app:copyDebugComposeResourcesToAndroidAssets
+> Task :shared:barcodescanner:writeDebugAarMetadata
+> Task :shared:barcodescanner:mergeDebugShaders
+> Task :shared:barcodescanner:mergeDebugJniLibFolders
+> Task :shared:resources:mergeAndroidMainJniLibFolders
+> Task :app:mergeDebugJniLibFolders
+> Task :app4:mergeDebugShaders
+> Task :shared:barcodescanner:compileDebugShaders NO-SOURCE
+> Task :shared:resources:mergeAndroidMainNativeLibs NO-SOURCE
+> Task :shared:barcodescanner:mergeDebugNativeLibs NO-SOURCE
+> Task :app4:compileDebugShaders NO-SOURCE
+> Task :shared:barcodescanner:generateDebugAssets UP-TO-DATE
+> Task :app4:generateDebugAssets UP-TO-DATE
+> Task :shared:barcodescanner:stripDebugDebugSymbols NO-SOURCE
+> Task :shared:barcodescanner:prepareLintJarForPublish
+> Task :shared:barcodescanner:mergeDebugAssets
+> Task :app:mergeDebugShaders
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :shared:barcodescanner:copyDebugJniLibsProjectAndLocalJars
+> Task :shared:barcodescanner:copyDebugJniLibsProjectOnly
+> Task :shared:resources:copyAndroidMainJniLibsProjectOnly
+> Task :app4:mergeDebugJniLibFolders
+> Task :shared:resources:writeAndroidMainAarMetadata
+> Task :app:processDebugNavigationResources
+> Task :app:compileDebugNavigationResources FROM-CACHE
+> Task :shared:resources:convertXmlValueResourcesForCommonMain
+> Task :app4:processDebugNavigationResources
+> Task :app4:compileDebugNavigationResources FROM-CACHE
+> Task :shared:barcodescanner:checkDebugAarMetadata
+> Task :app:checkDebugAarMetadata
+> Task :shared:barcodescanner:dataBindingMergeDependencyArtifactsDebug
+> Task :app4:checkDebugAarMetadata
+> Task :app:checkDebugDuplicateClasses
+> Task :app:processDebugMainManifest FROM-CACHE
+> Task :app4:processDebugMainManifest FROM-CACHE
+> Task :app4:checkDebugDuplicateClasses
+> Task :app:processDebugManifest FROM-CACHE
+> Task :app4:processDebugManifest FROM-CACHE
+> Task :shared:resources:copyNonXmlValueResourcesForCommonMain
+> Task :app4:processDebugManifestForPackage FROM-CACHE
+> Task :app:processDebugManifestForPackage FROM-CACHE
+> Task :shared:resources:prepareComposeResourcesTaskForCommonMain
+> Task :app4:packageDebugResources
+> Task :app:packageDebugResources
+> Task :app4:mergeDebugNativeLibs
+> Task :app:mergeDebugNativeLibs
+> Task :shared:resources:copyAndroidMainComposeResourcesToAndroidAssets
+
+> Task :app4:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so, libsqlite3x.so. Run with --info option to learn more.
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so, libsqlite3x.so. Run with --info option to learn more.
+
+> Task :shared:resources:generateResourceAccessorsForCommonMain
+> Task :shared:resources:generateActualResourceCollectorsForAndroidMain
+> Task :shared:resources:mergeAndroidMainAssets
+> Task :app:mergeExtDexDebug FROM-CACHE
+> Task :app4:parseDebugLocalResources
+> Task :app:parseDebugLocalResources
+> Task :shared:resources:packageAndroidMainResources FROM-CACHE
+> Task :shared:resources:compileAndroidMainLibraryResources FROM-CACHE
+> Task :shared:resources:parseAndroidMainLocalResources FROM-CACHE
+> Task :shared:resources:generateAndroidMainRFile FROM-CACHE
+> Task :app4:mergeDebugAssets
+> Task :app:mergeDebugAssets
+> Task :app:mapDebugSourceSetPaths
+> Task :app4:mapDebugSourceSetPaths
+> Task :shared:barcodescanner:dataBindingGenBaseClassesDebug FROM-CACHE
+> Task :app4:mergeExtDexDebug FROM-CACHE
+> Task :app4:compressDebugAssets
+> Task :app:compressDebugAssets
+> Task :app4:mergeDebugResources
+> Task :app:mergeDebugResources
+> Task :app:processDebugResources
+> Task :app4:processDebugResources
+> Task :shared:resources:compileAndroidMain
+> Task :shared:resources:processAndroidMainJavaRes
+> Task :shared:resources:bundleLibRuntimeToDirAndroidMain
+> Task :shared:resources:bundleAndroidMainClassesToRuntimeJar
+> Task :shared:resources:bundleAndroidMainClassesToCompileJar
+> Task :shared:barcodescanner:compileDebugKotlinAndroid FROM-CACHE
+> Task :shared:barcodescanner:processDebugJavaRes
+> Task :shared:barcodescanner:mergeDebugJavaResource
+> Task :shared:barcodescanner:extractDebugAnnotations FROM-CACHE
+> Task :shared:barcodescanner:compileDebugJavaWithJavac
+> Task :shared:barcodescanner:mergeDebugGeneratedProguardFiles
+> Task :shared:barcodescanner:syncDebugLibJars FROM-CACHE
+> Task :shared:barcodescanner:mergeDebugConsumerProguardFiles
+> Task :shared:barcodescanner:bundleLibCompileToJarDebug
+> Task :shared:barcodescanner:bundleLibRuntimeToDirDebug
+> Task :shared:barcodescanner:bundleLibRuntimeToJarDebug
+> Task :shared:barcodescanner:bundleDebugAar
+> Task :shared:barcodescanner:assembleDebug
+> Task :app4:mergeLibDexDebug
+> Task :app:mergeLibDexDebug
+
+> Task :app4:kspDebugKotlinAndroid
+w: [ksp] D:/benchmark/benchmark_root/workspace/app_foodyou/task_006_bengali/app4/src/commonMain/kotlin/com/maksimowiczm/foodyou/userfood/infrastructure/room/search/SearchDao.kt:25:  com.maksimowiczm.foodyou.userfood.infrastructure.room.search.UserFoodSearchEntity has some properties [p_name_bn] which are not returned by the query. If they are not supposed to be read from the result, you can mark them with @Ignore annotation. You can suppress this warning by annotating the function with @SuppressWarnings(RoomWarnings.QUERY_MISMATCH). Columns returned by the query: p_sqliteId, p_uuid, p_name_en, p_name_ca, p_name_cs, p_name_da, p_name_de, p_name_es, p_name_fr, p_name_it, p_name_id, p_name_hu, p_name_nl, p_name_pl, p_name_sl, p_name_pt-BR, p_name_tr, p_name_ru, p_name_uk, p_name_ar, p_name_zh-CN, p_brand, p_barcode, p_note, p_photoPath, p_accountId, p_energy, p_proteins, p_fats, p_saturatedFats, p_transFats, p_monounsaturatedFats, p_polyunsaturatedFats, p_omega3, p_omega6, p_carbohydrates, p_sugars, p_addedSugars, p_dietaryFiber, p_solubleFiber, p_insolubleFiber, p_salt, p_cholesterol, p_caffeine, p_manganese, p_magnesium, p_potassium, p_calcium, p_copper, p_zinc, p_sodium, p_iron, p_phosphorus, p_selenium, p_iodine, p_chromium, p_vitaminA, p_vitaminB1, p_vitaminB2, p_vitaminB3, p_vitaminB5, p_vitaminB6, p_vitaminB7, p_vitaminB9, p_vitaminB12, p_vitaminC, p_vitaminD, p_vitaminE, p_vitaminK, p_package_type, p_package_amount, p_package_unit, p_serving_type, p_serving_amount, p_serving_unit, p_isLiquid, r_sqliteId, r_uuid, r_name, r_servings, r_imagePath, r_note, r_finalWeight, r_accountId, simpleName.
+w: [ksp] D:/benchmark/benchmark_root/workspace/app_foodyou/task_006_bengali/app4/src/commonMain/kotlin/com/maksimowiczm/foodyou/userfood/infrastructure/room/search/SearchDao.kt:60:  com.maksimowiczm.foodyou.userfood.infrastructure.room.search.UserFoodSearchEntity has some properties [p_name_bn] which are not returned by the query. If they are not supposed to be read from the result, you can mark them with @Ignore annotation. You can suppress this warning by annotating the function with @SuppressWarnings(RoomWarnings.QUERY_MISMATCH). Columns returned by the query: p_sqliteId, p_uuid, p_name_en, p_name_ca, p_name_cs, p_name_da, p_name_de, p_name_es, p_name_fr, p_name_it, p_name_id, p_name_hu, p_name_nl, p_name_pl, p_name_sl, p_name_pt-BR, p_name_tr, p_name_ru, p_name_uk, p_name_ar, p_name_zh-CN, p_brand, p_barcode, p_note, p_photoPath, p_accountId, p_energy, p_proteins, p_fats, p_saturatedFats, p_transFats, p_monounsaturatedFats, p_polyunsaturatedFats, p_omega3, p_omega6, p_carbohydrates, p_sugars, p_addedSugars, p_dietaryFiber, p_solubleFiber, p_insolubleFiber, p_salt, p_cholesterol, p_caffeine, p_manganese, p_magnesium, p_potassium, p_calcium, p_copper, p_zinc, p_sodium, p_iron, p_phosphorus, p_selenium, p_iodine, p_chromium, p_vitaminA, p_vitaminB1, p_vitaminB2, p_vitaminB3, p_vitaminB5, p_vitaminB6, p_vitaminB7, p_vitaminB9, p_vitaminB12, p_vitaminC, p_vitaminD, p_vitaminE, p_vitaminK, p_package_type, p_package_amount, p_package_unit, p_serving_type, p_serving_amount, p_serving_unit, p_isLiquid, r_sqliteId, r_uuid, r_name, r_servings, r_imagePath, r_note, r_finalWeight, r_accountId, simpleName.
+w: [ksp] D:/benchmark/benchmark_root/workspace/app_foodyou/task_006_bengali/app4/src/commonMain/kotlin/com/maksimowiczm/foodyou/userfood/infrastructure/room/search/SearchDao.kt:92:  com.maksimowiczm.foodyou.userfood.infrastructure.room.search.UserFoodSearchEntity has some properties [p_name_bn] which are not returned by the query. If they are not supposed to be read from the result, you can mark them with @Ignore annotation. You can suppress this warning by annotating the function with @SuppressWarnings(RoomWarnings.QUERY_MISMATCH). Columns returned by the query: p_sqliteId, p_uuid, p_name_en, p_name_ca, p_name_cs, p_name_da, p_name_de, p_name_es, p_name_fr, p_name_it, p_name_id, p_name_hu, p_name_nl, p_name_pl, p_name_sl, p_name_pt-BR, p_name_tr, p_name_ru, p_name_uk, p_name_ar, p_name_zh-CN, p_brand, p_barcode, p_note, p_photoPath, p_accountId, p_energy, p_proteins, p_fats, p_saturatedFats, p_transFats, p_monounsaturatedFats, p_polyunsaturatedFats, p_omega3, p_omega6, p_carbohydrates, p_sugars, p_addedSugars, p_dietaryFiber, p_solubleFiber, p_insolubleFiber, p_salt, p_cholesterol, p_caffeine, p_manganese, p_magnesium, p_potassium, p_calcium, p_copper, p_zinc, p_sodium, p_iron, p_phosphorus, p_selenium, p_iodine, p_chromium, p_vitaminA, p_vitaminB1, p_vitaminB2, p_vitaminB3, p_vitaminB5, p_vitaminB6, p_vitaminB7, p_vitaminB9, p_vitaminB12, p_vitaminC, p_vitaminD, p_vitaminE, p_vitaminK, p_package_type, p_package_amount, p_package_unit, p_serving_type, p_serving_amount, p_serving_unit, p_isLiquid, r_sqliteId, r_uuid, r_name, r_servings, r_imagePath, r_note, r_finalWeight, r_accountId, simpleName.
+
+> Task :app:kspDebugKotlinAndroid
+> Task :app4:compileDebugKotlinAndroid
+> Task :app:compileDebugKotlinAndroid
+> Task :app4:processDebugJavaRes
+
+> Task :app:compileDebugKotlinAndroid
+w: ATTENTION!
+This build uses unsafe internal compiler arguments:
+
+-XXLanguage:+ExpectActualClasses
+-XXLanguage:+ContextParameters
+
+This mode is not recommended for production use,
+as no stability/compatibility guarantees are given on
+compiler or generated code. Use it at your own risk!
+
+
+> Task :app:compileDebugJavaWithJavac NO-SOURCE
+> Task :app:copyRoomSchemas NO-SOURCE
+> Task :app4:mergeDebugJavaResource
+> Task :app4:compileDebugJavaWithJavac
+> Task :app4:copyRoomSchemas NO-SOURCE
+> Task :app:processDebugJavaRes
+> Task :app:mergeDebugJavaResource
+> Task :app4:dexBuilderDebug
+> Task :app4:mergeDebugGlobalSynthetics FROM-CACHE
+> Task :app4:mergeProjectDexDebug
+> Task :app:dexBuilderDebug
+> Task :app4:packageDebug
+> Task :app4:assembleDebug
+> Task :app4:createDebugApkListingFileRedirect
+> Task :app:mergeDebugGlobalSynthetics FROM-CACHE
+> Task :app:mergeProjectDexDebug
+> Task :app:packageDebug
+> Task :app:assembleDebug
+> Task :app:createDebugApkListingFileRedirect
+
+BUILD SUCCESSFUL in 2m 34s
+155 actionable tasks: 112 executed, 43 from cache
+Configuration cache entry stored.

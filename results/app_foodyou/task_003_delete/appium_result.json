@@ -1,0 +1,59 @@
+{
+  "success": false,
+  "elapsed_time": 95.62,
+  "screenshots": [
+    "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\00_00_app_launched_20260331_174053.png",
+    "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\01_01_after_ok_20260331_174115.png",
+    "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\02_02_after_agree_20260331_174127.png",
+    "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\03_03_after_skip_20260331_174138.png",
+    "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\04_04_after_version_update_20260331_174141.png",
+    "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\05_05_lightning_clicked_20260331_174142.png",
+    "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\06_06_egg_input_20260331_174143.png",
+    "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\07_07_saved_20260331_174144.png",
+    "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\08_08_egg_clicked_20260331_174145.png",
+    "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\09_09_delete_item_clicked_20260331_174156.png",
+    "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\10_10_deleted_20260331_174218.png"
+  ],
+  "ui_trees": [
+    "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\ui_trees\\00_app_launched.xml",
+    "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\ui_trees\\90_post_script.xml",
+    "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\ui_trees\\98_failure.xml"
+  ],
+  "ui_checks": {
+    "passed": false,
+    "summary": "failed: core_target_element_exists, interactable_nodes_at_least_two, task_specific_marker_exists",
+    "results": [
+      {
+        "name": "core_target_element_exists",
+        "passed": false,
+        "matched_count": 0,
+        "min_count": 1,
+        "max_count": null
+      },
+      {
+        "name": "interactable_nodes_at_least_two",
+        "passed": false,
+        "matched_count": 1,
+        "min_count": 2,
+        "max_count": null
+      },
+      {
+        "name": "app_package_present",
+        "passed": true,
+        "matched_count": 79,
+        "min_count": 1,
+        "max_count": null
+      },
+      {
+        "name": "task_specific_marker_exists",
+        "passed": false,
+        "matched_count": 0,
+        "min_count": 1,
+        "max_count": null
+      }
+    ]
+  },
+  "log": "RuntimeError: UI tree checks failed: failed: core_target_element_exists, interactable_nodes_at_least_two, task_specific_marker_exists",
+  "test_type": "custom",
+  "timestamp": "2026-03-31T17:42:19.407948"
+}

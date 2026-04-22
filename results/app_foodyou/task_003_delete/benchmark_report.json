@@ -1,0 +1,120 @@
+{
+  "app_name": "app_foodyou",
+  "task_id": "task_003_delete",
+  "start_time": "2026-03-07T15:10:26.354117",
+  "use_ground_truth": true,
+  "steps": {
+    "agent": {
+      "success": true,
+      "warning": "Skipped LLM, used ground truth instead"
+    },
+    "compilation": {
+      "success": true,
+      "return_code": 0,
+      "elapsed_time": 30.305381059646606,
+      "apk_exists": true,
+      "apk_path": "D:\\benchmark\\benchmark_root\\workspace\\app_foodyou\\task_003_delete\\app\\build\\outputs\\apk\\debug\\app-debug.apk",
+      "apk_size_mb": 89.1
+    },
+    "appium": {
+      "success": true,
+      "elapsed_time": 35.9949676990509,
+      "screenshots": [
+        "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\00_app_launched_20260307_151120.png",
+        "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\01_after_ok_20260307_151123.png",
+        "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\02_after_agree_20260307_151126.png",
+        "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\03_after_skip_20260307_151128.png",
+        "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\04_after_version_update_20260307_151130.png",
+        "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\05_lightning_clicked_20260307_151133.png",
+        "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\06_egg_input_20260307_151134.png",
+        "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\07_saved_20260307_151136.png",
+        "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\08_egg_clicked_20260307_151138.png",
+        "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\09_delete_item_clicked_20260307_151141.png",
+        "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\10_deleted_20260307_151144.png"
+      ],
+      "test_type": "custom",
+      "timestamp": "2026-03-07T15:11:45.746212"
+    },
+    "vlm_judge": {
+      "combined_id": "app_foodyou/task_003_delete",
+      "app_name": "app_foodyou",
+      "task_id": "task_003_delete",
+      "success": false,
+      "task_prompt": "This is the source code of a healthy diet app. I would like to add an undo delete feature to the app. After a user deletes content, they should have a limited amount of time to undo the deletion, and if they choose to do so within that time period, the deleted content should be restored.",
+      "screenshots_count": 11,
+      "evaluations": [
+        {
+          "success": false,
+          "screenshot": "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\00_app_launched_20260307_151120.png",
+          "error": "litellm.AuthenticationError: AuthenticationError: OpenAIException - The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable"
+        },
+        {
+          "success": false,
+          "screenshot": "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\01_after_ok_20260307_151123.png",
+          "error": "litellm.AuthenticationError: AuthenticationError: OpenAIException - The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable"
+        },
+        {
+          "success": false,
+          "screenshot": "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\02_after_agree_20260307_151126.png",
+          "error": "litellm.AuthenticationError: AuthenticationError: OpenAIException - The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable"
+        },
+        {
+          "success": false,
+          "screenshot": "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\03_after_skip_20260307_151128.png",
+          "error": "litellm.AuthenticationError: AuthenticationError: OpenAIException - The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable"
+        },
+        {
+          "success": false,
+          "screenshot": "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\04_after_version_update_20260307_151130.png",
+          "error": "litellm.AuthenticationError: AuthenticationError: OpenAIException - The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable"
+        },
+        {
+          "success": false,
+          "screenshot": "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\05_lightning_clicked_20260307_151133.png",
+          "error": "litellm.AuthenticationError: AuthenticationError: OpenAIException - The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable"
+        },
+        {
+          "success": false,
+          "screenshot": "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\06_egg_input_20260307_151134.png",
+          "error": "litellm.AuthenticationError: AuthenticationError: OpenAIException - The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable"
+        },
+        {
+          "success": false,
+          "screenshot": "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\07_saved_20260307_151136.png",
+          "error": "litellm.AuthenticationError: AuthenticationError: OpenAIException - The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable"
+        },
+        {
+          "success": false,
+          "screenshot": "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\08_egg_clicked_20260307_151138.png",
+          "error": "litellm.AuthenticationError: AuthenticationError: OpenAIException - The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable"
+        },
+        {
+          "success": false,
+          "screenshot": "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\09_delete_item_clicked_20260307_151141.png",
+          "error": "litellm.AuthenticationError: AuthenticationError: OpenAIException - The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable"
+        },
+        {
+          "success": false,
+          "screenshot": "D:\\benchmark\\benchmark_root\\results\\app_foodyou\\task_003_delete\\screenshots\\10_deleted_20260307_151144.png",
+          "error": "litellm.AuthenticationError: AuthenticationError: OpenAIException - The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable"
+        }
+      ],
+      "vsr_score": 0.0,
+      "vsr_percentage": 0.0,
+      "overall_assessment": "No successful evaluations",
+      "timestamp": "2026-03-07T15:11:45.984522"
+    }
+  },
+  "final_result": "COMPLETED",
+  "end_time": "2026-03-07T15:11:45.986860",
+  "total_elapsed_time": 79.63274264335632,
+  "metrics": {
+    "CR": 1.0,
+    "VSR": 0.0,
+    "VSR_percentage": 0.0,
+    "agent_success": true,
+    "compilation_success": true,
+    "appium_success": true,
+    "vlm_success": false
+  }
+}
