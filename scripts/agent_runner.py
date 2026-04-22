@@ -32,9 +32,12 @@ from tools.retriever import Retriever
 _MAX_FEEDBACK_ROUNDS = 2   # RQ5：最多自动修复轮次
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 _MAX_AGENT_STEPS = 10      # ReAct / Tool-Planning 最大工具交互轮次
 _MAX_RESPONSE_RECOVERY_RETRIES = 2  # 对空/过短/无代码块响应的自动恢复重试次数
 _MIN_VALID_RESPONSE_CHARS = 200
+=======
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
 =======
 >>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
 =======
@@ -175,6 +178,7 @@ class AgentRunner:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         retries = 0
         while True:
             if self.strategy == "direct":
@@ -241,6 +245,9 @@ class AgentRunner:
             rag_context=context,
         )
 
+=======
+        # LLM 调用
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
 =======
         # LLM 调用
 >>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
