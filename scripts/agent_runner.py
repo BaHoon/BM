@@ -31,9 +31,12 @@ from tools.retriever import Retriever
 # --------------------------------------------------------------------------- #
 _MAX_FEEDBACK_ROUNDS = 2   # RQ5：最多自动修复轮次
 <<<<<<< HEAD
+<<<<<<< HEAD
 _MAX_AGENT_STEPS = 10      # ReAct / Tool-Planning 最大工具交互轮次
 _MAX_RESPONSE_RECOVERY_RETRIES = 2  # 对空/过短/无代码块响应的自动恢复重试次数
 _MIN_VALID_RESPONSE_CHARS = 200
+=======
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
 =======
 >>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
 
@@ -171,6 +174,7 @@ class AgentRunner:
             )
 
 <<<<<<< HEAD
+<<<<<<< HEAD
         retries = 0
         while True:
             if self.strategy == "direct":
@@ -240,6 +244,9 @@ class AgentRunner:
 =======
         # LLM 调用
 >>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
+=======
+        # LLM 调用
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
         llm_response = self.llm.generate_code(
             task_prompt=task_prompt,
             context=context,
@@ -263,6 +270,7 @@ class AgentRunner:
             "retrieved_files": retrieved_paths,
             # 旧字段兼容
             "total_files": len(write_results),
+<<<<<<< HEAD
 <<<<<<< HEAD
             "tool_calls": 0,
             "plan_valid": True,
@@ -449,6 +457,8 @@ class AgentRunner:
             "agent_trace": trace,
 =======
 >>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
+=======
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
         }
 
     def run_with_feedback_loop(
@@ -593,10 +603,13 @@ class AgentRunner:
         )
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     def _validate_agent_output(self, llm_response: str) -> bool:
         """Validate final output by checking presence of at least one writable code block."""
         return bool(self._extract_code_blocks(llm_response))
 
+=======
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
 =======
 >>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
 
