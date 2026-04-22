@@ -13,6 +13,7 @@ Agent_Runner.py - 实验核心执行逻辑
 """
 
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -23,17 +24,24 @@ _SCRIPTS_DIR = Path(__file__).parent
 sys.path.insert(0, str(_SCRIPTS_DIR))
 
 from llm_api.client import LLMClient
-from tools.agent_executor import PlanValidator, ToolExecutionError, ToolRuntime, parse_agent_json
 from tools.retriever import Retriever
-from tools.task_config import find_task_config, synthesize_meta_from_task_config
 
 # --------------------------------------------------------------------------- #
 #  常量
 # --------------------------------------------------------------------------- #
 _MAX_FEEDBACK_ROUNDS = 2   # RQ5：最多自动修复轮次
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
 _MAX_AGENT_STEPS = 10      # ReAct / Tool-Planning 最大工具交互轮次
 _MAX_RESPONSE_RECOVERY_RETRIES = 2  # 对空/过短/无代码块响应的自动恢复重试次数
 _MIN_VALID_RESPONSE_CHARS = 200
+=======
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
+=======
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
+=======
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
 
 
 class AgentRunner:
@@ -54,7 +62,7 @@ class AgentRunner:
         data_dir:           str   = "data",
         workspace_dir:      str   = "workspace",
         results_dir:        str   = "results",
-        temperature:        float = 0.0,
+        temperature:        float = 0.2,
     ):
         """
         Args:
@@ -62,7 +70,7 @@ class AgentRunner:
             strategy:           Agent 策略 'direct' | 'ReAct' | 'tool_planning'。
             retriever_strategy: 文件检索策略 'keyword' | 'tfidf' | 'ast_analysis'。
             retriever_top_k:    检索返回文件数（默认 5）。
-            temperature:        LLM 温度，默认 0.0 保证代码确定性。
+            temperature:        LLM 温度，默认 0.2 保证代码确定性。
         """
         self.root_dir      = Path(__file__).parent.parent
         self.data_dir      = self.root_dir / data_dir
@@ -111,21 +119,11 @@ class AgentRunner:
             # 兼容旧格式
             meta_path = self.data_dir / app_name / "meta.json"
             
-        if meta_path.exists():
-            with open(meta_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-
-        # 新结构兼容：从 app 级统一 JSON 中按 task_id 查找
-        if task_id:
-            found = find_task_config(self.data_dir, app_name=app_name, task_id=task_id)
-            if found:
-                task_key, cfg = found
-                cfg = dict(cfg)
-                cfg.setdefault("task_key", task_key)
-                cfg.setdefault("task_id", task_id)
-                return synthesize_meta_from_task_config(cfg)
-
-        raise FileNotFoundError(f"Meta file not found: {meta_path}")
+        if not meta_path.exists():
+            raise FileNotFoundError(f"Meta file not found: {meta_path}")
+        
+        with open(meta_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
     
     # ----------------------------------------------------------------------- #
     #  主入口 (新) — 供 Experiment_Launcher 直接调用
@@ -160,6 +158,16 @@ class AgentRunner:
         meta        = self.load_meta(f"{app_name}/{task_id}")
         task_prompt = meta.get("prompt", "")
 
+        # RAG 检索
+        base_src = self.data_dir / app_name / "base_src"
+        retriever = Retriever(
+            base_src_dir=base_src,
+            strategy=self.retriever_strategy,
+            top_k=self.retriever_top_k,
+        )
+        retrieved_paths, context = retriever.retrieve(task_prompt)
+        print(f"[AgentRunner] Retrieved {len(retrieved_paths)} files: {retrieved_paths}")
+
         # workspace 校验
         workspace_path = self.workspace_dir / app_name / task_id
         if not workspace_path.exists():
@@ -168,6 +176,9 @@ class AgentRunner:
                 "Call Env_Manager.reset_workspace() first."
             )
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
         retries = 0
         while True:
             if self.strategy == "direct":
@@ -234,40 +245,41 @@ class AgentRunner:
             rag_context=context,
         )
 
+=======
+        # LLM 调用
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
+=======
+        # LLM 调用
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
+=======
+        # LLM 调用
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
         llm_response = self.llm.generate_code(
             task_prompt=task_prompt,
-            context=enriched_context,
+            context=context,
             feedback_screenshots=feedback_screenshots,
             feedback_log=feedback_log,
             temperature=self.temperature,
         )
 
-        if not self._validate_agent_output(llm_response):
-            self._save_llm_response(app_name, task_id, attempt, llm_response, retrieved_paths)
-            return {
-                "success": False,
-                "files_written": 0,
-                "write_results": {},
-                "llm_response": llm_response,
-                "retrieved_files": retrieved_paths,
-                "total_files": 0,
-                "error": "invalid_final_patch_or_step_overflow",
-                "tool_calls": 0,
-                "plan_valid": self.strategy != "tool_planning",
-            }
-
-        code_blocks = self._extract_code_blocks(llm_response)
+        # 解析 & 写文件
+        code_blocks  = self._extract_code_blocks(llm_response)
         write_results = self._write_to_workspace(workspace_path, code_blocks)
+
         success_count = sum(1 for v in write_results.values() if v == "SUCCESS")
         self._save_llm_response(app_name, task_id, attempt, llm_response, retrieved_paths)
 
         return {
-            "success": success_count > 0,
-            "files_written": success_count,
-            "write_results": write_results,
-            "llm_response": llm_response,
+            "success":         success_count > 0,
+            "files_written":   success_count,
+            "write_results":   write_results,
+            "llm_response":    llm_response,
             "retrieved_files": retrieved_paths,
+            # 旧字段兼容
             "total_files": len(write_results),
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
             "tool_calls": 0,
             "plan_valid": True,
         }
@@ -451,6 +463,12 @@ class AgentRunner:
             "tool_calls": tool_calls,
             "plan_valid": (self.strategy != "tool_planning") or plan_loaded,
             "agent_trace": trace,
+=======
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
+=======
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
+=======
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
         }
 
     def run_with_feedback_loop(
@@ -506,111 +524,6 @@ class AgentRunner:
     # ----------------------------------------------------------------------- #
     #  私有方法
     # ----------------------------------------------------------------------- #
-
-    def _build_direct_baseline_context(
-        self,
-        app_name: str,
-        task_id: str,
-        workspace_path: Path,
-        rag_context: str,
-    ) -> str:
-        """Build zero-shot direct context with UI tree + manifest + dir structure + retrieved files."""
-        manifest_text = ""
-        manifest_path = next(iter(workspace_path.glob("**/AndroidManifest.xml")), None)
-        if manifest_path and manifest_path.exists():
-            manifest_text = manifest_path.read_text(encoding="utf-8", errors="replace")[:12000]
-
-        ui_tree_text = ""
-        ui_tree_path = self.results_dir / app_name / task_id / "ui_tree.xml"
-        if ui_tree_path.exists():
-            ui_tree_text = ui_tree_path.read_text(encoding="utf-8", errors="replace")[:12000]
-
-        dir_tree = self._render_tree(workspace_path, max_depth=3, max_entries=220)
-
-        return (
-            "# Project Directory Tree\n"
-            + dir_tree
-            + "\n\n# AndroidManifest.xml\n"
-            + manifest_text
-            + "\n\n# Current UI Tree XML (if available)\n"
-            + ui_tree_text
-            + "\n\n# Retrieved Relevant Source\n"
-            + rag_context
-        )
-
-    def _render_tree(self, root: Path, max_depth: int = 3, max_entries: int = 200) -> str:
-        root = root.resolve()
-        rows: list[str] = []
-        count = 0
-        for p in sorted(root.rglob("*")):
-            if count >= max_entries:
-                break
-            rel = p.relative_to(root)
-            depth = len(rel.parts)
-            if depth > max_depth:
-                continue
-            prefix = "  " * (depth - 1)
-            name = rel.parts[-1] + ("/" if p.is_dir() else "")
-            rows.append(f"{prefix}{name}")
-            count += 1
-        return "\n".join(rows)
-
-    def _build_tool_system_prompt(self, strategy: str) -> str:
-        if strategy == "tool_planning":
-            return (
-                "You are a real tool-using Android coding agent. "
-                "You must first output a plan as JSON action with type='plan'. "
-                "Then use tool_call actions that include step_id and optional complete_step=true. "
-                "Tools available: list_dir, read_file, search_text. "
-                "Never fabricate observations. Observations come only from system. "
-                "When finished, output full-file code blocks and end with [FINAL_PATCH]. "
-                "Max 10 turns total."
-            )
-        return (
-            "You are a real ReAct Android coding agent. "
-            "Use JSON tool_call actions to inspect project context before patching. "
-            "Tools available: list_dir, read_file, search_text. "
-            "Never fabricate observations. Observations come only from system. "
-            "When finished, output full-file code blocks and end with [FINAL_PATCH]. "
-            "Max 10 turns total."
-        )
-
-    def _build_tool_user_prompt(
-        self,
-        task_prompt: str,
-        seed_context: str,
-        feedback_log: Optional[str],
-        strategy: str,
-    ) -> str:
-        protocol = (
-            "Action JSON protocol:\n"
-            "1) Plan action (tool_planning only first turn):\n"
-            "{\"type\":\"plan\",\"steps\":[{\"id\":\"S1\",\"goal\":\"...\",\"depends_on\":[]}]}\n"
-            "2) Tool call action:\n"
-            "{\"type\":\"tool_call\",\"tool\":\"read_file\",\"args\":{...},\"step_id\":\"S1\",\"complete_step\":false}\n"
-            "3) Optional step complete action:\n"
-            "{\"type\":\"step_complete\",\"step_id\":\"S1\"}\n"
-            "4) Final patch:\n"
-            "```filepath:path/to/File.kt\n<full file>\n```\n[FINAL_PATCH]\n"
-        )
-
-        extra = ""
-        if feedback_log:
-            extra = f"\n\nPrevious attempt feedback:\n```\n{feedback_log[-4000:]}\n```"
-
-        return (
-            f"Task:\n{task_prompt}\n\n"
-            f"Seed context:\n{seed_context[:20000]}\n\n"
-            f"Strategy: {strategy}\n\n"
-            f"{protocol}"
-            f"{extra}"
-        )
-
-    def _format_observation(self, payload: dict) -> str:
-        text = json.dumps(payload, ensure_ascii=False)
-        if len(text) > 7000:
-            text = text[:7000] + "...<truncated>"
-        return f"Observation:\n```json\n{text}\n```"
 
     def _extract_code_blocks(self, llm_response: str) -> List[Tuple[str, str]]:
         """支持 ```filepath:... 和标准 ```kotlin/xml 两种格式。"""
@@ -699,10 +612,19 @@ class AgentRunner:
             encoding="utf-8",
         )
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
     def _validate_agent_output(self, llm_response: str) -> bool:
         """Validate final output by checking presence of at least one writable code block."""
         return bool(self._extract_code_blocks(llm_response))
 
+=======
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
+=======
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
+=======
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
 
 def main():
     import argparse
@@ -726,7 +648,6 @@ def main():
         strategy=args.strategy,
         retriever_strategy=args.retriever,
         retriever_top_k=args.top_k,
-        temperature=0.0,
     )
     try:
         result = runner.run_task(args.app_name, args.task_id)

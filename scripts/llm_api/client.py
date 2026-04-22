@@ -104,7 +104,6 @@ STRATEGY_SYSTEM_PROMPTS: dict[str, str] = {
     "direct": (
         "You are an expert Android developer. "
         "Produce complete, compilable code for every file that needs to change. "
-        "You MUST end your output with a single line: [FINAL_PATCH]. "
         "Output ONLY code blocks using the format:\n"
         "```filepath:relative/path/to/File.ext\n"
         "<complete file content>\n"
@@ -114,31 +113,27 @@ STRATEGY_SYSTEM_PROMPTS: dict[str, str] = {
 
     "ReAct": (
         "You are an expert Android developer using the ReAct framework.\n"
-        "Limit yourself to at most 10 Thought/Action/Observation steps.\n"
         "Follow this pattern:\n"
         "  Thought: analyse the task and the relevant files\n"
         "  Action: decide which files to modify and why\n"
         "  Observation: describe the expected change\n"
-        "  ... (repeat as needed, max 10 steps) ...\n"
+        "  ... (repeat as needed) ...\n"
         "  Final Answer: output ALL modified files as code blocks:\n"
         "```filepath:relative/path/to/File.ext\n"
         "<complete file content>\n"
         "```\n"
-        "Every code block MUST contain the full file, not a diff or snippet.\n"
-        "After all code blocks, output one final line: [FINAL_PATCH]."
+        "Every code block MUST contain the full file, not a diff or snippet."
     ),
 
     "tool_planning": (
         "You are an expert Android developer.\n"
-        "Limit total planning/implementation steps to 10.\n"
         "Step 1 – PLAN: List every file you will create or modify, with a one-line "
         "reason for each.\n"
         "Step 2 – IMPLEMENT: For each planned file, output a complete code block:\n"
         "```filepath:relative/path/to/File.ext\n"
         "<complete file content>\n"
         "```\n"
-        "Do NOT skip any planned file.\n"
-        "After all code blocks, output one final line: [FINAL_PATCH]."
+        "Do NOT skip any planned file."
     ),
 }
 
@@ -166,9 +161,8 @@ class LLMClient:
         context: str,
         feedback_screenshots: Optional[list[str]] = None,
         feedback_log: Optional[str] = None,
-        temperature: float = 0.0,
-        max_tokens: int = 4096,
-        top_p: float = 1.0,
+        temperature: float = 0.2,
+        max_tokens: int = 16000,
     ) -> str:
         """
         调用 LLM 生成/修复代码。
@@ -196,40 +190,23 @@ class LLMClient:
             {"role": "user",   "content": user_content},
         ]
 
-        return self.chat(
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            top_p=top_p,
-        )
-
-    def chat(
-        self,
-        messages: list[dict],
-        temperature: float = 0.0,
-        max_tokens: int = 4096,
-        top_p: float = 1.0,
-    ) -> str:
-        """Low-level chat completion for multi-turn agent loops."""
         call_params: dict = {
-            "model": self.model,
-            "messages": messages,
+            "model":       self.model,
+            "messages":    messages,
             "temperature": temperature,
-            "top_p": top_p,
-            "max_tokens": max_tokens,
+            "max_tokens":  max_tokens,
         }
         tongji_model = _resolve_tongji_model(self.model)
         if self.model.startswith("gemini"):
             call_params["custom_llm_provider"] = "gemini"
         elif tongji_model:
-            call_params["model"] = f"openai/{tongji_model}"
+            call_params["model"]    = f"openai/{tongji_model}"
             call_params["api_base"] = _TONGJI_BASE_URL
-            call_params["api_key"] = _TONGJI_API_KEY
+            call_params["api_key"]  = _TONGJI_API_KEY
 
-        print(
-            f"[LLMClient] model={self.model}  strategy={self.strategy}  "
-            f"prompt_chars={sum(len(str(m.get('content', ''))) for m in messages)}"
-        )
+        print(f"[LLMClient] model={self.model}  strategy={self.strategy}  "
+              f"prompt_chars={sum(len(str(m['content'])) for m in messages)}")
+
         response = self._completion_with_retry(call_params)
         raw_content = response.choices[0].message.content
         if raw_content is None:

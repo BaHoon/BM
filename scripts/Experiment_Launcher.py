@@ -15,9 +15,9 @@ Experiment_Launcher.py - 批量实验调度器
 流程（每个任务）：
   1. EnvManager.reset_workspace()     — 还原干净 workspace
   2. AgentRunner.run_task()           — LLM 代码生成（RAG + 策略）
-    3. EnvManager.build_project()       — Gradle 编译
-    4. AppiumRunner.run_test()          — UI 自动化测试 → 截图 + UI 树
-    5. Scorer.score_task()              — L1/L2/L3 三层打分
+  3. EnvManager.build_project()       — Gradle 编译 → CSR
+  4. AppiumRunner.run_test()          — UI 自动化测试 → 截图
+  5. Evaluator.evaluate()             — Stream2 校验 → VSM / VLM 打分
   6. ExperimentLogger.log()           — 写入 raw_data.jsonl
 
 汇总（全部完成后）：
@@ -29,7 +29,9 @@ Experiment_Launcher.py - 批量实验调度器
 
 import argparse
 import json
+import os
 import sys
+import time
 from itertools import product
 from pathlib import Path
 from typing import Optional
@@ -39,9 +41,8 @@ sys.path.insert(0, str(_SCRIPTS_DIR))
 
 from agent_runner import AgentRunner
 from Env_Manager  import EnvManager
-from scorer       import Scorer
-from tools.logger import ExperimentLogger
-from tools.task_config import find_task_config, list_task_configs, synthesize_meta_from_task_config
+from Evaluator    import Evaluator
+from tools.logger import ExperimentLogger, ExperimentRecord
 
 
 # --------------------------------------------------------------------------- #
@@ -69,7 +70,6 @@ class ExperimentLauncher:
         skip_if_apk:       bool       = False,
         vlm_model:         str        = "gpt-4o",
         pass_k:            list[int]  = None,
-        direct_repeats:    int        = 3,
     ):
         self.models             = models
         self.strategies         = strategies
@@ -84,14 +84,13 @@ class ExperimentLauncher:
         self.skip_if_apk        = skip_if_apk
         self.vlm_model          = vlm_model
         self.pass_k_values      = pass_k or [1, 3]
-        self.direct_repeats     = max(1, int(direct_repeats))
 
         self.root        = Path(__file__).parent.parent
         self.data_dir    = self.root / "data"
         self.results_dir = self.root / "results"
 
         self.env_mgr  = EnvManager()
-        self.scorer = Scorer(vlm_model=vlm_model)
+        self.evaluator = Evaluator(vlm_model=vlm_model)
         self.logger   = ExperimentLogger(results_dir=self.results_dir)
 
         # 懒加载 AppiumRunner
@@ -105,14 +104,8 @@ class ExperimentLauncher:
         """遍历所有任务 × 模型 × 策略，依次执行完整 pipeline。"""
         task_list = self._discover_tasks()
         combos    = list(product(self.models, self.strategies))
-        plans: list[tuple[str, str, str, str, int]] = []
-        for app_name, task_id in task_list:
-            for model, strategy in combos:
-                repeats = self.direct_repeats if (strategy == "direct" and not self.feedback_loop) else 1
-                for attempt in range(1, repeats + 1):
-                    plans.append((app_name, task_id, model, strategy, attempt))
 
-        total = len(plans)
+        total = len(task_list) * len(combos)
         print(f"\n{'='*70}")
         print(f"  Experiment Launch")
         print(f"  Tasks={len(task_list)}  Models={self.models}  Strategies={self.strategies}")
@@ -120,16 +113,17 @@ class ExperimentLauncher:
         print(f"{'='*70}\n")
 
         run_idx = 0
-        for app_name, task_id, model, strategy, attempt in plans:
-            run_idx += 1
-            print(f"\n[{run_idx}/{total}] {app_name}/{task_id}  "
-                  f"model={model}  strategy={strategy}  attempt={attempt}")
-            try:
-                self._run_one(app_name, task_id, model, strategy, attempt)
-            except Exception as exc:
-                import traceback
-                print(f"[Launcher] ✗ UNHANDLED ERROR: {exc}")
-                traceback.print_exc()
+        for app_name, task_id in task_list:
+            for model, strategy in combos:
+                run_idx += 1
+                print(f"\n[{run_idx}/{total}] {app_name}/{task_id}  "
+                      f"model={model}  strategy={strategy}")
+                try:
+                    self._run_one(app_name, task_id, model, strategy)
+                except Exception as exc:
+                    import traceback
+                    print(f"[Launcher] ✗ UNHANDLED ERROR: {exc}")
+                    traceback.print_exc()
 
         # 全部完成后汇总
         self._print_summary()
@@ -146,10 +140,10 @@ class ExperimentLauncher:
         task_id:  str,
         model:    str,
         strategy: str,
-        run_attempt: int = 1,
     ) -> None:
         meta      = self._load_meta(app_name, task_id)
         domain    = meta.get("domain")
+        eval_type = meta.get("eval_type", "functional")
 
         with self.logger.start_run(
             app_name, task_id, model, strategy, domain=domain
@@ -171,10 +165,6 @@ class ExperimentLauncher:
                 retriever_top_k=self.retriever_top_k,
             )
 
-            agent_result = None
-            compile_result = None
-            appium_result = None
-
             try:
                 if self.feedback_loop:
                     # RQ5：注入反馈闭环
@@ -186,34 +176,37 @@ class ExperimentLauncher:
                     agent_result = histories[-1]
                     run.record.attempt = len(histories)
                 else:
-                    agent_result = agent.run_task(app_name, task_id, attempt=run_attempt)
-                    run.record.attempt = run_attempt
+                    agent_result = agent.run_task(app_name, task_id, attempt=1)
+                    run.record.attempt = 1
             except Exception as exc:
+                run.record.csr = False
+                run.record.vsm = False
+                run.record.error_category = "llm_api_error"
                 run.record.extra["agent_error"] = str(exc)
-                agent_result = {"success": False, "error": str(exc)}
                 print(f"  [agent] FAIL: {exc}")
+                return
 
-            run.record.retrieved_files = (agent_result or {}).get("retrieved_files", [])
-            run.record.extra["tool_calls"] = (agent_result or {}).get("tool_calls", 0)
-            run.record.extra["plan_valid"] = (agent_result or {}).get("plan_valid", strategy != "tool_planning")
-            if (agent_result or {}).get("agent_trace"):
-                run.record.extra["agent_trace"] = (agent_result or {}).get("agent_trace")
+            run.record.retrieved_files = agent_result.get("retrieved_files", [])
+
+            if not agent_result.get("success"):
+                run.record.csr = False
+                run.record.vsm = False
+                run.record.error_category = "no_code_generated"
+                return
 
             # Step 3: 编译
-            if agent_result and agent_result.get("success"):
-                compile_result = self.env_mgr.build_project(
-                    app_name, task_id, timeout=self.compile_timeout
-                )
-            else:
-                compile_result = {
-                    "success": False,
-                    "stdout": "",
-                    "stderr": (agent_result or {}).get("error", "agent_failed"),
-                }
-            run.record.csr = bool(compile_result.get("success", False))
+            compile_result = self.env_mgr.build_project(
+                app_name, task_id, timeout=self.compile_timeout
+            )
+            run.record.csr = compile_result.get("success", False)
+
+            if not run.record.csr:
+                run.record.vsm = False
+                run.record.error_category = "logic_error"
+                return
 
             # Step 4: Appium 测试（获取截图）
-            apk_path    = (compile_result or {}).get("apk_path")
+            apk_path    = compile_result.get("apk_path")
             screenshots = []
             appium_log  = ""
 
@@ -230,27 +223,15 @@ class ExperimentLauncher:
                     print(f"  [appium] WARN: {exc}")
 
             # Step 5: 评测
-            score_result = self.scorer.score_task(
-                app_name=app_name,
-                task_id=task_id,
-                agent_result=agent_result,
-                compile_result=compile_result,
-                appium_result=appium_result,
+            eval_result = self.evaluator.evaluate(
+                app_name, task_id,
+                apk_path=apk_path,
+                screenshots=screenshots,
+                appium_log=appium_log,
             )
-
-            run.record.vsm = bool(score_result.get("pass", False))
-            run.record.vlm_score = ((score_result.get("l3") or {}).get("vlm") or {}).get("score")
-            run.record.error_category = self._derive_error_category(score_result)
-            run.record.l1_score = (score_result.get("l1") or {}).get("score", 0)
-            run.record.l2_score = (score_result.get("l2") or {}).get("score", 0)
-            run.record.l3_score = (score_result.get("l3") or {}).get("score", 0)
-            run.record.total_score = score_result.get("total_score", 0)
-            run.record.recall = score_result.get("recall", 0.0)
-            run.record.extra.update({
-                "l1_reason": (score_result.get("l1") or {}).get("reason"),
-                "l2_reason": (score_result.get("l2") or {}).get("reason"),
-                "l3_reason": (score_result.get("l3") or {}).get("reason"),
-            })
+            run.record.vsm            = eval_result.get("vsm", False)
+            run.record.vlm_score      = eval_result.get("vlm_score")
+            run.record.error_category = eval_result.get("error_category")
 
     # ----------------------------------------------------------------------- #
     #  Appium 懒加载
@@ -319,12 +300,6 @@ class ExperimentLauncher:
             parts = arg.split("/", 1)
             return [(parts[0], parts[1])]
 
-        unified_rows = list_task_configs(self.data_dir, app_name=self.app_filter)
-        for app_name, task_id, _, _ in unified_rows:
-            if arg not in ("all", None) and app_name != arg:
-                continue
-            tasks.append((app_name, task_id))
-
         for app_dir in sorted(self.data_dir.iterdir()):
             if not app_dir.is_dir() or app_dir.name == "base_src":
                 continue
@@ -338,8 +313,6 @@ class ExperimentLauncher:
                 meta_file = task_dir / "meta.json"
                 if meta_file.exists():
                     tasks.append((app_dir.name, task_dir.name))
-
-            tasks = sorted(set(tasks))
 
         print(f"[Launcher] Discovered {len(tasks)} tasks.")
         return tasks
@@ -380,7 +353,7 @@ class ExperimentLauncher:
             for r in records:
                 by_task[(r["app_name"], r["task_id"])].append(r.get("vsm", False))
             pass_at_k_vals = [
-                Scorer.compute_pass_at_k(slist, k)
+                Evaluator.compute_pass_at_k(slist, k)
                 for slist in by_task.values()
             ]
             avg = sum(pass_at_k_vals) / len(pass_at_k_vals) if pass_at_k_vals else 0
@@ -433,28 +406,7 @@ class ExperimentLauncher:
         if p.exists():
             with open(p, "r", encoding="utf-8") as f:
                 return json.load(f)
-
-        found = find_task_config(self.data_dir, app_name=app_name, task_id=task_id)
-        if found:
-            task_key, cfg = found
-            cfg = dict(cfg)
-            cfg.setdefault("task_key", task_key)
-            cfg.setdefault("task_id", task_id)
-            return synthesize_meta_from_task_config(cfg)
         return {}
-
-    def _derive_error_category(self, score_result: dict) -> str:
-        l1_reason = (score_result.get("l1") or {}).get("reason", "")
-        l2_reason = (score_result.get("l2") or {}).get("reason", "")
-        if "dependency" in l1_reason:
-            return "missing_context"
-        if "syntax" in l1_reason or "compile_fail" in l1_reason:
-            return "logic_error"
-        if "ui_node_missing" in l2_reason:
-            return "vague_req"
-        if score_result.get("pass"):
-            return "none"
-        return "vague_req"
 
 
 def _count_field(records: list, field: str) -> dict:
@@ -507,8 +459,6 @@ def parse_args():
     parser.add_argument("--appium-timeout",  type=int, default=300)
     parser.add_argument("--pass-k",      nargs="+", type=int, default=[1, 3],
                         help="计算 Pass@k 的 k 值列表")
-    parser.add_argument("--direct-repeats", type=int, default=3,
-                        help="direct 策略每任务重复次数（默认 3）")
     return parser.parse_args()
 
 
@@ -527,7 +477,6 @@ def main():
         feedback_rounds    = args.feedback_rounds,
         vlm_model          = args.vlm_model,
         pass_k             = args.pass_k,
-        direct_repeats     = args.direct_repeats,
     )
     launcher.launch()
 

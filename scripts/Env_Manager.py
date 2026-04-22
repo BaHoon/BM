@@ -25,8 +25,6 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from tools.task_config import find_task_config, synthesize_meta_from_task_config
-
 
 class EnvManager:
     """工作空间生命周期管理器：重置 → 编译 → APK 路径查询。"""
@@ -120,6 +118,9 @@ class EnvManager:
             )
 
         project_root = self._resolve_gradle_project_root(workspace_path)
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
         meta = self._load_meta(app_name, task_id)
         cmd = meta.get("build_command") or (
             self._GRADLE_CMD_WIN if os.name == "nt" else self._GRADLE_CMD_UNIX
@@ -130,6 +131,15 @@ class EnvManager:
             print(f"[EnvManager] Java required={required_java}, switching JAVA_HOME -> {jdk_home}")
         else:
             print(f"[EnvManager] Java required={required_java}, no explicit JDK home found, using current JAVA_HOME")
+=======
+        cmd = self._GRADLE_CMD_WIN if os.name == "nt" else self._GRADLE_CMD_UNIX
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
+=======
+        cmd = self._GRADLE_CMD_WIN if os.name == "nt" else self._GRADLE_CMD_UNIX
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
+=======
+        cmd = self._GRADLE_CMD_WIN if os.name == "nt" else self._GRADLE_CMD_UNIX
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
         print(f"[EnvManager] Building: {cmd}  (cwd={project_root})")
 
         t0 = time.time()
@@ -339,19 +349,10 @@ class EnvManager:
 
     def _load_meta(self, app_name: str, task_id: str) -> dict:
         meta_path = self.data_dir / app_name / task_id / "meta.json"
-        if meta_path.exists():
-            with open(meta_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-
-        found = find_task_config(self.data_dir, app_name=app_name, task_id=task_id)
-        if found:
-            task_key, cfg = found
-            cfg = dict(cfg)
-            cfg.setdefault("task_key", task_key)
-            cfg.setdefault("task_id", task_id)
-            return synthesize_meta_from_task_config(cfg)
-
-        raise FileNotFoundError(f"meta.json not found: {meta_path}")
+        if not meta_path.exists():
+            raise FileNotFoundError(f"meta.json not found: {meta_path}")
+        with open(meta_path, "r", encoding="utf-8") as f:
+            return json.load(f)
 
     def _extract_errors(self, text: str, max_lines: int = 30) -> str:
         """从编译输出中提取包含 error/exception/failure 的关键行。"""
