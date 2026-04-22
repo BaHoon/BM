@@ -43,7 +43,6 @@ yarn.lock
 # 基准工作目录与数据
 workspace/
 data/
-results/
 
 # 系统文件
 .DS_Store
