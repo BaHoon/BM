@@ -120,6 +120,7 @@ class EnvManager:
         project_root = self._resolve_gradle_project_root(workspace_path)
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         meta = self._load_meta(app_name, task_id)
         cmd = meta.get("build_command") or (
             self._GRADLE_CMD_WIN if os.name == "nt" else self._GRADLE_CMD_UNIX
@@ -130,6 +131,9 @@ class EnvManager:
             print(f"[EnvManager] Java required={required_java}, switching JAVA_HOME -> {jdk_home}")
         else:
             print(f"[EnvManager] Java required={required_java}, no explicit JDK home found, using current JAVA_HOME")
+=======
+        cmd = self._GRADLE_CMD_WIN if os.name == "nt" else self._GRADLE_CMD_UNIX
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
 =======
         cmd = self._GRADLE_CMD_WIN if os.name == "nt" else self._GRADLE_CMD_UNIX
 >>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)

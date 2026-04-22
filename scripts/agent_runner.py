@@ -272,6 +272,7 @@ class AgentRunner:
             "total_files": len(write_results),
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             "tool_calls": 0,
             "plan_valid": True,
         }
@@ -459,6 +460,8 @@ class AgentRunner:
 >>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
 =======
 >>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
+=======
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
         }
 
     def run_with_feedback_loop(
@@ -604,10 +607,13 @@ class AgentRunner:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     def _validate_agent_output(self, llm_response: str) -> bool:
         """Validate final output by checking presence of at least one writable code block."""
         return bool(self._extract_code_blocks(llm_response))
 
+=======
+>>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
 =======
 >>>>>>> parent of 42a28ff (按“真实工具 Agent”做了3种完整重构)
 =======
