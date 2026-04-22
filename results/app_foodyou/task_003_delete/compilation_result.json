@@ -1,9 +1,14 @@
 {
+  "combined_id": "app_foodyou/task_003_delete",
+  "app_name": "app_foodyou",
+  "task_id": "task_003_delete",
   "success": true,
   "return_code": 0,
-  "elapsed_time": 82.69,
+  "elapsed_time": 30.305381059646606,
   "apk_exists": true,
-  "apk_path": "D:\\benchmark\\benchmark_root\\workspace\\app_foodyou\\task_003_delete\\FoodYou-develop\\app\\build\\outputs\\apk\\debug\\app-debug.apk",
-  "apk_size_mb": 89.07,
-  "error_summary": "Starting a Gradle Daemon, 5 stopped Daemons could not be reused, use --status for details"
+  "apk_path": "D:\\benchmark\\benchmark_root\\workspace\\app_foodyou\\task_003_delete\\app\\build\\outputs\\apk\\debug\\app-debug.apk",
+  "apk_size_mb": 89.1,
+  "timestamp": "2026-03-07T15:11:09.717493",
+  "timeout_used": 900,
+  "timed_out": false
 }
