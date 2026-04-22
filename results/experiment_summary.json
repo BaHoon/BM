@@ -1,90 +1,24 @@
 {
-  "experiment_mode": "A",
-  "retriever": {
-    "strategy": "ast_analysis",
-    "top_k": 5,
-    "note": "RAG/静态分析在代码修改前执行，筛选3-5个关键文件"
-  },
-  "total_runs": 6,
+  "total_runs": 1,
   "by_model": {
     "deepseek-r1": {
-      "total": 6,
-      "csr": 4,
+      "total": 1,
+      "csr": 0,
       "vsm": 0,
-      "csr_rate": 0.6667,
+      "csr_rate": 0.0,
       "vsm_rate": 0.0
     }
   },
   "by_strategy": {
     "ReAct": {
-      "total": 6,
-      "csr": 4,
+      "total": 1,
+      "csr": 0,
       "vsm": 0,
-      "csr_rate": 0.6667,
+      "csr_rate": 0.0,
       "vsm_rate": 0.0
     }
   },
   "error_distribution": {
-    "env_error": 1,
-    "vague_req": 3,
-    "no_code_generated": 2
-  },
-  "rq1_baseline": {
-    "csr_rate": 0.6667,
-    "vsm_rate": 0.0,
-    "expected_pattern": "CSR高于VSM 表明纯文本代码生成在视觉UI任务上存在短板"
-  },
-  "rq2_model_vs_strategy": {
-    "mode": "A",
-    "benchmark_axis": "model",
-    "best_config": {
-      "model": "deepseek-r1",
-      "strategy": "ReAct"
-    },
-    "best_vsm_rate": 0.0
-  },
-  "rq3_cross_domain": {
-    "pass_at_k": {
-      "1": 0.0,
-      "3": 0.0
-    },
-    "recall_at_k": {
-      "1": 0.0,
-      "3": 0.0
-    },
-    "global_vsm_avg": 0.0,
-    "domain_vsm_rates": {
-      "theme": 0.0,
-      "delete": 0.0,
-      "notice": 0.0,
-      "bengali": 0.0,
-      "share": 0.0,
-      "korea": 0.0
-    },
-    "domain_dsi": {
-      "theme": 0.0,
-      "delete": 0.0,
-      "notice": 0.0,
-      "bengali": 0.0,
-      "share": 0.0,
-      "korea": 0.0
-    },
-    "comfort_domains": [],
-    "strange_domains": []
-  },
-  "rq4_error_analysis": {
-    "low_pass_k": 3,
-    "low_pass_task_count": 6,
-    "error_distribution": {
-      "env_error": 1,
-      "vague_req": 3,
-      "no_code_generated": 2
-    }
-  },
-  "rq5_feedback_loop": {
-    "enabled": false,
-    "measured_runs": 0,
-    "improved_runs": 0,
-    "improvement_rate": 0.0
+    "llm_api_error": 1
   }
 }

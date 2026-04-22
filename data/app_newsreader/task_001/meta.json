@@ -1,0 +1,9 @@
+{
+  "id": "app_001",
+  "name": "newsreader",
+"app_package": "livio.rssreader",
+  "build_command": "gradlew.bat assembleDebug",
+  "apk_path": "app/build/outputs/apk/debug/app-debug.apk",
+  "prompt": "This is the source code of a news application. Please add a new theme called 'Girl Skull Theme.'The theme should use a pink color palette, and the buttons and background images should include skull-style design elements.",
+  "eval_script": "test_script.py"
+}
