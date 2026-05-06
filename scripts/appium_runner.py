@@ -20,8 +20,20 @@ from pathlib import Path
 from typing import Optional, Dict, List
 
 from appium import webdriver
-from appium.webdriver.common.appium_options import AppiumOptions
-from appium.webdriver.common.by import AppiumBy
+# AppiumOptions: different appium client versions expose this in different locations.
+# Try several import paths and fall back to None if not available.
+try:
+    from appium.webdriver.common.appium_options import AppiumOptions
+except Exception:
+    try:
+        from appium.options.common import AppiumOptions
+    except Exception:
+        try:
+            from appium.options.common.base import AppiumOptions
+        except Exception:
+            AppiumOptions = None
+
+from appium.webdriver.common.appiumby import AppiumBy
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -222,12 +234,22 @@ class AppiumRunner:
         return False
 
     def _is_appium_running(self) -> bool:
-        """检查 Appium 服务器是否在运行。"""
+        """检查 Appium 服务器是否在运行（兼容 Appium 1/2 端点）。"""
         try:
             from urllib.request import urlopen
-            url = f"http://{self.APPIUM_HOST}:{self.APPIUM_PORT}/wd/hub/status"
-            response = urlopen(url, timeout=2)
-            return response.status == 200
+
+            status_urls = [
+                f"http://{self.APPIUM_HOST}:{self.APPIUM_PORT}/status",        # Appium 2 默认
+                f"http://{self.APPIUM_HOST}:{self.APPIUM_PORT}/wd/hub/status", # Appium 1 / 兼容模式
+            ]
+            for url in status_urls:
+                try:
+                    response = urlopen(url, timeout=2)
+                    if response.status == 200:
+                        return True
+                except Exception:
+                    continue
+            return False
         except Exception:
             return False
 
@@ -287,23 +309,51 @@ class AppiumRunner:
         
         print(f"[AppiumRunner] Package name: {package_name}")
 
-        # 构建 Desired Capabilities
-        options = AppiumOptions()
-        options.platform_name = "Android"
-        options.device_name = self.ADB_DEVICE
-        options.app = apk_path
-        options.app_package = package_name
-        options.app_activity = f"{package_name}.MainActivity"
-        options.automation_name = "UiAutomator2"
-        options.auto_grant_permissions = True
-        options.new_command_timeout = 300
+        # 构建 AppiumOptions 或 desired capabilities（根据客户端可用性回退）
+        if AppiumOptions is not None:
+            options = AppiumOptions()
+            options.platform_name = "Android"
+            options.device_name = self.ADB_DEVICE
+            options.app = apk_path
+            options.app_package = package_name
+            options.app_activity = f"{package_name}.MainActivity"
+            options.automation_name = "UiAutomator2"
+            options.auto_grant_permissions = True
+            options.new_command_timeout = 300
+            use_options = True
+        else:
+            # 回退到旧式 desiredCapabilities 字典
+            caps = {
+                "platformName": "Android",
+                "deviceName": self.ADB_DEVICE,
+                "app": apk_path,
+                "appPackage": package_name,
+                "appActivity": f"{package_name}.MainActivity",
+                "automationName": "UiAutomator2",
+                "autoGrantPermissions": True,
+                "newCommandTimeout": 300,
+            }
+            use_options = False
 
-        # 连接到 Appium
-        appium_url = f"http://{self.APPIUM_HOST}:{self.APPIUM_PORT}/wd/hub"
-        driver = webdriver.Remote(appium_url, options=options)
-        driver.implicitly_wait(10)
+        # 连接到 Appium（兼容 Appium 1/2）
+        candidate_urls = [
+            f"http://{self.APPIUM_HOST}:{self.APPIUM_PORT}",
+            f"http://{self.APPIUM_HOST}:{self.APPIUM_PORT}/wd/hub",
+        ]
+        last_error = None
+        for appium_url in candidate_urls:
+            try:
+                if AppiumOptions is not None and use_options:
+                    driver = webdriver.Remote(appium_url, options=options)
+                else:
+                    driver = webdriver.Remote(appium_url, desired_capabilities=caps)
+                driver.implicitly_wait(10)
+                print(f"[AppiumRunner] Connected to Appium endpoint: {appium_url}")
+                return driver
+            except Exception as exc:
+                last_error = exc
 
-        return driver
+        raise RuntimeError(f"Failed to connect to Appium endpoints: {last_error}")
 
     def __del__(self):
         """清理：关闭驱动和 Appium 进程。"""

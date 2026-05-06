@@ -30,6 +30,7 @@ Experiment_Launcher.py - 批量实验调度器
 import argparse
 import json
 import os
+import shutil
 import sys
 import time
 from itertools import product
@@ -141,6 +142,8 @@ class ExperimentLauncher:
         model:    str,
         strategy: str,
     ) -> None:
+        self._clear_task_results(app_name, task_id)
+
         meta      = self._load_meta(app_name, task_id)
         domain    = meta.get("domain")
         eval_type = meta.get("eval_type", "functional")
@@ -209,18 +212,29 @@ class ExperimentLauncher:
             apk_path    = compile_result.get("apk_path")
             screenshots = []
             appium_log  = ""
+            appium_result = None
 
-            if apk_path and self._get_appium():
-                try:
-                    appium_result = self._get_appium().run_test(
-                        f"{app_name}/{task_id}",
-                        apk_path,
-                        timeout=self.appium_timeout,
+            if apk_path:
+                runner = self._get_appium()
+                if runner:
+                    try:
+                        appium_result = runner.run_test(
+                            f"{app_name}/{task_id}",
+                            apk_path,
+                            timeout=self.appium_timeout,
+                        )
+                        screenshots = appium_result.get("screenshots", [])
+                        appium_log  = appium_result.get("log", "")
+                        self._save_appium_result(app_name, task_id, appium_result)
+                    except Exception as exc:
+                        appium_log = f"Appium run_test exception: {exc}"
+                        print(f"  [appium] WARN: {exc}")
+                else:
+                    appium_log = (
+                        "Appium runner unavailable: failed to import appium_runner "
+                        "or check/start Appium server"
                     )
-                    screenshots = appium_result.get("screenshots", [])
-                    appium_log  = appium_result.get("log", "")
-                except Exception as exc:
-                    print(f"  [appium] WARN: {exc}")
+                    print("  [appium] WARN: Appium runner unavailable")
 
             # Step 5: 评测
             eval_result = self.evaluator.evaluate(
@@ -232,6 +246,21 @@ class ExperimentLauncher:
             run.record.vsm            = eval_result.get("vsm", False)
             run.record.vlm_score      = eval_result.get("vlm_score")
             run.record.error_category = eval_result.get("error_category")
+
+    def _clear_task_results(self, app_name: str, task_id: str) -> None:
+        """每次运行前清空 results/app_name/task_id 下的历史产物。"""
+        task_results_dir = self.results_dir / app_name / task_id
+        if task_results_dir.exists():
+            for child in task_results_dir.iterdir():
+                if child.is_dir():
+                    shutil.rmtree(child, ignore_errors=True)
+                else:
+                    try:
+                        child.unlink()
+                    except FileNotFoundError:
+                        pass
+        task_results_dir.mkdir(parents=True, exist_ok=True)
+        print(f"[Launcher] Cleared result dir: {task_results_dir}")
 
     # ----------------------------------------------------------------------- #
     #  Appium 懒加载
@@ -246,9 +275,17 @@ class ExperimentLauncher:
             if runner.check_appium_server():
                 self._appium = runner
                 return self._appium
-        except Exception:
-            pass
+            print("[Launcher] WARN: Appium server check failed")
+        except Exception as exc:
+            print(f"[Launcher] WARN: failed to initialize AppiumRunner: {exc}")
         return None
+
+    def _save_appium_result(self, app_name: str, task_id: str, appium_result: dict) -> None:
+        out_dir = self.results_dir / app_name / task_id
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_file = out_dir / "appium_result.json"
+        with open(out_file, "w", encoding="utf-8") as f:
+            json.dump(appium_result, f, ensure_ascii=False, indent=2)
 
     # ----------------------------------------------------------------------- #
     #  RQ5 反馈回调工厂
@@ -449,7 +486,7 @@ def parse_args():
         choices=["keyword", "tfidf", "ast_analysis"],
         help="文件检索策略（默认 keyword）"
     )
-    parser.add_argument("--top-k",       type=int, default=5)
+    parser.add_argument("--top-k",       type=int, default=8)
     parser.add_argument("--vlm-model",   default="gpt-4o",
                         help="VLM 视觉评分模型（默认 gpt-4o，经 Tongji base_url 路由）")
     parser.add_argument("--feedback-loop",  action="store_true",

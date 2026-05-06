@@ -56,14 +56,14 @@ class Retriever:
         self,
         base_src_dir: str | Path,
         strategy: str = "keyword",
-        top_k: int = 5,
+        top_k: int = 8,
         max_context_chars: int = _DEFAULT_MAX_CONTEXT,
     ):
         """
         Args:
             base_src_dir:      data/app_name/base_src 路径
             strategy:          'keyword' | 'tfidf' | 'ast_analysis'
-            top_k:             最多返回的文件数量
+            top_k:             最多返回的文件数量（默认 8）
             max_context_chars: 最终拼接上下文的字符上限
         """
         self.base_src_dir = Path(base_src_dir)

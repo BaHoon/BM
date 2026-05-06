@@ -54,13 +54,15 @@ _load_repo_env_file()
 # --------------------------------------------------------------------------- #
 #  同济 OpenAI-Compatible 端点配置
 # --------------------------------------------------------------------------- #
-_TONGJI_BASE_URL = os.getenv("TONGJI_BASE_URL", "https://llmapi.tongji.edu.cn/v1")
-_TONGJI_API_KEY  = os.getenv("TONGJI_API_KEY")
+_TONGJI_BASE_URL = os.getenv("TONGJI_BASE_URL") or os.getenv(
+    "OPENAI_BASE_URL", "https://llmapi.tongji.edu.cn/v1"
+)
+_TONGJI_API_KEY  = os.getenv("TONGJI_API_KEY") or os.getenv("OPENAI_API_KEY")
 
 if not _TONGJI_API_KEY:
     raise RuntimeError(
-        "TONGJI_API_KEY environment variable not set. "
-        "Please export TONGJI_API_KEY=your_api_key before running."
+        "API key not set. Please set TONGJI_API_KEY (preferred) or "
+        "OPENAI_API_KEY before running."
     )
 
 
@@ -103,37 +105,66 @@ MODEL_ALIASES: dict[str, str] = {
 STRATEGY_SYSTEM_PROMPTS: dict[str, str] = {
     "direct": (
         "You are an expert Android developer. "
-        "Produce complete, compilable code for every file that needs to change. "
-        "Output ONLY code blocks using the format:\n"
-        "```filepath:relative/path/to/File.ext\n"
-        "<complete file content>\n"
+        "Your only output must be parseable patch blocks. Do not output explanations, planning, or full-file rewrites for existing files. "
+        "Use this exact format for existing files:\n"
+        "```patchfile:RELATIVE_PATH\n"
+        "<<<<<<< SEARCH\n"
+        "<exact existing text copied from the current file; never empty>\n"
+        "=======\n"
+        "<replacement text>\n"
+        ">>>>>>> REPLACE\n"
         "```\n"
-        "Do NOT add explanations before or after the code blocks."
+        "Use this exact format for new files:\n"
+        "```patchfile:RELATIVE_PATH:NEW\n"
+        "<<<<<<< NEW\n"
+        "<complete new file content>\n"
+        ">>>>>>> NEW_END\n"
+        "```\n"
+        "Rules: RELATIVE_PATH must be a repository-relative path from the workspace root; include module subdirectories; never use absolute paths, drive letters, or ~; SEARCH text must match file content exactly and should include enough context to identify the target uniquely; do not use empty SEARCH for existing files; do not invent placeholder names such as generated1; if you need a new file, give it a concrete descriptive filename."
     ),
 
     "ReAct": (
-        "You are an expert Android developer using the ReAct framework.\n"
-        "Follow this pattern:\n"
-        "  Thought: analyse the task and the relevant files\n"
-        "  Action: decide which files to modify and why\n"
-        "  Observation: describe the expected change\n"
-        "  ... (repeat as needed) ...\n"
-        "  Final Answer: output ALL modified files as code blocks:\n"
-        "```filepath:relative/path/to/File.ext\n"
-        "<complete file content>\n"
-        "```\n"
-        "Every code block MUST contain the full file, not a diff or snippet."
+        "You are an expert Android developer. You are currently looking at a mobile app UI screen.\n"
+        "You ONLY see: the current Activity/Fragment name, the UI DOM tree (XML structure), and the user's Instruction.\n"
+        "You do NOT have access to source code files yet. You must use Tools to discover and retrieve them.\n"
+        "\n"
+        "You must work in cycles: Thought -> Action -> Observation, repeating until you call submit_patch to finish.\n"
+        "\n"
+        "Available Tools (call them EXACTLY as shown):\n"
+        "  1. search_keyword(keyword) — Search the project repo for a keyword (e.g., 'btn_delete'). Returns list of matching files/lines.\n"
+        "  2. read_file(file_path, start_line, end_line) — Read a file's content. Use line numbers from search_keyword.\n"
+        "  3. submit_patch(file_path, old_snippet, new_snippet) — Apply a patch (old_snippet -> new_snippet) to file_path. This ends your task.\n"
+        "\n"
+        "Workflow:\n"
+        "  Thought: Analyze the UI DOM and Instruction. What file(s) likely need to change?\n"
+        "  Action: Call a Tool, e.g., search_keyword(\"Settings\")\n"
+        "\n"
+        "CRITICAL: You are only allowed to output THOUGHT and ACTION. DO NOT output the OBSERVATION yourself. The system will provide the OBSERVATION to you. You MUST wait for the system's response.\n"
+        "Once you output an Action, STOP generating. Do NOT write blocks of code outside of submit_patch."
     ),
 
     "tool_planning": (
-        "You are an expert Android developer.\n"
-        "Step 1 – PLAN: List every file you will create or modify, with a one-line "
-        "reason for each.\n"
-        "Step 2 – IMPLEMENT: For each planned file, output a complete code block:\n"
-        "```filepath:relative/path/to/File.ext\n"
-        "<complete file content>\n"
-        "```\n"
-        "Do NOT skip any planned file."
+        "You are an Android architect. Your task is NOT to write code, but to plan how to find and modify the necessary source code.\n"
+        "\n"
+        "You ONLY see: the current Activity/Fragment name, the UI DOM tree (XML structure), and the user's Instruction.\n"
+        "\n"
+        "Output a JSON array of <=5 exploration steps. Each step must specify which Tool to call and what to search/read.\n"
+        "\n"
+        "Example output format:\n"
+        "[\n"
+        "  {\"step\": 1, \"action\": \"search_keyword btn_delete\"},\n"
+        "  {\"step\": 2, \"action\": \"read_file FoodYou-develop/app/src/.../NotificationSettings.kt 1 50\"},\n"
+        "  {\"step\": 3, \"action\": \"search_keyword MutablePreferences\"},\n"
+        "  {\"step\": 4, \"action\": \"read_file FoodYou-develop/app/src/.../NotificationPreferences.kt\"},\n"
+        "  {\"step\": 5, \"action\": \"submit_patch FoodYou-develop/app/src/.../NotificationPreferences.kt old_code new_code\"}\n"
+        "]\n"
+        "\n"
+        "Available Tools:\n"
+        "  - search_keyword <keyword> — Find files containing a keyword.\n"
+        "  - read_file <file_path> [start_line] [end_line] — Read file content.\n"
+        "  - submit_patch <file_path> <old_snippet> <new_snippet> — Apply and submit a code patch.\n"
+        "\n"
+        "Do NOT output code blocks or natural language explanations. Output ONLY the JSON array."
     ),
 }
 
@@ -263,6 +294,64 @@ class LLMClient:
         response = self._completion_with_retry(call_params)
         raw = response.choices[0].message.content.strip()
         return _parse_json_safe(raw, default={"score": 0, "passed": False, "reason": raw})
+
+    def generate_with_system_prompt(
+        self,
+        system_prompt: str,
+        user_content: str,
+        temperature: float = 0.2,
+        max_tokens: int = 8000,
+        stop: Optional[list[str]] = None,
+    ) -> str:
+        """使用自定义 system prompt 调用 LLM（复用统一路由与重试逻辑）。"""
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user",   "content": user_content},
+        ]
+
+        call_params: dict = {
+            "model":       self.model,
+            "messages":    messages,
+            "temperature": temperature,
+            "max_tokens":  max_tokens,
+        }
+        if stop:
+            call_params["stop"] = stop
+
+        tongji_model = _resolve_tongji_model(self.model)
+        if self.model.startswith("gemini"):
+            call_params["custom_llm_provider"] = "gemini"
+        elif tongji_model:
+            call_params["model"]    = f"openai/{tongji_model}"
+            call_params["api_base"] = _TONGJI_BASE_URL
+            call_params["api_key"]  = _TONGJI_API_KEY
+
+        print(
+            f"[LLMClient] custom_system_call model={call_params.get('model')} "
+            f"api_base={call_params.get('api_base', '<provider-default>')} "
+            f"prompt_chars={sum(len(str(m['content'])) for m in messages)}"
+        )
+        try:
+            response = self._completion_with_retry(call_params)
+            if response is None:
+                return (
+                    "Observation: System Error: API returned no response. "
+                    "Please try a narrower search or shorter context."
+                )
+            content = getattr(response.choices[0].message, "content", None)
+            if not content:
+                return (
+                    "Observation: System Error: API returned empty content. "
+                    "Please try a narrower search or shorter context."
+                )
+            print(f"[LLMClient] custom_system_response_chars={len(content)}")
+            return content
+        except Exception as exc:
+            print(f"[LLMClient] custom_system_call failed: {exc}")
+            return (
+                "Observation: System Error: API request failed. "
+                f"Please try a narrower search or shorter context. Details: {exc}"
+            )
 
     # ----------------------------------------------------------------------- #
     #  私有助手方法

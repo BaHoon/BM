@@ -19,6 +19,6 @@
     }
   },
   "error_distribution": {
-    "llm_api_error": 1
+    "no_code_generated": 1
   }
 }

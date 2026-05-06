@@ -187,6 +187,16 @@ class Evaluator:
             print(f"  [S2-func] PASS  source=screenshots_only  shots={len(screenshots)}")
             return detail, True
 
+        if appium_log:
+            detail = {
+                "passed": False,
+                "source": "appium_log_only",
+                "error": "appium_execution_unavailable_or_failed",
+                "reason": appium_log[-2000:],
+            }
+            print("  [S2-func] FAIL  source=appium_log_only")
+            return detail, False
+
         test_script = self.data_dir / app_name / task_id / "test_script.py"
         if not test_script.exists():
             print(f"  [S2-func] test_script.py not found: {test_script}")
