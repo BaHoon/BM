@@ -16,7 +16,6 @@ import json
 import os
 import re
 import sys
-import litellm
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
@@ -195,7 +194,7 @@ class AgentRunner:
                 current_activity=current_activity,
                 ui_dom_tree=ui_dom_tree,
                 attempt=attempt,
-                max_steps=10,
+                max_steps=None,
             )
             self._save_agent_trace(
                 app_name=app_name,
@@ -284,6 +283,10 @@ class AgentRunner:
         在项目中搜索关键字，返回匹配结果与可直接回注给模型的 Observation 文本。
         """
         results: List[Dict[str, Any]] = []
+        try:
+            relative_base = self.workspace_dir if base_src.is_relative_to(self.workspace_dir) else self.root_dir
+        except AttributeError:
+            relative_base = self.workspace_dir if str(base_src).startswith(str(self.workspace_dir)) else self.root_dir
         for root, _, files in os.walk(base_src):
             for fn in files:
                 if not fn.endswith(('.kt', '.java', '.xml')):
@@ -294,7 +297,7 @@ class AgentRunner:
                         for i, line in enumerate(f, start=1):
                             if keyword in line:
                                 results.append({
-                                    'path': str(p.relative_to(self.root_dir)),
+                                    'path': str(p.relative_to(relative_base)),
                                     'line': i,
                                     'line_text': line.rstrip('\n'),
                                 })
@@ -319,7 +322,10 @@ class AgentRunner:
 
     def tool_read_file(self, file_path: str, start_line: Optional[int] = None, end_line: Optional[int] = None) -> str:
         """读取仓库内相对路径文件的内容（支持行切片）。"""
-        target = self.root_dir / file_path
+        if file_path.startswith("workspace/"):
+            file_path = file_path[len("workspace/"):]
+        workspace_target = self.workspace_dir / file_path
+        target = workspace_target if workspace_target.exists() else (self.root_dir / file_path)
         if not target.exists():
             raise FileNotFoundError(str(target))
         text = target.read_text(encoding='utf-8')
@@ -334,16 +340,18 @@ class AgentRunner:
         """把补丁写入 workspace（校验 old_snippet 是否存在）。"""
         target = self.workspace_dir / file_path
         target.parent.mkdir(parents=True, exist_ok=True)
+        full_path = str(target)
         content = target.read_text(encoding='utf-8') if target.exists() else ''
         if old_snippet:
             if old_snippet not in content:
-                return {'ok': False, 'error': 'SEARCH_NOT_FOUND'}
+                return {'ok': False, 'error': 'SEARCH_NOT_FOUND', 'path': full_path}
             content = content.replace(old_snippet, new_snippet, 1)
         else:
             # 插入到文件末尾
             content = (content.rstrip() + '\n\n' + new_snippet.rstrip() + '\n')
         target.write_text(content, encoding='utf-8')
-        return {'ok': True}
+        print(f"[AgentRunner] submit_patch wrote: {Path(full_path).resolve()}")
+        return {'ok': True, 'path': full_path}
 
     def _call_llm_with_system(self, system_prompt: str, user_content: str, temperature: float = 0.2, stop: Optional[list[str]] = None) -> str:
         """
@@ -373,6 +381,90 @@ class AgentRunner:
             normalized = normalized.rsplit("</think>", 1)[-1].strip()
         elif "<think>" in normalized:
             normalized = re.sub(r"<think>.*?</think>", "", normalized, flags=re.DOTALL).strip()
+
+        # JSON-style tool call: {"tool": "search_keyword", "arguments": {"keyword": "Settings"}}
+        try:
+            json_match = re.search(r"\{.*\}", normalized, re.DOTALL)
+            if json_match:
+                payload = json.loads(json_match.group(0))
+                if isinstance(payload, dict):
+                    tool_name = payload.get("tool") or payload.get("action")
+                    arguments = payload.get("arguments", {})
+                    if not arguments:
+                        arguments = payload.get("action_parameters", {})
+                else:
+                    tool_name = None
+                    arguments = {}
+                if isinstance(tool_name, str) and "(" in tool_name and ")" in tool_name:
+                    normalized_action = tool_name.strip()
+                    patterns = {
+                        "search_keyword": re.compile(r"search_keyword\(([^)]+)\)"),
+                        "read_file": re.compile(r"read_file\(([^,\)]+)(?:,\s*([0-9]+)\s*,?\s*([0-9]+))?\)"),
+                        "submit_patch": re.compile(r"submit_patch\((.*)\)\s*$", re.DOTALL),
+                    }
+                    for name, pattern in patterns.items():
+                        match = pattern.search(normalized_action)
+                        if not match:
+                            continue
+                        if name == "search_keyword":
+                            return {
+                                "ok": True,
+                                "tool": name,
+                                "keyword": match.group(1).strip().strip('"').strip("'"),
+                                "normalized": normalized_action,
+                            }
+                        if name == "read_file":
+                            return {
+                                "ok": True,
+                                "tool": name,
+                                "path": match.group(1).strip().strip('"').strip("'"),
+                                "start_line": int(match.group(2)) if match.group(2) else None,
+                                "end_line": int(match.group(3)) if match.group(3) else None,
+                                "normalized": normalized_action,
+                            }
+                        payload_inner = match.group(1).strip()
+                        parts = [part.strip() for part in re.split(r",\s*", payload_inner, maxsplit=2)]
+                        if len(parts) < 3:
+                            return {
+                                "ok": False,
+                                "error": "malformed_submit_patch",
+                                "normalized": normalized_action,
+                            }
+                        return {
+                            "ok": True,
+                            "tool": name,
+                            "file_path": parts[0].strip('"').strip("'"),
+                            "old_snip": parts[1].strip('"').strip("'"),
+                            "new_snip": parts[2].strip('"').strip("'"),
+                            "normalized": normalized_action,
+                        }
+                if tool_name == "search_keyword" and "keyword" in arguments:
+                    return {
+                        "ok": True,
+                        "tool": tool_name,
+                        "keyword": str(arguments["keyword"]).strip(),
+                        "normalized": normalized,
+                    }
+                if tool_name == "read_file" and "file_path" in arguments:
+                    return {
+                        "ok": True,
+                        "tool": tool_name,
+                        "path": str(arguments["file_path"]).strip(),
+                        "start_line": int(arguments["start_line"]) if arguments.get("start_line") else None,
+                        "end_line": int(arguments["end_line"]) if arguments.get("end_line") else None,
+                        "normalized": normalized,
+                    }
+                if tool_name == "submit_patch" and "file_path" in arguments:
+                    return {
+                        "ok": True,
+                        "tool": tool_name,
+                        "file_path": str(arguments["file_path"]).strip(),
+                        "old_snip": str(arguments.get("old_snippet", "")),
+                        "new_snip": str(arguments.get("new_snippet", "")),
+                        "normalized": normalized,
+                    }
+        except Exception:
+            pass
 
         patterns = {
             "search_keyword": re.compile(r"search_keyword\(([^)]+)\)"),
@@ -455,13 +547,32 @@ class AgentRunner:
                         current_activity: str,
                         ui_dom_tree: str,
                         attempt: int = 1,
-                        max_steps: int = 10) -> Dict[str, Any]:
+                        max_steps: Optional[int] = None) -> Dict[str, Any]:
         """
         ReAct 模式运行骨架：只在初始 Prompt 中包含 Instruction/Current_Activity/UI_DOM_Tree。
-        Agent 必须通过工具调用获取源码，循环最多 max_steps 步。
+        Agent 必须通过工具调用获取源码，允许自行决定何时结束。
         """
-        base_src = self.data_dir / app_name / 'base_src'
+        if max_steps is None:
+            env_limit = os.getenv("REACT_MAX_STEPS")
+            if env_limit is not None:
+                try:
+                    env_val = int(env_limit)
+                except ValueError:
+                    env_val = 0
+                max_steps = env_val if env_val > 0 else None
+            else:
+                max_steps = 50
+        base_src = self.workspace_dir / app_name / task_id
         history: List[Dict[str, Any]] = []
+
+        def _normalize_task_path(path: str) -> str:
+            cleaned = path.strip().lstrip("/")
+            if cleaned.startswith("workspace/"):
+                cleaned = cleaned[len("workspace/"):]
+            task_prefix = f"{app_name}/{task_id}/"
+            if not cleaned.startswith(task_prefix):
+                cleaned = task_prefix + cleaned
+            return cleaned
 
         system_prompt = (
             "You are an expert Android developer. You are currently looking at a mobile app UI screen.\n"
@@ -479,11 +590,15 @@ class AgentRunner:
             "  Thought: Analyze the UI DOM and Instruction. What file(s) likely need to change?\n"
             "  Action: Call a Tool, e.g., search_keyword(\"Settings\")\n"
             "\n"
-            "CRITICAL: You are only allowed to output THOUGHT and ACTION. DO NOT output the OBSERVATION yourself. The system will provide the OBSERVATION to you. You MUST wait for the system's response.\n"
+            "CRITICAL: Output EXACTLY ONE tool call in plain text. Do NOT output JSON, markdown, or extra text.\n"
+            "Examples (valid):\n"
+            "  search_keyword(\"Settings\")\n"
+            "  read_file(\"app/src/main/res/xml/root_preferences.xml\", 1, 40)\n"
+            "  submit_patch(\"app/src/main/res/xml/root_preferences.xml\", \"<old>\", \"<new>\")\n"
+            "You are only allowed to output THOUGHT and ACTION. DO NOT output the OBSERVATION yourself. The system will provide the OBSERVATION to you. You MUST wait for the system's response.\n"
             "Once you output an Action, STOP generating. Do NOT write blocks of code outside of submit_patch.\n"
             "\n"
             "Constraints:\n"
-            "  - Max 10 tool calls. If you don't call submit_patch within 10 steps, you fail.\n"
             "  - search_keyword output includes line numbers; use them to read_file efficiently.\n"
             "  - old_snippet in submit_patch must EXACTLY match existing code (including whitespace).\n"
             "  - Do NOT output raw code blocks; only use submit_patch to write code.\n"
@@ -512,8 +627,11 @@ class AgentRunner:
 
         steps = 0
         try:
-            while steps < max_steps:
+            while True:
                 steps += 1
+                if max_steps is not None and steps > max_steps:
+                    _log_to_file("=== FINISHED (TIMEOUT) ===")
+                    return {'result': 'TIMEOUT', 'history': history}
                 
                 # Combine initial context and conversation log
                 user_input = json.dumps(prompt_context, ensure_ascii=False, indent=2)
@@ -528,7 +646,6 @@ class AgentRunner:
                     stop=["Observation:", "Observation:\n", "\nObservation:", "\nObservation:\n"]
                 )
 
-                # Simple action parsing: expect strings like search_keyword(keyword)
                 resp_l = resp.strip()
                 history.append({'step': steps, 'agent_response': resp_l})
                 _log_to_file(f"\n[Step {steps}] Model Output:\n{resp_l}\n")
@@ -541,49 +658,46 @@ class AgentRunner:
                 # Append model's response to conversation log
                 conversation_log += f"\n{resp_l}\n"
 
-                # search_keyword
-                m = re.search(r"search_keyword\(([^)]+)\)", resp_l)
-                if m:
-                    kw = m.group(1).strip().strip('"').strip("'")
-                    obs = self.tool_search_keyword(base_src, kw)
-                    conversation_log += f"\n{obs['observation']}\n"
-                    conversation_log += f"Observation Results: {json.dumps(obs['matches'], ensure_ascii=False, indent=2)}\n"
-                    _log_to_file(f"[Step {steps}] Tool: search_keyword('{kw}') -> {obs['observation']}")
-                    continue
-
-                # read_file(path, start, end)
-                m = re.search(r"read_file\(([^,\)]+)(?:,\s*([0-9]+)\s*,?\s*([0-9]+))?\)", resp_l)
-                if m:
-                    path = m.group(1).strip().strip('"').strip("'")
-                    s = int(m.group(2)) if m.group(2) else None
-                    e = int(m.group(3)) if m.group(3) else None
-                    try:
-                        txt = self.tool_read_file(path, s, e)
-                        _log_to_file(f"[Step {steps}] Tool: read_file('{path}') -> SUCCESS (length: {len(str(txt))})")
-                    except Exception as exc:
-                        txt = f"ERROR: {exc}"
-                        _log_to_file(f"[Step {steps}] Tool: read_file('{path}') -> ERROR: {exc}")
-                    conversation_log += f"\nObservation: {{'path': '{path}', 'content': ... (length: {len(str(txt))})}}\n"
-                    # Keep full content in the log for the model to read
-                    conversation_log += f"--- FILE CONTENT START ---\n{txt}\n--- FILE CONTENT END ---\n"
-                    continue
-
-                # submit_patch(file_path, old, new)
                 parsed = self._extract_react_tool_call(resp_l)
-                if parsed.get("ok") and parsed.get("tool") == "submit_patch":
-                    file_path = parsed["file_path"]
-                    old_snip = parsed["old_snip"]
-                    new_snip = parsed["new_snip"]
-                    _log_to_file(f"[Step {steps}] Tool: submit_patch to '{file_path}'")
-                    try:
-                        res = self.tool_submit_patch(file_path, old_snip, new_snip)
-                        _log_to_file(f"[Step {steps}] Result: {res}")
-                        return {'result': res, 'history': history}
-                    except Exception as exc:
-                        err_msg = f"ERROR executing submit_patch: {exc}"
-                        _log_to_file(f"[Step {steps}] Observation: {err_msg}")
-                        conversation_log += f"\nObservation: {err_msg}\n"
+                if parsed.get("ok"):
+                    tool_name = parsed.get("tool")
+                    if tool_name == "search_keyword":
+                        kw = parsed["keyword"]
+                        obs = self.tool_search_keyword(base_src, kw)
+                        conversation_log += f"\n{obs['observation']}\n"
+                        conversation_log += f"Observation Results: {json.dumps(obs['matches'], ensure_ascii=False, indent=2)}\n"
+                        _log_to_file(f"[Step {steps}] Tool: search_keyword('{kw}') -> {obs['observation']}")
                         continue
+                    if tool_name == "read_file":
+                        path = _normalize_task_path(parsed["path"])
+                        s = parsed.get("start_line")
+                        e = parsed.get("end_line")
+                        try:
+                            txt = self.tool_read_file(path, s, e)
+                            _log_to_file(f"[Step {steps}] Tool: read_file('{path}') -> SUCCESS (length: {len(str(txt))})")
+                        except Exception as exc:
+                            txt = f"ERROR: {exc}"
+                            _log_to_file(f"[Step {steps}] Tool: read_file('{path}') -> ERROR: {exc}")
+                        conversation_log += f"\nObservation: {{'path': '{path}', 'content': ... (length: {len(str(txt))})}}\n"
+                        conversation_log += f"--- FILE CONTENT START ---\n{txt}\n--- FILE CONTENT END ---\n"
+                        continue
+                    if tool_name == "submit_patch":
+                        file_path = _normalize_task_path(parsed["file_path"])
+                        old_snip = parsed["old_snip"]
+                        new_snip = parsed["new_snip"]
+                        if not file_path:
+                            _log_to_file(f"[Step {steps}] Tool: submit_patch called with empty file_path; treating as done.")
+                            return {'result': 'DONE_NO_PATCH', 'history': history}
+                        _log_to_file(f"[Step {steps}] Tool: submit_patch to '{file_path}'")
+                        try:
+                            res = self.tool_submit_patch(file_path, old_snip, new_snip)
+                            _log_to_file(f"[Step {steps}] Result: {res}")
+                            return {'result': res, 'history': history}
+                        except Exception as exc:
+                            err_msg = f"ERROR executing submit_patch: {exc}"
+                            _log_to_file(f"[Step {steps}] Observation: {err_msg}")
+                            conversation_log += f"\nObservation: {err_msg}\n"
+                            continue
 
                 # If model didn't call a known tool, inform it
                 if parsed.get("error") == "multiple_actions":
@@ -593,7 +707,6 @@ class AgentRunner:
                 _log_to_file(f"[Step {steps}] Notice: Model didn't call any valid tool.")
                 conversation_log += f"\n{err_msg}\n"
 
-            _log_to_file(f"=== FINISHED (TIMEOUT) ===")
             return {'result': 'TIMEOUT', 'history': history}
 
         except Exception as exc:
@@ -855,6 +968,7 @@ class AgentRunner:
                 target.write_text(content, encoding="utf-8")
                 results[rel_path] = "SUCCESS"
                 print(f"  ✓ Patched: {rel_path}")
+                print(f"    ↳ abs: {target.resolve()}")
             except Exception as exc:
                 results[rel_path] = f"ERROR: {exc}"
                 print(f"  ✗ Patch failed: {rel_path} ({exc})")
@@ -935,6 +1049,11 @@ class AgentRunner:
         must_exist: bool,
     ) -> Path:
         """兼容 workspace 嵌套一层项目目录（如 FoodYou-develop/）。"""
+        task_prefix = f"{workspace_path.parent.name}/{workspace_path.name}/"
+        if rel_path.startswith(task_prefix):
+            rel_path = rel_path[len(task_prefix):]
+        elif rel_path.startswith(f"{workspace_path.name}/"):
+            rel_path = rel_path[len(workspace_path.name) + 1:]
         rel_path = self._normalize_rel_path(rel_path)
         candidates = [workspace_path / rel_path]
 
@@ -970,6 +1089,7 @@ class AgentRunner:
                 target.write_text(content, encoding="utf-8")
                 results[rel_path] = "SUCCESS"
                 print(f"  ✓ Written: {rel_path}")
+                print(f"    ↳ abs: {target.resolve()}")
             except Exception as exc:
                 results[rel_path] = f"ERROR: {exc}"
                 print(f"  ✗ Failed:  {rel_path}  ({exc})")

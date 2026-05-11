@@ -31,3 +31,36 @@
 2026-04-30 10:22:04 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=1406.8s
 2026-04-30 11:05:23 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=622.2s
 2026-04-30 11:12:13 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=119.7s
+2026-05-06 13:31:50 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=110.5s
+2026-05-06 13:51:57 [ERROR] Exception in run: 
+2026-05-06 13:51:57 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=38.2s
+2026-05-06 13:53:46 [ERROR] Exception in run: 
+2026-05-06 13:53:46 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=15.9s
+2026-05-06 14:05:29 [ERROR] Exception in run: 
+2026-05-06 14:05:29 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=5.6s
+2026-05-06 14:06:10 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=direct attempt=1 ✗ FAIL  latency=12.1s
+2026-05-06 14:17:34 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=direct attempt=1 ✗ FAIL  latency=13.0s
+2026-05-06 14:19:13 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=direct attempt=1 ✗ FAIL  latency=12.0s
+2026-05-06 14:43:54 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=direct attempt=1 ✗ FAIL  latency=13.5s
+2026-05-06 14:44:46 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=direct attempt=1 ✗ FAIL  latency=12.8s
+2026-05-06 14:48:57 [ERROR] Exception in run: 
+2026-05-06 14:48:57 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=direct attempt=1 ✗ FAIL  latency=52.2s
+2026-05-06 14:49:43 [ERROR] Exception in run: 
+2026-05-06 14:49:43 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=28.8s
+2026-05-11 13:45:54 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=112.3s
+2026-05-11 14:22:13 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=direct attempt=1 ✗ FAIL  latency=13.1s
+2026-05-11 14:55:05 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=direct attempt=1 ✗ FAIL  latency=222.2s
+2026-05-11 15:01:16 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=338.2s
+2026-05-11 15:42:48 [ERROR] Exception in run: 
+2026-05-11 15:42:48 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=277.0s
+2026-05-11 15:59:43 [ERROR] Exception in run: 
+2026-05-11 15:59:43 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=986.2s
+2026-05-11 16:34:20 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=1901.4s
+2026-05-11 17:45:40 [ERROR] Exception in run: 
+2026-05-11 17:45:40 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=439.9s
+2026-05-11 18:01:09 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=768.9s
+2026-05-11 19:36:29 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=2781.0s
+2026-05-11 21:46:32 [ERROR] Exception in run: 
+2026-05-11 21:46:32 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=31.5s
+2026-05-11 21:56:20 [ERROR] Exception in run: 
+2026-05-11 21:56:20 [INFO] [app_foodyou/task_005_notice] model=deepseek-r1 strategy=ReAct attempt=1 ✗ FAIL  latency=585.1s

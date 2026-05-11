@@ -1,6 +1,0 @@
-{
-  "model": "deepseek-r1",
-  "strategy": "ReAct",
-  "attempt": 1,
-  "retrieved_files": []
-}

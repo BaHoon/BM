@@ -17,12 +17,11 @@ import os
 import time
 import random
 import base64
-import litellm
 from pathlib import Path
+from urllib.parse import urlparse
+from contextlib import contextmanager
 from typing import Optional
-
-# 关闭 litellm 的冗余日志
-litellm.set_verbose = False
+from openai import OpenAI
 
 # 网络抖动时的重试配置（针对同济端点偶发 500/连接重置）
 _DEFAULT_RETRY_TIMES = 3
@@ -59,6 +58,57 @@ _TONGJI_BASE_URL = os.getenv("TONGJI_BASE_URL") or os.getenv(
 )
 _TONGJI_API_KEY  = os.getenv("TONGJI_API_KEY") or os.getenv("OPENAI_API_KEY")
 
+
+def _ensure_no_proxy_for_tongji(base_url: str) -> None:
+    """将同济端点加入 NO_PROXY/no_proxy，避免代理影响校园网访问。"""
+    parsed = urlparse(base_url)
+    host = parsed.hostname
+    if not host:
+        return
+
+    extra = os.getenv("TONGJI_NO_PROXY")
+    for key in ("NO_PROXY", "no_proxy"):
+        current = os.environ.get(key, "")
+        entries = [item.strip() for item in current.split(",") if item.strip()]
+        if extra:
+            entries.extend([item.strip() for item in extra.split(",") if item.strip()])
+        if host not in entries:
+            entries.append(host)
+        os.environ[key] = ",".join(dict.fromkeys(entries))
+
+
+_ensure_no_proxy_for_tongji(_TONGJI_BASE_URL)
+
+
+_PROXY_ENV_KEYS = (
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "ALL_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "all_proxy",
+)
+
+
+@contextmanager
+def _temporary_clear_proxy(enabled: bool):
+    """临时清理代理环境变量，避免请求被强制走代理。"""
+    if not enabled:
+        yield
+        return
+
+    backup = {key: os.environ.get(key) for key in _PROXY_ENV_KEYS}
+    try:
+        for key in _PROXY_ENV_KEYS:
+            os.environ.pop(key, None)
+        yield
+    finally:
+        for key, value in backup.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
 if not _TONGJI_API_KEY:
     raise RuntimeError(
         "API key not set. Please set TONGJI_API_KEY (preferred) or "
@@ -67,33 +117,20 @@ if not _TONGJI_API_KEY:
 
 
 # 凡是 model 名以此前缀开头的，都路由到同济端点
+# 凡是 model 名以此前缀开头的，都路由到同济端点
 _TONGJI_MODEL_PREFIX = "tongji/"
 
 
-def _resolve_tongji_model(model: str) -> Optional[str]:
-    """返回应通过同济 OpenAI-Compatible 端点访问的真实模型名。"""
+def _resolve_tongji_model(model: str) -> str:
+    """返回应通过同济端点访问的真实模型名。"""
     if model.startswith(_TONGJI_MODEL_PREFIX):
         return model[len(_TONGJI_MODEL_PREFIX):]
-
-    # 默认将 OpenAI 兼容模型也路由到同济 base_url。
-    if "/" not in model and model.startswith(("gpt-", "o1", "o3", "o4", "DeepSeek", "deepseek")):
-        return model
-
-    return None
+    return model
 
 # --------------------------------------------------------------------------- #
 #  预定义模型别名（便于 CLI 传参）
 # --------------------------------------------------------------------------- #
 MODEL_ALIASES: dict[str, str] = {
-    "gpt-4o":          "gpt-4o",
-    "gpt-4o-mini":     "gpt-4o-mini",
-    "claude":          "claude-sonnet-4-5",
-    "claude-3-5":      "claude-3-5-sonnet-20241022",
-    "claude-4-5":      "claude-sonnet-4-5",
-    "gemini-flash":    "gemini/gemini-2.5-flash",
-    "gemini-pro":      "gemini/gemini-2.5-pro",
-    "gemini":          "gemini/gemini-2.5-flash",
-    #   # 同济 DeepSeek 端点
     "deepseek":        "tongji/DeepSeek-R1",
     "deepseek-r1":     "tongji/DeepSeek-R1",
     "DeepSeek-R1":     "tongji/DeepSeek-R1",
@@ -180,6 +217,7 @@ class LLMClient:
         """
         self.model = MODEL_ALIASES.get(model, model)
         self.strategy = strategy
+        self._client = OpenAI(api_key=_TONGJI_API_KEY, base_url=_TONGJI_BASE_URL)
         self._validate_api_keys()
 
     # ----------------------------------------------------------------------- #
@@ -221,24 +259,20 @@ class LLMClient:
             {"role": "user",   "content": user_content},
         ]
 
-        call_params: dict = {
-            "model":       self.model,
-            "messages":    messages,
-            "temperature": temperature,
-            "max_tokens":  max_tokens,
-        }
-        tongji_model = _resolve_tongji_model(self.model)
-        if self.model.startswith("gemini"):
-            call_params["custom_llm_provider"] = "gemini"
-        elif tongji_model:
-            call_params["model"]    = f"openai/{tongji_model}"
-            call_params["api_base"] = _TONGJI_BASE_URL
-            call_params["api_key"]  = _TONGJI_API_KEY
+        model_name = _resolve_tongji_model(self.model)
+        print(
+            f"[LLMClient] model={model_name}  strategy={self.strategy}  "
+            f"prompt_chars={sum(len(str(m['content'])) for m in messages)}"
+        )
 
-        print(f"[LLMClient] model={self.model}  strategy={self.strategy}  "
-              f"prompt_chars={sum(len(str(m['content'])) for m in messages)}")
-
-        response = self._completion_with_retry(call_params)
+        response = self._completion_with_retry(
+            lambda: self._client.chat.completions.create(
+                model=model_name,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        )
         content: str = response.choices[0].message.content
         print(f"[LLMClient] response_chars={len(content)}")
         return content
@@ -277,21 +311,15 @@ class LLMClient:
             }
         ]
 
-        call_params = {
-            "model":       self.model,
-            "messages":    messages,
-            "temperature": temperature,
-            "max_tokens":  512,
-        }
-        tongji_model = _resolve_tongji_model(self.model)
-        if self.model.startswith("gemini"):
-            call_params["custom_llm_provider"] = "gemini"
-        elif tongji_model:
-            call_params["model"]    = f"openai/{tongji_model}"
-            call_params["api_base"] = _TONGJI_BASE_URL
-            call_params["api_key"]  = _TONGJI_API_KEY
-
-        response = self._completion_with_retry(call_params)
+        model_name = _resolve_tongji_model(self.model)
+        response = self._completion_with_retry(
+            lambda: self._client.chat.completions.create(
+                model=model_name,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=512,
+            )
+        )
         raw = response.choices[0].message.content.strip()
         return _parse_json_safe(raw, default={"score": 0, "passed": False, "reason": raw})
 
@@ -309,30 +337,22 @@ class LLMClient:
             {"role": "user",   "content": user_content},
         ]
 
-        call_params: dict = {
-            "model":       self.model,
-            "messages":    messages,
-            "temperature": temperature,
-            "max_tokens":  max_tokens,
-        }
-        if stop:
-            call_params["stop"] = stop
-
-        tongji_model = _resolve_tongji_model(self.model)
-        if self.model.startswith("gemini"):
-            call_params["custom_llm_provider"] = "gemini"
-        elif tongji_model:
-            call_params["model"]    = f"openai/{tongji_model}"
-            call_params["api_base"] = _TONGJI_BASE_URL
-            call_params["api_key"]  = _TONGJI_API_KEY
-
+        model_name = _resolve_tongji_model(self.model)
         print(
-            f"[LLMClient] custom_system_call model={call_params.get('model')} "
-            f"api_base={call_params.get('api_base', '<provider-default>')} "
+            f"[LLMClient] custom_system_call model={model_name} "
+            f"api_base={_TONGJI_BASE_URL} "
             f"prompt_chars={sum(len(str(m['content'])) for m in messages)}"
         )
         try:
-            response = self._completion_with_retry(call_params)
+            response = self._completion_with_retry(
+                lambda: self._client.chat.completions.create(
+                    model=model_name,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    stop=stop,
+                )
+            )
             if response is None:
                 return (
                     "Observation: System Error: API returned no response. "
@@ -400,26 +420,19 @@ class LLMClient:
 
     def _validate_api_keys(self):
         """启动时检查必要的 API Key 是否已设置，仅打印警告。"""
-        if _resolve_tongji_model(self.model):
-            return
+        if not _TONGJI_API_KEY:
+            print("[LLMClient] ⚠  TONGJI_API_KEY not set – please set it in .env")
 
-        checks = {
-            "gpt":    ("OPENAI_API_KEY",  "https://platform.openai.com/api-keys"),
-            "claude": ("ANTHROPIC_API_KEY", "https://console.anthropic.com/"),
-            "gemini": ("GEMINI_API_KEY",   "https://aistudio.google.com/app/apikey"),
-        }
-        for prefix, (env_var, url) in checks.items():
-            if self.model.startswith(prefix) and not os.environ.get(env_var):
-                print(f"[LLMClient] ⚠  {env_var} not set – "
-                      f"get it from {url}")
-        # 同济端点：key 已硬编码，无需额外检查
-
-    def _completion_with_retry(self, call_params: dict):
-        """对 litellm.completion 做轻量重试，缓解连接重置/临时 500。"""
+    def _completion_with_retry(self, request_fn):
+        """对 OpenAI 请求做轻量重试，缓解连接重置/临时 500。"""
         last_exc = None
+        force_direct = (
+            os.getenv("TONGJI_FORCE_DIRECT", "").lower() in {"1", "true", "yes"}
+        )
         for attempt in range(1, _DEFAULT_RETRY_TIMES + 1):
             try:
-                return litellm.completion(**call_params)
+                with _temporary_clear_proxy(force_direct):
+                    return request_fn()
             except Exception as exc:
                 last_exc = exc
                 if attempt >= _DEFAULT_RETRY_TIMES:

@@ -1,5 +1,5 @@
 # Core dependency for LLM calls (used by scripts/llm_api/client.py)
-litellm>=1.57.0
+openai>=2.24.0
 
 # Appium client (used by appium_runner and mobile test execution)
 Appium-Python-Client>=4.0.0
