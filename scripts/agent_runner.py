@@ -48,7 +48,6 @@ class AgentRunner:
         self,
         model:              str   = "tongji/DeepSeek-R1",
         strategy:           str   = "ReAct",
-        retriever_strategy: str   = "keyword",
         retriever_top_k:    int   = 5,
         data_dir:           str   = "data",
         workspace_dir:      str   = "workspace",
@@ -59,7 +58,6 @@ class AgentRunner:
         Args:
             model:              底座模型，可用简写见 llm_api/client.py MODEL_ALIASES。
             strategy:           Agent 策略 'direct' | 'ReAct' | 'tool_planning'。
-            retriever_strategy: 文件检索策略 'keyword' | 'tfidf' | 'ast_analysis'。
             retriever_top_k:    检索返回文件数（默认 8）。
             temperature:        LLM 温度，默认 0.2 保证代码确定性。
         """
@@ -69,7 +67,6 @@ class AgentRunner:
         self.results_dir   = self.root_dir / results_dir
         self.model         = model
         self.strategy      = strategy
-        self.retriever_strategy = retriever_strategy
         self.retriever_top_k    = retriever_top_k
         self.temperature        = temperature
 
@@ -166,7 +163,6 @@ class AgentRunner:
             base_src = self.data_dir / app_name / "base_src"
             retriever = Retriever(
                 base_src_dir=base_src,
-                strategy=self.retriever_strategy,
                 top_k=self.retriever_top_k,
             )
             retrieved_paths, context = retriever.retrieve(task_prompt)
@@ -1234,9 +1230,6 @@ def main():
     parser.add_argument("--strategy", default="ReAct",
                         choices=["direct", "ReAct", "tool_planning"],
                         help="Agent 策略（默认 ReAct）")
-    parser.add_argument("--retriever", default="keyword",
-                        choices=["keyword", "tfidf", "ast_analysis"],
-                        help="检索策略（默认 keyword）")
     parser.add_argument("--top-k", type=int, default=8,
                         help="检索文件数量（默认 8）")
     args = parser.parse_args()
@@ -1244,7 +1237,6 @@ def main():
     runner = AgentRunner(
         model=args.model,
         strategy=args.strategy,
-        retriever_strategy=args.retriever,
         retriever_top_k=args.top_k,
     )
     try:

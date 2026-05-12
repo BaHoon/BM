@@ -62,7 +62,6 @@ class ExperimentLauncher:
         strategies:        list[str],
         tasks:             str        = "all",        # "all" | "app_foodyou" | "app_foodyou/task_001"
         app_filter:        Optional[str] = None,
-        retriever_strategy: str       = "keyword",
         retriever_top_k:   int        = 5,
         compile_timeout:   int        = 600,
         appium_timeout:    int        = 300,
@@ -76,7 +75,6 @@ class ExperimentLauncher:
         self.strategies         = strategies
         self.tasks_arg          = tasks
         self.app_filter         = app_filter
-        self.retriever_strategy = retriever_strategy
         self.retriever_top_k    = retriever_top_k
         self.compile_timeout    = compile_timeout
         self.appium_timeout     = appium_timeout
@@ -164,7 +162,6 @@ class ExperimentLauncher:
             agent = AgentRunner(
                 model=model,
                 strategy=strategy,
-                retriever_strategy=self.retriever_strategy,
                 retriever_top_k=self.retriever_top_k,
             )
 
@@ -481,11 +478,6 @@ def parse_args():
         "--app", default=None,
         help="按 App 名称过滤（与 --tasks 合用）"
     )
-    parser.add_argument(
-        "--retriever", default="keyword",
-        choices=["keyword", "tfidf", "ast_analysis"],
-        help="文件检索策略（默认 keyword）"
-    )
     parser.add_argument("--top-k",       type=int, default=8)
     parser.add_argument("--vlm-model",   default="gpt-4o",
                         help="VLM 视觉评分模型（默认 gpt-4o，经 Tongji base_url 路由）")
@@ -506,7 +498,6 @@ def main():
         strategies         = args.strategy,
         tasks              = args.tasks,
         app_filter         = args.app,
-        retriever_strategy = args.retriever,
         retriever_top_k    = args.top_k,
         compile_timeout    = args.compile_timeout,
         appium_timeout     = args.appium_timeout,
