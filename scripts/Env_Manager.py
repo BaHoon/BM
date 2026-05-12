@@ -83,6 +83,7 @@ class EnvManager:
             # Windows 下目录可能短暂残留；允许拷贝到已存在目录可避免 WinError 183。
             dirs_exist_ok=True,
         )
+        self._save_workspace_manifest(app_name, task_id, base_src, dst)
         print(f"[EnvManager] ✓ Workspace ready: {dst}")
         return dst
 
@@ -253,6 +254,26 @@ class EnvManager:
                     child.unlink()
                 except FileNotFoundError:
                     pass
+
+    def _save_workspace_manifest(
+        self,
+        app_name: str,
+        task_id: str,
+        source_dir: Path,
+        workspace_dir: Path,
+    ) -> None:
+        """记录本次 workspace 是从哪个 data/base_src 初始化的，方便复现实验。"""
+        manifest = {
+            "app_name": app_name,
+            "task_id": task_id,
+            "source_dir": str(source_dir.resolve()),
+            "workspace_dir": str(workspace_dir.resolve()),
+            "project_root": str(self._resolve_gradle_project_root(workspace_dir).resolve()),
+        }
+        (workspace_dir / ".workspace_manifest.json").write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
 
     def _resolve_gradle_project_root(self, workspace_path: Path) -> Path:
         """定位真实 Gradle 根目录（包含 gradlew/gradlew.bat）。"""

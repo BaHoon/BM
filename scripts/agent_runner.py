@@ -205,6 +205,21 @@ class AgentRunner:
             )
             llm_response = json.dumps(react_result, ensure_ascii=False, indent=2)
             retrieved_files_for_log = []
+            write_results = self._write_results_from_tool_result(
+                react_result.get("result"),
+                app_name,
+                task_id,
+            )
+            self._save_llm_response(app_name, task_id, attempt, llm_response, retrieved_files_for_log)
+            success_count = sum(1 for v in write_results.values() if v == "SUCCESS")
+            return {
+                "success":         success_count > 0,
+                "files_written":   success_count,
+                "write_results":   write_results,
+                "llm_response":    llm_response,
+                "retrieved_files": retrieved_files_for_log,
+                "total_files":     len(write_results),
+            }
 
         elif self.strategy == "tool_planning":
             # Planner + Executor：不做前置 RAG
@@ -274,6 +289,7 @@ class AgentRunner:
                 break
             if attempt <= max_rounds:
                 print(f"[AgentRunner] ✗ Attempt {attempt} failed, retrying with feedback...")
+        return history
 
     # -------------------------------------------------------------------
     # Tools exposed to agents (schema + simple implementations)
@@ -321,11 +337,8 @@ class AgentRunner:
         }
 
     def tool_read_file(self, file_path: str, start_line: Optional[int] = None, end_line: Optional[int] = None) -> str:
-        """读取仓库内相对路径文件的内容（支持行切片）。"""
-        if file_path.startswith("workspace/"):
-            file_path = file_path[len("workspace/"):]
-        workspace_target = self.workspace_dir / file_path
-        target = workspace_target if workspace_target.exists() else (self.root_dir / file_path)
+        """读取 workspace 内文件内容（支持任务路径、项目根路径、嵌套项目路径）。"""
+        target = self._resolve_workspace_file_path(file_path, must_exist=True)
         if not target.exists():
             raise FileNotFoundError(str(target))
         text = target.read_text(encoding='utf-8')
@@ -337,8 +350,8 @@ class AgentRunner:
         return '\n'.join(lines[s-1:e])
 
     def tool_submit_patch(self, file_path: str, old_snippet: str, new_snippet: str) -> Dict[str, Any]:
-        """把补丁写入 workspace（校验 old_snippet 是否存在）。"""
-        target = self.workspace_dir / file_path
+        """把补丁写入 workspace 的真实项目目录（校验 old_snippet 是否存在）。"""
+        target = self._resolve_workspace_file_path(file_path, must_exist=bool(old_snippet.strip()))
         target.parent.mkdir(parents=True, exist_ok=True)
         full_path = str(target)
         content = target.read_text(encoding='utf-8') if target.exists() else ''
@@ -351,7 +364,7 @@ class AgentRunner:
             content = (content.rstrip() + '\n\n' + new_snippet.rstrip() + '\n')
         target.write_text(content, encoding='utf-8')
         print(f"[AgentRunner] submit_patch wrote: {Path(full_path).resolve()}")
-        return {'ok': True, 'path': full_path}
+        return {'ok': True, 'path': full_path, 'relative_path': self._workspace_relative_path(target)}
 
     def _call_llm_with_system(self, system_prompt: str, user_content: str, temperature: float = 0.2, stop: Optional[list[str]] = None) -> str:
         """
@@ -1074,6 +1087,99 @@ class AgentRunner:
         if len(nested_roots) == 1:
             return nested_roots[0] / rel_path
         return workspace_path / rel_path
+
+    def _resolve_workspace_file_path(self, file_path: str, must_exist: bool) -> Path:
+        """
+        Resolve an agent-supplied path into the task workspace.
+
+        Accepted forms include:
+          - app/src/...
+          - FoodYou-develop/app/src/...
+          - app_foodyou/task_005_notice/app/src/...
+          - workspace/app_foodyou/task_005_notice/FoodYou-develop/app/src/...
+        """
+        cleaned = str(file_path).replace("\\", "/").strip().strip('"').strip("'")
+        if not cleaned:
+            raise ValueError("empty file_path")
+
+        absolute = Path(cleaned)
+        if absolute.is_absolute():
+            try:
+                cleaned = absolute.relative_to(self.workspace_dir).as_posix()
+            except ValueError:
+                if absolute.exists() or not must_exist:
+                    return absolute
+
+        cleaned = cleaned.lstrip("/")
+        if cleaned.startswith("workspace/"):
+            cleaned = cleaned[len("workspace/"):]
+
+        parts = cleaned.split("/")
+        if len(parts) >= 2:
+            workspace_path = self.workspace_dir / parts[0] / parts[1]
+            if workspace_path.exists():
+                rel_path = "/".join(parts[2:])
+                return self._resolve_target_path(workspace_path, rel_path, must_exist=must_exist)
+
+        # If the path does not include app/task, fall back only when a single
+        # task workspace exists. This keeps ad-hoc CLI usage convenient without
+        # guessing across multiple active tasks.
+        task_roots = [
+            task_dir
+            for app_dir in self.workspace_dir.iterdir()
+            if app_dir.is_dir()
+            for task_dir in app_dir.iterdir()
+            if task_dir.is_dir()
+        ] if self.workspace_dir.exists() else []
+        if len(task_roots) == 1:
+            return self._resolve_target_path(task_roots[0], cleaned, must_exist=must_exist)
+
+        target = self.workspace_dir / cleaned
+        if must_exist and not target.exists():
+            raise FileNotFoundError(
+                f"Cannot resolve workspace path: {file_path}. "
+                "Use app_name/task_id/path or call from an initialized ReAct task."
+            )
+        return target
+
+    def _workspace_relative_path(self, path: Path) -> str:
+        try:
+            return path.resolve().relative_to(self.workspace_dir.resolve()).as_posix()
+        except ValueError:
+            return path.as_posix()
+
+    def _write_results_from_tool_result(
+        self,
+        tool_result: Any,
+        app_name: str,
+        task_id: str,
+    ) -> Dict[str, str]:
+        """Convert ReAct submit_patch result into the normal write_results shape."""
+        out_dir = self.results_dir / app_name / task_id
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        if isinstance(tool_result, dict) and tool_result.get("ok"):
+            rel_path = tool_result.get("relative_path")
+            if not rel_path and tool_result.get("path"):
+                rel_path = self._workspace_relative_path(Path(tool_result["path"]))
+            rel_path = rel_path or "unknown"
+            summary = {
+                "strategy": self.strategy,
+                "tool": "submit_patch",
+                "ok": True,
+                "path": tool_result.get("path"),
+                "relative_path": rel_path,
+            }
+            (out_dir / "patch_result.json").write_text(
+                json.dumps(summary, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            return {rel_path: "SUCCESS"}
+
+        if tool_result == "DONE_NO_PATCH":
+            return {"__no_patch__": "ERROR: DONE_NO_PATCH"}
+
+        return {"__react_result__": f"ERROR: {tool_result}"}
 
     def _write_to_workspace(
         self,
