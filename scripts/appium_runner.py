@@ -111,6 +111,7 @@ class AppiumRunner:
 
         t0 = time.time()
         screenshots = []
+        ui_trees = []
         log = ""
 
         try:
@@ -145,6 +146,8 @@ class AppiumRunner:
             # 创建截图保存目录
             screenshot_dir = self.results_dir / app_name / task_id / "screenshots"
             screenshot_dir.mkdir(parents=True, exist_ok=True)
+            ui_tree_dir = self.results_dir / app_name / task_id / "ui_trees"
+            ui_tree_dir.mkdir(parents=True, exist_ok=True)
 
             # 准备注入的全局环境
             screenshot_count = [0]  # 使用列表以允许嵌套函数修改
@@ -152,10 +155,18 @@ class AppiumRunner:
             def take_screenshot(name: str) -> str:
                 """截图函数，注入到 test_script 的全局环境中。"""
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                filename = f"{screenshot_count[0]:02d}_{name}_{timestamp}.png"
+                idx = screenshot_count[0]
+                filename = f"{idx:02d}_{name}_{timestamp}.png"
                 filepath = screenshot_dir / filename
                 try:
                     self.driver.save_screenshot(str(filepath))
+                    ui_tree_path = self._save_ui_tree(ui_tree_dir, idx, name, timestamp)
+                    if ui_tree_path:
+                        ui_trees.append({
+                            "name": name,
+                            "path": str(ui_tree_path),
+                            "screenshot": str(filepath),
+                        })
                     screenshot_count[0] += 1
                     screenshots.append(str(filepath))
                     print(f"  [screenshot] {filename}")
@@ -181,12 +192,21 @@ class AppiumRunner:
 
             exec(test_code, globals_dict)
             print(f"[AppiumRunner] test_script completed successfully")
+            final_ui_tree = self._save_ui_tree(ui_tree_dir, screenshot_count[0], "final_state")
+            if final_ui_tree:
+                ui_trees.append({
+                    "name": "final_state",
+                    "path": str(final_ui_tree),
+                    "screenshot": None,
+                })
 
             elapsed = round(time.time() - t0, 2)
             return {
                 "success": True,
                 "elapsed_time": elapsed,
                 "screenshots": screenshots,
+                "ui_trees": ui_trees,
+                "final_ui_tree": str(final_ui_tree) if final_ui_tree else None,
                 "log": f"Test passed. {len(screenshots)} screenshots captured.",
                 "test_type": "custom",
                 "timestamp": datetime.now().isoformat(),
@@ -200,6 +220,8 @@ class AppiumRunner:
                 "success": False,
                 "elapsed_time": elapsed,
                 "screenshots": screenshots,
+                "ui_trees": ui_trees,
+                "final_ui_tree": ui_trees[-1]["path"] if ui_trees else None,
                 "log": error_msg,
                 "test_type": "custom",
                 "timestamp": datetime.now().isoformat(),
@@ -354,6 +376,28 @@ class AppiumRunner:
                 last_error = exc
 
         raise RuntimeError(f"Failed to connect to Appium endpoints: {last_error}")
+
+    def _save_ui_tree(
+        self,
+        ui_tree_dir: Path,
+        index: int,
+        name: str,
+        timestamp: Optional[str] = None,
+    ) -> Optional[Path]:
+        """保存当前页面 UI hierarchy，供 Level 2 节点匹配使用。"""
+        if not self.driver:
+            return None
+        timestamp = timestamp or datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_name = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in name)[:80]
+        path = ui_tree_dir / f"{index:02d}_{safe_name}_{timestamp}.xml"
+        try:
+            source = self.driver.page_source or ""
+            path.write_text(source, encoding="utf-8")
+            print(f"  [ui-tree] {path.name}")
+            return path
+        except Exception as exc:
+            print(f"  [ui-tree] ERROR: {exc}")
+            return None
 
     def __del__(self):
         """清理：关闭驱动和 Appium 进程。"""

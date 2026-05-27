@@ -30,7 +30,7 @@ _DEFAULT_RETRY_BASE_SLEEP = 2.0
 
 def _load_repo_env_file() -> None:
     """从仓库根目录加载 .env（仅填充未设置的环境变量）。"""
-    env_path = Path(__file__).resolve().parents[2] / ".env"
+    env_path = Path(__file__).resolve().parents[1] / ".env"
     if not env_path.exists():
         return
 
@@ -57,6 +57,8 @@ _TONGJI_BASE_URL = os.getenv("TONGJI_BASE_URL") or os.getenv(
     "OPENAI_BASE_URL", "https://llmapi.tongji.edu.cn/v1"
 )
 _TONGJI_API_KEY  = os.getenv("TONGJI_API_KEY") or os.getenv("OPENAI_API_KEY")
+_OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+_OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL")
 
 
 def _ensure_no_proxy_for_tongji(base_url: str) -> None:
@@ -109,14 +111,6 @@ def _temporary_clear_proxy(enabled: bool):
             else:
                 os.environ[key] = value
 
-if not _TONGJI_API_KEY:
-    raise RuntimeError(
-        "API key not set. Please set TONGJI_API_KEY (preferred) or "
-        "OPENAI_API_KEY before running."
-    )
-
-
-# 凡是 model 名以此前缀开头的，都路由到同济端点
 # 凡是 model 名以此前缀开头的，都路由到同济端点
 _TONGJI_MODEL_PREFIX = "tongji/"
 
@@ -126,6 +120,19 @@ def _resolve_tongji_model(model: str) -> str:
     if model.startswith(_TONGJI_MODEL_PREFIX):
         return model[len(_TONGJI_MODEL_PREFIX):]
     return model
+
+
+def _normalize_model(model: str) -> str:
+    return MODEL_ALIASES.get(model, model)
+
+
+def _uses_tongji(model: str) -> bool:
+    return _normalize_model(model).startswith(_TONGJI_MODEL_PREFIX)
+
+
+def has_configured_api_key(model: str = "deepseek-r1") -> bool:
+    """Return whether the API key required by this model route is configured."""
+    return bool(_TONGJI_API_KEY if _uses_tongji(model) else _OPENAI_API_KEY)
 
 # --------------------------------------------------------------------------- #
 #  预定义模型别名（便于 CLI 传参）
@@ -143,6 +150,7 @@ STRATEGY_SYSTEM_PROMPTS: dict[str, str] = {
     "direct": (
         "You are an expert Android developer. "
         "Your only output must be parseable patch blocks. Do not output explanations, planning, or full-file rewrites for existing files. "
+        "If UI DOM or activity context is provided in the user input, ground your edits and file choices in those concrete UI elements rather than guessing. "
         "Use this exact format for existing files:\n"
         "```patchfile:RELATIVE_PATH\n"
         "<<<<<<< SEARCH\n"
@@ -165,6 +173,8 @@ STRATEGY_SYSTEM_PROMPTS: dict[str, str] = {
         "You ONLY see: the current Activity/Fragment name, the UI DOM tree (XML structure), and the user's Instruction.\n"
         "You do NOT have access to source code files yet. You must use Tools to discover and retrieve them.\n"
         "\n"
+        "PREMISE: Always inspect the UI_DOM_Tree first. Your next tool call MUST be grounded in concrete UI elements (text, ids, class names) observed in the UI DOM. Do NOT guess or brainstorm keywords without UI evidence.\n"
+        "If the UI DOM is empty, explicitly note it and then search by app-specific package names or settings-related files, not generic Android classes.\n"
         "You must work in cycles: Thought -> Action -> Observation, repeating until you call submit_patch to finish.\n"
         "\n"
         "Available Tools (call them EXACTLY as shown):\n"
@@ -181,27 +191,34 @@ STRATEGY_SYSTEM_PROMPTS: dict[str, str] = {
     ),
 
     "tool_planning": (
-        "You are an Android architect. Your task is NOT to write code, but to plan how to find and modify the necessary source code.\n"
+        "You are an Android architect controlling source-code discovery tools.\n"
         "\n"
         "You ONLY see: the current Activity/Fragment name, the UI DOM tree (XML structure), and the user's Instruction.\n"
+        "You do NOT have source code until you use tools.\n"
         "\n"
-        "Output a JSON array of <=5 exploration steps. Each step must specify which Tool to call and what to search/read.\n"
+        "PREMISE: Always inspect the UI_DOM_Tree first. Your next tool call MUST be grounded in concrete UI elements (text, ids, class names) observed in the UI DOM. Do NOT guess or brainstorm keywords without UI evidence.\n"
+        "If the UI DOM is empty, explicitly note it and then search by app-specific package names or settings-related files, not generic Android classes.\n"
+        "Work in cycles. In each cycle, choose exactly ONE next tool call based on all previous Observations.\n"
+        "Do not make a fixed multi-step plan. After every Observation, re-plan the next single action.\n"
+        "When the task is implemented, call submit_patch. A successful submit_patch ends the task.\n"
         "\n"
-        "Example output format:\n"
-        "[\n"
-        "  {\"step\": 1, \"action\": \"search_keyword btn_delete\"},\n"
-        "  {\"step\": 2, \"action\": \"read_file FoodYou-develop/app/src/.../NotificationSettings.kt 1 50\"},\n"
-        "  {\"step\": 3, \"action\": \"search_keyword MutablePreferences\"},\n"
-        "  {\"step\": 4, \"action\": \"read_file FoodYou-develop/app/src/.../NotificationPreferences.kt\"},\n"
-        "  {\"step\": 5, \"action\": \"submit_patch FoodYou-develop/app/src/.../NotificationPreferences.kt old_code new_code\"}\n"
-        "]\n"
+        "Available Tools (call them EXACTLY as shown):\n"
+        "  1. search_keyword(keyword) — Search the project repo for a keyword. Use broader terms when a search returns no matches.\n"
+        "  2. read_file(file_path, start_line, end_line) — Read a file's content. Use line numbers from search_keyword.\n"
+        "  3. submit_patch(file_path, old_snippet, new_snippet) — Apply a patch (old_snippet -> new_snippet) to file_path. This ends your task.\n"
         "\n"
-        "Available Tools:\n"
-        "  - search_keyword <keyword> — Find files containing a keyword.\n"
-        "  - read_file <file_path> [start_line] [end_line] — Read file content.\n"
-        "  - submit_patch <file_path> <old_snippet> <new_snippet> — Apply and submit a code patch.\n"
+        "Planning rules:\n"
+        "  - Never repeat an identical action after it already produced an Observation.\n"
+        "  - If a keyword has zero matches, switch to a different broader keyword, file name, package concept, or UI string.\n"
+        "  - Prefer reading concrete search hits before patching.\n"
+        "  - old_snippet in submit_patch must EXACTLY match existing code, including whitespace.\n"
         "\n"
-        "Do NOT output code blocks or natural language explanations. Output ONLY the JSON array."
+        "CRITICAL: Output EXACTLY ONE tool call in plain text. Do NOT output JSON, markdown, explanations, or multiple actions.\n"
+        "Examples:\n"
+        "  search_keyword(\"Settings\")\n"
+        "  read_file(\"app/src/main/res/xml/root_preferences.xml\", 1, 80)\n"
+        "  submit_patch(\"app/src/main/res/xml/root_preferences.xml\", \"<old>\", \"<new>\")\n"
+        "Once you output an Action, STOP generating. The system will provide the Observation."
     ),
 }
 
@@ -215,10 +232,16 @@ class LLMClient:
             model:    模型名称，可用 MODEL_ALIASES 中的简写。
             strategy: 'direct' | 'ReAct' | 'tool_planning'
         """
-        self.model = MODEL_ALIASES.get(model, model)
+        self.model = _normalize_model(model)
         self.strategy = strategy
-        self._client = OpenAI(api_key=_TONGJI_API_KEY, base_url=_TONGJI_BASE_URL)
+        self.uses_tongji = self.model.startswith(_TONGJI_MODEL_PREFIX)
+        self.api_key = _TONGJI_API_KEY if self.uses_tongji else _OPENAI_API_KEY
+        self.base_url = _TONGJI_BASE_URL if self.uses_tongji else _OPENAI_BASE_URL
         self._validate_api_keys()
+        client_kwargs = {"api_key": self.api_key}
+        if self.base_url:
+            client_kwargs["base_url"] = self.base_url
+        self._client = OpenAI(**client_kwargs)
 
     # ----------------------------------------------------------------------- #
     #  公开接口
@@ -259,7 +282,7 @@ class LLMClient:
             {"role": "user",   "content": user_content},
         ]
 
-        model_name = _resolve_tongji_model(self.model)
+        model_name = _resolve_tongji_model(self.model) if self.uses_tongji else self.model
         print(
             f"[LLMClient] model={model_name}  strategy={self.strategy}  "
             f"prompt_chars={sum(len(str(m['content'])) for m in messages)}"
@@ -277,31 +300,55 @@ class LLMClient:
         print(f"[LLMClient] response_chars={len(content)}")
         return content
 
-    def score_screenshot(
+    def score_visual_binary_checks(
         self,
         task_prompt: str,
         screenshot_paths: list[str],
+        checks: list[dict],
+        target_node: Optional[dict] = None,
         temperature: float = 0.0,
     ) -> dict:
         """
-        调用视觉模型（GPT-4o-vision / Gemini）对截图进行审美打分（VLM 评测）。
+        用客观二项问题评估 Level 3 视觉语义。
 
         Returns:
-            {"score": 0-10, "passed": bool, "reason": str}
+            {
+              "passed": bool,
+              "checks": [{"id": str, "question": str, "passed": bool, "evidence": str}],
+              "reason": str
+            }
         """
         images_content = []
         for path in screenshot_paths:
             b64 = _encode_image(path)
             images_content.append({
-                "type":      "image_url",
+                "type": "image_url",
                 "image_url": {"url": f"data:image/png;base64,{b64}", "detail": "high"},
             })
 
+        normalized_checks = [
+            {
+                "id": str(item.get("id", f"check_{idx + 1}")),
+                "question": str(item.get("question", "")),
+            }
+            for idx, item in enumerate(checks)
+            if item.get("question")
+        ]
+
         eval_prompt = (
             f"Task requirement:\n{task_prompt}\n\n"
-            "Look at the screenshot(s) of the Android application.\n"
-            "Score how well the UI satisfies the visual requirement on a scale of 0-10.\n"
-            "Respond in JSON: {\"score\": <int>, \"passed\": <bool>, \"reason\": \"<1-2 sentences>\"}"
+            f"Matched UI node from the accessibility tree:\n{target_node or {}}\n\n"
+            "You are NOT allowed to give a subjective score. "
+            "Answer only the objective binary checks below. "
+            "For each check, return true only when the screenshot visibly proves it. "
+            "If evidence is missing, ambiguous, off-screen, hidden, or you are unsure, return false.\n\n"
+            f"Checks:\n{normalized_checks}\n\n"
+            "Return strict JSON only:\n"
+            "{"
+            "\"passed\": <true only if every check passed>, "
+            "\"checks\": [{\"id\": \"...\", \"question\": \"...\", \"passed\": <bool>, \"evidence\": \"short visible evidence\"}], "
+            "\"reason\": \"one short sentence\""
+            "}"
         )
 
         messages = [
@@ -311,17 +358,25 @@ class LLMClient:
             }
         ]
 
-        model_name = _resolve_tongji_model(self.model)
+        model_name = _resolve_tongji_model(self.model) if self.uses_tongji else self.model
         response = self._completion_with_retry(
             lambda: self._client.chat.completions.create(
                 model=model_name,
                 messages=messages,
                 temperature=temperature,
-                max_tokens=512,
+                max_tokens=800,
             )
         )
         raw = response.choices[0].message.content.strip()
-        return _parse_json_safe(raw, default={"score": 0, "passed": False, "reason": raw})
+        default = {
+            "passed": False,
+            "checks": [
+                {**item, "passed": False, "evidence": "VLM response was not valid JSON."}
+                for item in normalized_checks
+            ],
+            "reason": raw,
+        }
+        return _parse_json_safe(raw, default=default)
 
     def generate_with_system_prompt(
         self,
@@ -337,10 +392,10 @@ class LLMClient:
             {"role": "user",   "content": user_content},
         ]
 
-        model_name = _resolve_tongji_model(self.model)
+        model_name = _resolve_tongji_model(self.model) if self.uses_tongji else self.model
         print(
             f"[LLMClient] custom_system_call model={model_name} "
-            f"api_base={_TONGJI_BASE_URL} "
+            f"api_base={self.base_url or 'openai_default'} "
             f"prompt_chars={sum(len(str(m['content'])) for m in messages)}"
         )
         try:
@@ -420,8 +475,10 @@ class LLMClient:
 
     def _validate_api_keys(self):
         """启动时检查必要的 API Key 是否已设置，仅打印警告。"""
-        if not _TONGJI_API_KEY:
-            print("[LLMClient] ⚠  TONGJI_API_KEY not set – please set it in .env")
+        if self.api_key:
+            return
+        key_name = "TONGJI_API_KEY" if self.uses_tongji else "OPENAI_API_KEY"
+        raise RuntimeError(f"{key_name} not set for model {self.model}")
 
     def _completion_with_retry(self, request_fn):
         """对 OpenAI 请求做轻量重试，缓解连接重置/临时 500。"""

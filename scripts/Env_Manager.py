@@ -83,6 +83,7 @@ class EnvManager:
             # Windows 下目录可能短暂残留；允许拷贝到已存在目录可避免 WinError 183。
             dirs_exist_ok=True,
         )
+        self._ensure_gradlew_executable(self._resolve_gradle_project_root(dst))
         self._save_workspace_manifest(app_name, task_id, base_src, dst)
         print(f"[EnvManager] ✓ Workspace ready: {dst}")
         return dst
@@ -116,6 +117,7 @@ class EnvManager:
             )
 
         project_root = self._resolve_gradle_project_root(workspace_path)
+        self._ensure_gradlew_executable(project_root)
         cmd = self._GRADLE_CMD_WIN if os.name == "nt" else self._GRADLE_CMD_UNIX
         required_java = self._detect_required_java_version(project_root)
         java_home_used: Optional[str] = None
@@ -167,11 +169,20 @@ class EnvManager:
         # APK 路径
         apk_path, apk_exists, apk_size = self._check_apk(app_name, task_id)
 
-        # 提取关键错误行（最多 30 行含 error/exception）
-        error_summary = self._extract_errors(stdout + "\n" + stderr)
+        combined_log = stdout + "\n" + stderr
+
+        # 提取关键诊断信息
+        error_summary = self._extract_errors(combined_log)
+        warning_lines = self._extract_warnings(combined_log)
+        level1 = self._score_level1(
+            success=success,
+            warning_lines=warning_lines,
+            build_log=combined_log,
+            project_root=project_root,
+        )
 
         result = {
-            "success":       success or apk_exists,
+            "success":       success,
             "return_code":   rc,
             "elapsed_time":  elapsed,
             "apk_exists":    apk_exists,
@@ -183,6 +194,12 @@ class EnvManager:
             "stdout":        stdout[-8000:],   # 保留后 8000 字符避免过大
             "stderr":        stderr[-4000:],
             "error_summary": error_summary,
+            "warning_count":  len(warning_lines),
+            "warning_summary": "\n".join(warning_lines[:30]),
+            "level1_score":   level1["score"],
+            "level1_category": level1["category"],
+            "level1_reason":  level1["reason"],
+            "level1_evidence": level1["evidence"],
         }
 
         status = "✓ BUILD OK" if result["success"] else "✗ BUILD FAILED"
@@ -290,6 +307,22 @@ class EnvManager:
         # 找不到时退回原路径，保持原有行为（后续由 subprocess 报错）
         return workspace_path
 
+    def _ensure_gradlew_executable(self, project_root: Path) -> None:
+        """Unix/macOS 下确保 Gradle wrapper 可执行，避免 Permission denied。"""
+        if os.name == "nt":
+            return
+        gradlew = project_root / "gradlew"
+        if not gradlew.exists():
+            return
+        try:
+            mode = gradlew.stat().st_mode
+            if mode & 0o111:
+                return
+            gradlew.chmod(mode | 0o755)
+            print(f"[EnvManager] chmod +x {gradlew}")
+        except Exception as exc:
+            print(f"[EnvManager] WARN: failed to chmod +x {gradlew}: {exc}")
+
     def _check_apk(
         self, app_name: str, task_id: str
     ) -> tuple[Optional[Path], bool, float]:
@@ -335,9 +368,204 @@ class EnvManager:
     def _extract_errors(self, text: str, max_lines: int = 30) -> str:
         """从编译输出中提取包含 error/exception/failure 的关键行。"""
         lines = text.splitlines()
-        keywords = ("error:", "exception", "failure", "could not", "unresolved")
+        keywords = (
+            "error:",
+            "exception",
+            "failure",
+            "failed",
+            "could not",
+            "unresolved",
+            "cannot find",
+            "package ",
+            "expecting ",
+            "unexpected ",
+            "illegal ",
+        )
         key_lines = [l for l in lines if any(k in l.lower() for k in keywords)]
         return "\n".join(key_lines[:max_lines])
+
+    def _extract_warnings(self, text: str, max_lines: int = 200) -> list[str]:
+        """提取真实编译 warning 行，用于区分 Level 1 的 4 分和 3 分。"""
+        warning_lines: list[str] = []
+        seen: set[str] = set()
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
+            lower = line.lower()
+            if not line:
+                continue
+            if "warning" not in lower and "deprecated" not in lower:
+                continue
+            if re.search(r"\b(no|0)\s+warnings?\b", lower):
+                continue
+            if "warning mode" in lower:
+                continue
+            if "to show individual deprecation warnings" in lower:
+                continue
+            if line in seen:
+                continue
+            warning_lines.append(line)
+            seen.add(line)
+            if len(warning_lines) >= max_lines:
+                break
+        return warning_lines
+
+    def _score_level1(
+        self,
+        success: bool,
+        warning_lines: list[str],
+        build_log: str,
+        project_root: Path,
+    ) -> dict:
+        """
+        按用户定义的 Level 1 五档标准评分：
+          4: 编译成功且零 warning
+          3: 编译成功但有 warning
+          2: 编译失败，局部语法/拼写类错误
+          1: 编译失败，依赖/上下文错误
+          0: 输出不是合法代码
+        """
+        if success:
+            if warning_lines:
+                return {
+                    "score": 3,
+                    "category": "compiled_with_warnings",
+                    "reason": "编译成功，但存在 warning。",
+                    "evidence": warning_lines[:5],
+                }
+            return {
+                "score": 4,
+                "category": "perfect_compile",
+                "reason": "编译成功，且未检测到 warning。",
+                "evidence": [],
+            }
+
+        invalid_evidence = self._detect_invalid_code_artifact(project_root, build_log)
+        if invalid_evidence:
+            return {
+                "score": 0,
+                "category": "invalid_code_output",
+                "reason": "输出内容不是合法代码，疑似 Markdown/说明文字被写入源码。",
+                "evidence": invalid_evidence[:5],
+            }
+
+        dependency_evidence = self._find_dependency_context_errors(build_log)
+        syntax_evidence = self._find_syntax_local_errors(build_log)
+
+        if dependency_evidence:
+            return {
+                "score": 1,
+                "category": "dependency_or_context_error",
+                "reason": "编译失败，错误指向不存在的依赖、包、类或工程上下文。",
+                "evidence": dependency_evidence[:5],
+            }
+
+        if syntax_evidence:
+            return {
+                "score": 2,
+                "category": "syntax_or_local_error",
+                "reason": "编译失败，错误局限在语法、符号拼写或局部代码严谨性问题。",
+                "evidence": syntax_evidence[:5],
+            }
+
+        fallback_evidence = self._extract_errors(build_log, max_lines=5).splitlines()
+        return {
+            "score": 2,
+            "category": "syntax_or_local_error",
+            "reason": "编译失败，但未发现明确依赖/上下文错误，按局部代码错误处理。",
+            "evidence": fallback_evidence,
+        }
+
+    def _detect_invalid_code_artifact(self, project_root: Path, build_log: str) -> list[str]:
+        """检测 Markdown/说明文字等非代码内容是否被写入源码文件。"""
+        evidence: list[str] = []
+        source_exts = {".kt", ".java", ".xml", ".gradle", ".kts"}
+        skip_dirs = {"build", ".gradle", ".idea", ".git"}
+
+        try:
+            for path in project_root.rglob("*"):
+                if len(evidence) >= 5:
+                    break
+                if not path.is_file() or path.suffix not in source_exts:
+                    continue
+                if any(part in skip_dirs for part in path.parts):
+                    continue
+                try:
+                    text = path.read_text(encoding="utf-8", errors="replace")
+                except Exception:
+                    continue
+                stripped = text.lstrip()
+                if "```" in text:
+                    evidence.append(f"{path.relative_to(project_root)} contains Markdown code fence ```")
+                elif re.match(r"^(Here is|Below is|Sure[, ]|This code|Explanation:)", stripped, re.IGNORECASE):
+                    first_line = stripped.splitlines()[0][:120]
+                    evidence.append(f"{path.relative_to(project_root)} starts with prose: {first_line}")
+                elif path.suffix in {".kt", ".java", ".gradle", ".kts"} and stripped.startswith("# "):
+                    evidence.append(f"{path.relative_to(project_root)} starts with Markdown heading")
+        except Exception:
+            pass
+
+        lower_log = build_log.lower()
+        if "```" in build_log:
+            evidence.append("compiler log contains Markdown code fence")
+        if "illegal character: '`'" in lower_log or "illegal char <:>" in lower_log:
+            evidence.append("compiler reported illegal Markdown-like characters")
+        return evidence
+
+    def _find_dependency_context_errors(self, text: str) -> list[str]:
+        """匹配依赖、包、类、项目上下文缺失类错误。"""
+        patterns = [
+            r"could not (find|resolve|get) .+",
+            r"failed to resolve .+",
+            r"unable to resolve dependency .+",
+            r"no matching variant of .+ was found",
+            r"module .+ was not found",
+            r"package .+ does not exist",
+            r"cannot find symbol\s+class\s+\w+",
+            r"cannot access class .+",
+            r"classnotfoundexception",
+            r"noclassdeffounderror",
+            r"unresolved reference: [A-Z][A-Za-z0-9_]*(?:\b|$)",
+            r"unresolved reference '[A-Z][A-Za-z0-9_]*'",
+            r"unresolved import",
+        ]
+        return self._matching_lines(text, patterns)
+
+    def _find_syntax_local_errors(self, text: str) -> list[str]:
+        """匹配漏分号、括号、局部变量拼写等代码严谨性错误。"""
+        patterns = [
+            r"\berror:\s*(expecting|expected|unexpected|missing|illegal|modifier|syntax)",
+            r"expecting (an element|'.+'|.+)",
+            r"unexpected tokens?",
+            r"syntax error",
+            r"';' expected",
+            r"\) expected",
+            r"\} expected",
+            r"reached end of file while parsing",
+            r"variable .+ might not have been initialized",
+            r"cannot find symbol\s+(variable|method)\s+\w+",
+            r"unresolved reference: [a-z_][A-Za-z0-9_]*",
+            r"unresolved reference '[a-z_][A-Za-z0-9_]*'",
+            r"type mismatch",
+            r"none of the following functions can be called",
+            r"too many arguments",
+            r"no value passed for parameter",
+        ]
+        return self._matching_lines(text, patterns)
+
+    def _matching_lines(self, text: str, patterns: list[str], max_lines: int = 20) -> list[str]:
+        matches: list[str] = []
+        seen: set[str] = set()
+        compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            if any(p.search(line) for p in compiled) and line not in seen:
+                matches.append(line)
+                seen.add(line)
+                if len(matches) >= max_lines:
+                    break
+        return matches
 
     def _run_gradle(
         self,
@@ -451,6 +679,23 @@ class EnvManager:
             for c in candidates:
                 if c.exists() and (c / "bin" / "java.exe").exists():
                     return str(c)
+
+        # 4) macOS: 使用 /usr/libexec/java_home 自动解析版本。
+        if sys.platform == "darwin":
+            try:
+                proc = subprocess.run(
+                    ["/usr/libexec/java_home", "-v", str(version)],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    check=False,
+                )
+                if proc.returncode == 0:
+                    candidate = proc.stdout.strip()
+                    if candidate and Path(candidate).exists():
+                        return candidate
+            except Exception:
+                pass
 
         return None
 

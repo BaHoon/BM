@@ -9,13 +9,14 @@ Agent_Runner.py - 实验核心执行逻辑
   4. 解析模型输出的代码块并写入 workspace/
   5. RQ5 反馈闭环：失败后将截图 + 错误日志打包重新调用模型
 
-向后兼容：保留旧 run(combined_id) 接口，供 benchmark_runner.py 调用。
+向后兼容：保留 run(combined_id) 便于外部脚本按 "app/task" 调用。
 """
 
 import json
 import os
 import re
 import sys
+import ast
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
@@ -24,8 +25,8 @@ from typing import Dict, List, Optional, Tuple, Any
 _SCRIPTS_DIR = Path(__file__).parent
 sys.path.insert(0, str(_SCRIPTS_DIR))
 
-from llm_api.client import LLMClient
-from tools.retriever import Retriever
+from llm_client import LLMClient
+from retriever import Retriever
 from dataclasses import dataclass
 from typing import Any
 
@@ -56,7 +57,7 @@ class AgentRunner:
     ):
         """
         Args:
-            model:              底座模型，可用简写见 llm_api/client.py MODEL_ALIASES。
+            model:              底座模型，可用简写见 llm_client.py MODEL_ALIASES。
             strategy:           Agent 策略 'direct' | 'ReAct' | 'tool_planning'。
             retriever_top_k:    检索返回文件数（默认 8）。
             temperature:        LLM 温度，默认 0.2 保证代码确定性。
@@ -72,6 +73,7 @@ class AgentRunner:
 
         self.results_dir.mkdir(parents=True, exist_ok=True)
         self.llm = LLMClient(model=model, strategy=strategy)
+        self._active_workspace_path: Optional[Path] = None
         
     def _parse_id(self, combined_id: str) -> tuple:
         """
@@ -181,14 +183,10 @@ class AgentRunner:
         elif self.strategy == "ReAct":
             # 纯工具调用循环：不做前置 RAG
             print("[AgentRunner] Using ReAct strategy (no RAG) — Agent will discover code via tool calls")
-            current_activity = meta.get("current_activity", "unknown")
-            ui_dom_tree = meta.get("ui_dom_tree", "")
             react_result = self.run_react_agent(
                 app_name=app_name,
                 task_id=task_id,
                 instruction=task_prompt,
-                current_activity=current_activity,
-                ui_dom_tree=ui_dom_tree,
                 attempt=attempt,
                 max_steps=None,
             )
@@ -218,16 +216,12 @@ class AgentRunner:
             }
 
         elif self.strategy == "tool_planning":
-            # Planner + Executor：不做前置 RAG
-            print("[AgentRunner] Using tool_planning strategy (no RAG) — Planner will generate execution plan")
-            current_activity = meta.get("current_activity", "unknown")
-            ui_dom_tree = meta.get("ui_dom_tree", "")
+            # 动态 Planner + Tools：不做前置 RAG
+            print("[AgentRunner] Using tool_planning strategy (no RAG) — Planner will choose one tool at a time")
             planning_result = self.run_tool_planning(
                 app_name=app_name,
                 task_id=task_id,
                 instruction=task_prompt,
-                current_activity=current_activity,
-                ui_dom_tree=ui_dom_tree,
                 attempt=attempt,
             )
             self._save_agent_trace(
@@ -237,6 +231,24 @@ class AgentRunner:
                 trace_obj=planning_result,
                 trace_name="agent_trace_tool_planning",
             )
+            if "result" in planning_result:
+                llm_response = json.dumps(planning_result, ensure_ascii=False, indent=2)
+                retrieved_files_for_log = []
+                write_results = self._write_results_from_tool_result(
+                    planning_result.get("result"),
+                    app_name,
+                    task_id,
+                )
+                self._save_llm_response(app_name, task_id, attempt, llm_response, retrieved_files_for_log)
+                success_count = sum(1 for v in write_results.values() if v == "SUCCESS")
+                return {
+                    "success":         success_count > 0,
+                    "files_written":   success_count,
+                    "write_results":   write_results,
+                    "llm_response":    llm_response,
+                    "retrieved_files": retrieved_files_for_log,
+                    "total_files":     len(write_results),
+                }
             llm_response = planning_result.get("patch_response") or json.dumps(
                 planning_result, ensure_ascii=False, indent=2
             )
@@ -298,43 +310,111 @@ class AgentRunner:
         在项目中搜索关键字，返回匹配结果与可直接回注给模型的 Observation 文本。
         """
         results: List[Dict[str, Any]] = []
+        matched_files: set[str] = set()
+        keyword_folded = keyword.casefold()
+        base_src = base_src.resolve()
         try:
-            relative_base = self.workspace_dir if base_src.is_relative_to(self.workspace_dir) else self.root_dir
+            workspace_root = self.workspace_dir.resolve()
+            root_dir = self.root_dir.resolve()
+            relative_base = workspace_root if base_src.is_relative_to(workspace_root) else root_dir
         except AttributeError:
-            relative_base = self.workspace_dir if str(base_src).startswith(str(self.workspace_dir)) else self.root_dir
-        for root, _, files in os.walk(base_src):
-            for fn in files:
-                if not fn.endswith(('.kt', '.java', '.xml')):
-                    continue
-                p = Path(root) / fn
-                try:
-                    with open(p, 'r', encoding='utf-8') as f:
-                        for i, line in enumerate(f, start=1):
-                            if keyword in line:
-                                results.append({
-                                    'path': str(p.relative_to(relative_base)),
-                                    'line': i,
-                                    'line_text': line.rstrip('\n'),
-                                })
-                except Exception:
-                    continue
+            workspace_root = self.workspace_dir.resolve()
+            root_dir = self.root_dir.resolve()
+            relative_base = workspace_root if str(base_src).startswith(str(workspace_root)) else root_dir
+
+        def _search(case_sensitive: bool) -> None:
+            seen = {(item["path"], item["line"], item["line_text"]) for item in results}
+            for root, dirs, files in os.walk(base_src):
+                dirs[:] = [d for d in dirs if d not in {"build", ".gradle"}]
+                for fn in files:
+                    if not fn.endswith(('.kt', '.java', '.xml')):
+                        continue
+                    p = (Path(root) / fn).resolve()
+                    rel_path = str(p.relative_to(relative_base))
+                    haystack_path = rel_path if case_sensitive else rel_path.casefold()
+                    needle = keyword if case_sensitive else keyword_folded
+                    if needle and needle in haystack_path:
+                        item = {
+                            'path': rel_path,
+                            'line': 0,
+                            'line_text': '<path match>',
+                        }
+                        key = (item["path"], item["line"], item["line_text"])
+                        if key not in seen:
+                            results.append(item)
+                            seen.add(key)
+                        matched_files.add(rel_path)
+                    try:
+                        with open(p, 'r', encoding='utf-8') as f:
+                            for i, line in enumerate(f, start=1):
+                                haystack_line = line if case_sensitive else line.casefold()
+                                if needle and needle in haystack_line:
+                                    item = {
+                                        'path': rel_path,
+                                        'line': i,
+                                        'line_text': line.rstrip('\n'),
+                                    }
+                                    key = (item["path"], item["line"], item["line_text"])
+                                    if key not in seen:
+                                        results.append(item)
+                                        seen.add(key)
+                                    matched_files.add(rel_path)
+                    except Exception:
+                        continue
+
+        _search(case_sensitive=True)
+        used_case_insensitive_fallback = False
+        if not results:
+            _search(case_sensitive=False)
+            used_case_insensitive_fallback = bool(results)
+
         total_matches = len(results)
-        shown_results = results[:10]
-        if total_matches > 10:
+        matched_files_list = sorted(matched_files)
+        total_files = len(matched_files_list)
+        too_many_matches = total_matches > 50
+        shown_results = [] if too_many_matches else results[:10]
+        if too_many_matches:
+            observation = (
+                f"Observation: Found {total_matches} matches for '{keyword}' across {total_files} files. "
+                "Returning the full matched file list instead of line snippets."
+            )
+        elif total_matches > 10:
             observation = (
                 f"Observation: Found {total_matches} matches for '{keyword}'. "
                 "Showing the first 10 matches. Please refine your search keyword to be more specific."
             )
         else:
             observation = f"Observation: Found {total_matches} matches for '{keyword}'."
+        if used_case_insensitive_fallback:
+            observation += " Used case-insensitive fallback."
 
         return {
             "matches": shown_results,
+            "files": matched_files_list,
             "total_matches": total_matches,
-            "truncated": total_matches > 10,
+            "total_files": total_files,
+            "truncated": total_matches > 10 and not too_many_matches,
+            "files_only": too_many_matches,
             "observation": observation,
         }
 
+    def tool_list_dir(self, dir_path: str) -> Dict[str, Any]:
+        """列出 workspace 内目录内容（仅一层）。"""
+        target = self._resolve_workspace_file_path(dir_path, must_exist=True)
+        if not target.exists() or not target.is_dir():
+            raise FileNotFoundError(str(target))
+        entries = []
+        # 定义要过滤的噪音文件夹
+        ignore_dirs = {".git", ".idea", "build", ".gradle", "bin"} 
+        for child in sorted(target.iterdir()):
+            if child.name in ignore_dirs:
+                continue # 跳过无用文件夹
+            name = child.name + ("/" if child.is_dir() else "")
+            entries.append(name)
+        return {
+            "path": str(target.resolve()),
+            "entries": entries,
+        }
     def tool_read_file(self, file_path: str, start_line: Optional[int] = None, end_line: Optional[int] = None) -> str:
         """读取 workspace 内文件内容（支持任务路径、项目根路径、嵌套项目路径）。"""
         target = self._resolve_workspace_file_path(file_path, must_exist=True)
@@ -359,8 +439,14 @@ class AgentRunner:
                 return {'ok': False, 'error': 'SEARCH_NOT_FOUND', 'path': full_path}
             content = content.replace(old_snippet, new_snippet, 1)
         else:
-            # 插入到文件末尾
-            content = (content.rstrip() + '\n\n' + new_snippet.rstrip() + '\n')
+            if target.exists() and content.strip():
+                return {
+                    'ok': False,
+                    'error': 'EMPTY_OLD_SNIPPET_ON_EXISTING_FILE',
+                    'path': full_path,
+                    'message': 'old_snippet must exactly match existing content when modifying an existing non-empty file',
+                }
+            content = new_snippet.rstrip() + '\n'
         target.write_text(content, encoding='utf-8')
         print(f"[AgentRunner] submit_patch wrote: {Path(full_path).resolve()}")
         return {'ok': True, 'path': full_path, 'relative_path': self._workspace_relative_path(target)}
@@ -387,150 +473,155 @@ class AgentRunner:
             raise
 
     def _extract_react_tool_call(self, response_text: str) -> Dict[str, Any]:
-        """从 DeepSeek-R1 输出中剥离 think 内容，并提取单个工具调用。"""
+        """从模型输出中提取最早的一个完整工具调用，丢弃同轮多余内容。"""
         normalized = response_text.strip()
-        if "</think>" in normalized:
-            normalized = normalized.rsplit("</think>", 1)[-1].strip()
-        elif "<think>" in normalized:
-            normalized = re.sub(r"<think>.*?</think>", "", normalized, flags=re.DOTALL).strip()
+        normalized = re.sub(r"</?think>", "\n", normalized).strip()
+        json_action = self._extract_json_action(normalized)
+        if json_action:
+            normalized = json_action
 
-        # JSON-style tool call: {"tool": "search_keyword", "arguments": {"keyword": "Settings"}}
+        tool_re = re.compile(r"\b(search_keyword|list_dir|read_file|submit_patch)\s*\(")
+        calls: list[dict[str, Any]] = []
+        for match in tool_re.finditer(normalized):
+            open_idx = normalized.find("(", match.start())
+            end_idx = self._find_matching_paren(normalized, open_idx)
+            if end_idx is None:
+                continue
+            calls.append({
+                "tool": match.group(1),
+                "start": match.start(),
+                "end": end_idx + 1,
+                "call": normalized[match.start():end_idx + 1],
+                "payload": normalized[open_idx + 1:end_idx],
+            })
+
+        if not calls:
+            return {
+                "ok": False,
+                "error": "no_action",
+                "final_without_tool": self._looks_like_final_without_tool(normalized),
+                "normalized": normalized,
+            }
+
+        calls.sort(key=lambda item: item["start"])
+        selected = calls[0]
+        tool_name = selected["tool"]
+        payload = selected["payload"].strip()
+        discarded = len(calls) - 1
+
         try:
-            json_match = re.search(r"\{.*\}", normalized, re.DOTALL)
-            if json_match:
-                payload = json.loads(json_match.group(0))
-                if isinstance(payload, dict):
-                    tool_name = payload.get("tool") or payload.get("action")
-                    arguments = payload.get("arguments", {})
-                    if not arguments:
-                        arguments = payload.get("action_parameters", {})
-                else:
-                    tool_name = None
-                    arguments = {}
-                if isinstance(tool_name, str) and "(" in tool_name and ")" in tool_name:
-                    normalized_action = tool_name.strip()
-                    patterns = {
-                        "search_keyword": re.compile(r"search_keyword\(([^)]+)\)"),
-                        "read_file": re.compile(r"read_file\(([^,\)]+)(?:,\s*([0-9]+)\s*,?\s*([0-9]+))?\)"),
-                        "submit_patch": re.compile(r"submit_patch\((.*)\)\s*$", re.DOTALL),
-                    }
-                    for name, pattern in patterns.items():
-                        match = pattern.search(normalized_action)
-                        if not match:
-                            continue
-                        if name == "search_keyword":
-                            return {
-                                "ok": True,
-                                "tool": name,
-                                "keyword": match.group(1).strip().strip('"').strip("'"),
-                                "normalized": normalized_action,
-                            }
-                        if name == "read_file":
-                            return {
-                                "ok": True,
-                                "tool": name,
-                                "path": match.group(1).strip().strip('"').strip("'"),
-                                "start_line": int(match.group(2)) if match.group(2) else None,
-                                "end_line": int(match.group(3)) if match.group(3) else None,
-                                "normalized": normalized_action,
-                            }
-                        payload_inner = match.group(1).strip()
-                        parts = [part.strip() for part in re.split(r",\s*", payload_inner, maxsplit=2)]
-                        if len(parts) < 3:
-                            return {
-                                "ok": False,
-                                "error": "malformed_submit_patch",
-                                "normalized": normalized_action,
-                            }
-                        return {
-                            "ok": True,
-                            "tool": name,
-                            "file_path": parts[0].strip('"').strip("'"),
-                            "old_snip": parts[1].strip('"').strip("'"),
-                            "new_snip": parts[2].strip('"').strip("'"),
-                            "normalized": normalized_action,
-                        }
-                if tool_name == "search_keyword" and "keyword" in arguments:
-                    return {
-                        "ok": True,
-                        "tool": tool_name,
-                        "keyword": str(arguments["keyword"]).strip(),
-                        "normalized": normalized,
-                    }
-                if tool_name == "read_file" and "file_path" in arguments:
-                    return {
-                        "ok": True,
-                        "tool": tool_name,
-                        "path": str(arguments["file_path"]).strip(),
-                        "start_line": int(arguments["start_line"]) if arguments.get("start_line") else None,
-                        "end_line": int(arguments["end_line"]) if arguments.get("end_line") else None,
-                        "normalized": normalized,
-                    }
-                if tool_name == "submit_patch" and "file_path" in arguments:
-                    return {
-                        "ok": True,
-                        "tool": tool_name,
-                        "file_path": str(arguments["file_path"]).strip(),
-                        "old_snip": str(arguments.get("old_snippet", "")),
-                        "new_snip": str(arguments.get("new_snippet", "")),
-                        "normalized": normalized,
-                    }
+            args = ast.literal_eval(f"({payload},)")
         except Exception:
-            pass
-
-        patterns = {
-            "search_keyword": re.compile(r"search_keyword\(([^)]+)\)"),
-            "read_file": re.compile(r"read_file\(([^,\)]+)(?:,\s*([0-9]+)\s*,?\s*([0-9]+))?\)"),
-            "submit_patch": re.compile(r"submit_patch\((.*)\)\s*$", re.DOTALL),
-        }
-
-        matches: List[Dict[str, Any]] = []
-        for tool_name, pattern in patterns.items():
-            for match in pattern.finditer(normalized):
-                matches.append({"tool": tool_name, "match": match})
-
-        if len(matches) != 1:
             return {
                 "ok": False,
-                "error": "multiple_actions" if len(matches) > 1 else "no_action",
+                "error": f"malformed_{tool_name}",
                 "normalized": normalized,
+                "selected_call": selected["call"],
+                "discarded_actions": discarded,
             }
+        if not isinstance(args, tuple):
+            args = (args,)
 
-        tool_name = matches[0]["tool"]
-        match = matches[0]["match"]
-        if tool_name == "search_keyword":
-            return {
-                "ok": True,
-                "tool": tool_name,
-                "keyword": match.group(1).strip().strip('"').strip("'"),
-                "normalized": normalized,
-            }
-        if tool_name == "read_file":
-            return {
-                "ok": True,
-                "tool": tool_name,
-                "path": match.group(1).strip().strip('"').strip("'"),
-                "start_line": int(match.group(2)) if match.group(2) else None,
-                "end_line": int(match.group(3)) if match.group(3) else None,
-                "normalized": normalized,
-            }
-
-        payload = match.group(1).strip()
-        parts = [part.strip() for part in re.split(r",\s*", payload, maxsplit=2)]
-        if len(parts) < 3:
-            return {
-                "ok": False,
-                "error": "malformed_submit_patch",
-                "normalized": normalized,
-            }
-        return {
+        base = {
             "ok": True,
             "tool": tool_name,
-            "file_path": parts[0].strip('"').strip("'"),
-            "old_snip": parts[1].strip('"').strip("'"),
-            "new_snip": parts[2].strip('"').strip("'"),
             "normalized": normalized,
+            "selected_call": selected["call"],
+            "discarded_actions": discarded,
         }
+        if tool_name == "search_keyword" and len(args) >= 1:
+            return {**base, "keyword": str(args[0])}
+        if tool_name == "list_dir" and len(args) >= 1:
+            return {**base, "path": str(args[0])}
+        if tool_name == "read_file" and len(args) >= 1:
+            return {
+                **base,
+                "path": str(args[0]),
+                "start_line": int(args[1]) if len(args) >= 2 and args[1] is not None else None,
+                "end_line": int(args[2]) if len(args) >= 3 and args[2] is not None else None,
+            }
+        if tool_name == "submit_patch" and len(args) >= 3:
+            return {
+                **base,
+                "file_path": str(args[0]),
+                "old_snip": str(args[1]),
+                "new_snip": str(args[2]),
+            }
+        return {
+            "ok": False,
+            "error": f"malformed_{tool_name}",
+            "normalized": normalized,
+            "selected_call": selected["call"],
+            "discarded_actions": discarded,
+        }
+
+    def _find_matching_paren(self, text: str, open_idx: int) -> Optional[int]:
+        """找到工具调用的右括号，跳过字符串里的括号。"""
+        if open_idx < 0 or open_idx >= len(text) or text[open_idx] != "(":
+            return None
+        depth = 0
+        quote: Optional[str] = None
+        triple = False
+        escape = False
+        i = open_idx
+        while i < len(text):
+            ch = text[i]
+            if quote:
+                if escape:
+                    escape = False
+                elif ch == "\\":
+                    escape = True
+                elif triple and text.startswith(quote * 3, i):
+                    quote = None
+                    triple = False
+                    i += 2
+                elif not triple and ch == quote:
+                    quote = None
+            else:
+                if text.startswith('"""', i) or text.startswith("'''", i):
+                    quote = text[i]
+                    triple = True
+                    i += 2
+                elif ch in {'"', "'"}:
+                    quote = ch
+                    triple = False
+                elif ch == "(":
+                    depth += 1
+                elif ch == ")":
+                    depth -= 1
+                    if depth == 0:
+                        return i
+            i += 1
+        return None
+
+    def _looks_like_final_without_tool(self, text: str) -> bool:
+        """识别模型声称完成但没有合法工具调用的回复，用于快速终止循环。"""
+        lower = text.casefold()
+        phrases = (
+            "no further changes needed",
+            "task is complete",
+            "finish the task",
+            "ready to compile",
+            "solution should now be complete",
+            "all changes are complete",
+            "无需进一步",
+            "任务完成",
+        )
+        return any(phrase in lower for phrase in phrases)
+
+    def _extract_json_action(self, text: str) -> Optional[str]:
+        """兼容模型输出 {"action": "read_file(...)"} 的工具调用格式。"""
+        stripped = text.strip()
+        if not stripped.startswith("{"):
+            return None
+        try:
+            payload = json.loads(stripped)
+        except Exception:
+            return None
+        action = payload.get("action") if isinstance(payload, dict) else None
+        if not isinstance(action, str):
+            return None
+        return action.strip()
 
     def _save_agent_trace(
         self,
@@ -556,12 +647,10 @@ class AgentRunner:
                         app_name: str,
                         task_id: str,
                         instruction: str,
-                        current_activity: str,
-                        ui_dom_tree: str,
                         attempt: int = 1,
                         max_steps: Optional[int] = None) -> Dict[str, Any]:
         """
-        ReAct 模式运行骨架：只在初始 Prompt 中包含 Instruction/Current_Activity/UI_DOM_Tree。
+        ReAct 模式运行骨架：只在初始 Prompt 中包含 Instruction。
         Agent 必须通过工具调用获取源码，允许自行决定何时结束。
         """
         if max_steps is None:
@@ -575,6 +664,8 @@ class AgentRunner:
             else:
                 max_steps = 50
         base_src = self.workspace_dir / app_name / task_id
+        previous_active_workspace = self._active_workspace_path
+        self._active_workspace_path = base_src
         history: List[Dict[str, Any]] = []
 
         def _normalize_task_path(path: str) -> str:
@@ -586,17 +677,33 @@ class AgentRunner:
                 cleaned = task_prefix + cleaned
             return cleaned
 
+        def _action_key(parsed: Dict[str, Any]) -> str:
+            tool_name = parsed.get("tool")
+            if tool_name == "search_keyword":
+                return f"search_keyword:{parsed.get('keyword', '').strip().lower()}"
+            if tool_name == "list_dir":
+                return f"list_dir:{parsed.get('path', '').strip()}"
+            if tool_name == "read_file":
+                return (
+                    f"read_file:{_normalize_task_path(parsed.get('path', ''))}:"
+                    f"{parsed.get('start_line')}:{parsed.get('end_line')}"
+                )
+            if tool_name == "submit_patch":
+                return f"submit_patch:{_normalize_task_path(parsed.get('file_path', ''))}:{hash(parsed.get('old_snip', ''))}"
+            return str(parsed.get("selected_call") or parsed.get("normalized", "")).strip().lower()
+
         system_prompt = (
             "You are an expert Android developer. You are currently looking at a mobile app UI screen.\n"
-            "You ONLY see: the current Activity/Fragment name, the UI DOM tree (XML structure), and the user's Instruction.\n"
+            "You ONLY see: the user's Instruction.\n"
             "You do NOT have access to source code files yet. You must use Tools to discover and retrieve them.\n"
             "\n"
             "You must work in cycles: Thought -> Action -> Observation, repeating until you call submit_patch to finish.\n"
             "\n"
             "Available Tools (call them EXACTLY as shown):\n"
             "  1. search_keyword(keyword) — Search the project repo for a keyword (e.g., 'btn_delete'). Returns list of matching files/lines.\n"
-            "  2. read_file(file_path, start_line, end_line) — Read a file's content. Use line numbers from search_keyword.\n"
-            "  3. submit_patch(file_path, old_snippet, new_snippet) — Apply a patch (old_snippet -> new_snippet) to file_path. This ends your task.\n"
+            "  2. list_dir(path) — List directory entries (one level) to explore project structure.\n"
+            "  3. read_file(file_path, start_line, end_line) — Read a file's content. Use line numbers from search_keyword.\n"
+            "  4. submit_patch(file_path, old_snippet, new_snippet) — Apply a patch (old_snippet -> new_snippet) to file_path. This ends your task.\n"
             "\n"
             "Workflow:\n"
             "  Thought: Analyze the UI DOM and Instruction. What file(s) likely need to change?\n"
@@ -605,6 +712,7 @@ class AgentRunner:
             "CRITICAL: Output EXACTLY ONE tool call in plain text. Do NOT output JSON, markdown, or extra text.\n"
             "Examples (valid):\n"
             "  search_keyword(\"Settings\")\n"
+            "  list_dir(\"app/src/main/res\")\n"
             "  read_file(\"app/src/main/res/xml/root_preferences.xml\", 1, 40)\n"
             "  submit_patch(\"app/src/main/res/xml/root_preferences.xml\", \"<old>\", \"<new>\")\n"
             "You are only allowed to output THOUGHT and ACTION. DO NOT output the OBSERVATION yourself. The system will provide the OBSERVATION to you. You MUST wait for the system's response.\n"
@@ -612,19 +720,23 @@ class AgentRunner:
             "\n"
             "Constraints:\n"
             "  - search_keyword output includes line numbers; use them to read_file efficiently.\n"
+            "  - Before creating a new settings file, search and read the existing settings screen implementation.\n"
+            "  - Do not assume Android XML PreferenceScreen architecture; follow the app's actual UI framework.\n"
             "  - old_snippet in submit_patch must EXACTLY match existing code (including whitespace).\n"
+            "  - old_snippet may be empty only for a brand-new file that does not already exist.\n"
             "  - Do NOT output raw code blocks; only use submit_patch to write code.\n"
         )
 
-        # initial message contains only the three permitted variables
+        # initial message contains only the permitted variables
         prompt_context = {
             'Instruction': instruction,
-            'Current_Activity': current_activity,
-            'UI_DOM_Tree': ui_dom_tree,
         }
 
         # Start conversation history for strict ReAct
         conversation_log = ""
+        read_files: set[str] = set()
+        executed_actions: set[str] = set()
+        max_empty_retries = 2
         
         # Prepare log file
         log_dir = self.results_dir / app_name / task_id
@@ -638,6 +750,8 @@ class AgentRunner:
                 f.write(msg + "\n")
 
         steps = 0
+        invalid_steps = 0
+        duplicate_steps = 0
         try:
             while True:
                 steps += 1
@@ -651,17 +765,28 @@ class AgentRunner:
                     user_input += "\n\n=== Conversation History ===\n" + conversation_log
 
                 # Ask model what to do next (it should produce an Action)
-                resp = self._call_llm_with_system(
-                    system_prompt, 
-                    user_input, 
-                    temperature=self.temperature,
-                    stop=["Observation:", "Observation:\n", "\nObservation:", "\nObservation:\n"]
-                )
+                resp = ""
+                for attempt_idx in range(max_empty_retries + 1):
+                    resp = self._call_llm_with_system(
+                        system_prompt,
+                        user_input,
+                        temperature=self.temperature,
+                        stop=["Observation:", "Observation:\n", "\nObservation:", "\nObservation:\n"],
+                    )
+                    if resp and not resp.strip().startswith("Observation: System Error: API returned empty content"):
+                        break
+                    _log_to_file(
+                        f"[Step {steps}] Empty response retry {attempt_idx + 1}/{max_empty_retries + 1}"
+                    )
 
                 resp_l = resp.strip()
                 history.append({'step': steps, 'agent_response': resp_l})
                 _log_to_file(f"\n[Step {steps}] Model Output:\n{resp_l}\n")
 
+                if resp_l.startswith("Observation: System Error: API returned empty content"):
+                    conversation_log += f"\n{resp_l}\n"
+                    _log_to_file(f"[Step {steps}] API empty response persisted; retry next step.")
+                    continue
                 if resp_l.startswith("Observation: System Error:"):
                     conversation_log += f"\n{resp_l}\n"
                     _log_to_file(f"[Step {steps}] API fallback Observation injected into conversation.")
@@ -672,13 +797,55 @@ class AgentRunner:
 
                 parsed = self._extract_react_tool_call(resp_l)
                 if parsed.get("ok"):
+                    if parsed.get("discarded_actions"):
+                        _log_to_file(
+                            f"[Step {steps}] Notice: discarded {parsed['discarded_actions']} extra tool call(s) from the same model response."
+                        )
+                        conversation_log += (
+                            "\nObservation: Only the first tool call from your previous response was executed. "
+                            "Extra tool calls and completion prose were ignored.\n"
+                        )
+                    action_key = _action_key(parsed)
+                    if action_key in executed_actions:
+                        duplicate_steps += 1
+                        dup_msg = (
+                            "Observation: Duplicate Action skipped. This exact action was already executed; "
+                            "choose a different keyword, read a different file/range, or patch based on new evidence."
+                        )
+                        _log_to_file(f"[Step {steps}] Duplicate action skipped: {action_key}")
+                        conversation_log += f"\n{dup_msg}\n"
+                        if duplicate_steps >= 3:
+                            _log_to_file("=== FINISHED (DUPLICATE ACTION LOOP) ===")
+                            return {'result': 'DUPLICATE_ACTION_LOOP', 'history': history}
+                        continue
+                    executed_actions.add(action_key)
+                    invalid_steps = 0
+                    duplicate_steps = 0
                     tool_name = parsed.get("tool")
                     if tool_name == "search_keyword":
                         kw = parsed["keyword"]
                         obs = self.tool_search_keyword(base_src, kw)
                         conversation_log += f"\n{obs['observation']}\n"
-                        conversation_log += f"Observation Results: {json.dumps(obs['matches'], ensure_ascii=False, indent=2)}\n"
+                        if obs.get("files_only"):
+                            conversation_log += f"Observation Files: {json.dumps(obs['files'], ensure_ascii=False, indent=2)}\n"
+                        else:
+                            conversation_log += f"Observation Results: {json.dumps(obs['matches'], ensure_ascii=False, indent=2)}\n"
                         _log_to_file(f"[Step {steps}] Tool: search_keyword('{kw}') -> {obs['observation']}")
+                        continue
+                    if tool_name == "list_dir":
+                        path = parsed["path"]
+                        try:
+                            listing = self.tool_list_dir(path)
+                            _log_to_file(
+                                f"[Step {steps}] Tool: list_dir('{path}') -> SUCCESS (entries: {len(listing['entries'])})"
+                            )
+                            conversation_log += (
+                                f"\nObservation: list_dir('{path}') -> {json.dumps(listing['entries'], ensure_ascii=False)}\n"
+                            )
+                        except Exception as exc:
+                            err_msg = f"ERROR: {exc}"
+                            _log_to_file(f"[Step {steps}] Tool: list_dir('{path}') -> ERROR: {exc}")
+                            conversation_log += f"\nObservation: {err_msg}\n"
                         continue
                     if tool_name == "read_file":
                         path = _normalize_task_path(parsed["path"])
@@ -687,10 +854,17 @@ class AgentRunner:
                         try:
                             txt = self.tool_read_file(path, s, e)
                             _log_to_file(f"[Step {steps}] Tool: read_file('{path}') -> SUCCESS (length: {len(str(txt))})")
+                            read_files.add(path)
                         except Exception as exc:
                             txt = f"ERROR: {exc}"
                             _log_to_file(f"[Step {steps}] Tool: read_file('{path}') -> ERROR: {exc}")
                         conversation_log += f"\nObservation: {{'path': '{path}', 'content': ... (length: {len(str(txt))})}}\n"
+                        if read_files:
+                            conversation_log += (
+                                "Observation: Read files so far: "
+                                + json.dumps(sorted(read_files), ensure_ascii=False)
+                                + "\n"
+                            )
                         conversation_log += f"--- FILE CONTENT START ---\n{txt}\n--- FILE CONTENT END ---\n"
                         continue
                     if tool_name == "submit_patch":
@@ -704,18 +878,27 @@ class AgentRunner:
                         try:
                             res = self.tool_submit_patch(file_path, old_snip, new_snip)
                             _log_to_file(f"[Step {steps}] Result: {res}")
-                            return {'result': res, 'history': history}
+                            if res.get("ok"):
+                                return {'result': res, 'history': history}
+                            err_msg = f"Observation: submit_patch failed: {res}"
                         except Exception as exc:
-                            err_msg = f"ERROR executing submit_patch: {exc}"
+                            err_msg = f"Observation: ERROR executing submit_patch: {exc}"
                             _log_to_file(f"[Step {steps}] Observation: {err_msg}")
-                            conversation_log += f"\nObservation: {err_msg}\n"
-                            continue
+                        conversation_log += f"\n{err_msg}\n"
+                        continue
 
                 # If model didn't call a known tool, inform it
-                if parsed.get("error") == "multiple_actions":
-                    err_msg = "Observation: Format Error, multiple Actions detected. Output exactly one tool call after </think>."
+                if parsed.get("final_without_tool"):
+                    _log_to_file("=== FINISHED (MODEL STOPPED WITHOUT TOOL CALL) ===")
+                    return {'result': 'MODEL_STOPPED_WITHOUT_TOOL_CALL', 'history': history}
+                if parsed.get("error", "").startswith("malformed_"):
+                    err_msg = f"Observation: Format Error, malformed {parsed.get('error', '').replace('malformed_', '')} call. Output exactly one valid tool call."
                 else:
                     err_msg = "Observation: Format Error, please use the exact schema for one of the available tools."
+                invalid_steps += 1
+                if invalid_steps >= 3:
+                    _log_to_file("=== FINISHED (INVALID OUTPUTS) ===")
+                    return {'result': 'INVALID_TOOL_CALL', 'history': history}
                 _log_to_file(f"[Step {steps}] Notice: Model didn't call any valid tool.")
                 conversation_log += f"\n{err_msg}\n"
 
@@ -726,6 +909,8 @@ class AgentRunner:
             _log_to_file(f"[Exception] {err_msg}")
             history.append({'step': steps, 'agent_response': err_msg})
             return {'result': err_msg, 'history': history}
+        finally:
+            self._active_workspace_path = previous_active_workspace
 
     # -------------------------------------------------------------------
     # Tool-Planning strategy skeleton (Planner + Executor)
@@ -739,11 +924,11 @@ class AgentRunner:
                           app_name: str,
                           task_id: str,
                           instruction: str,
-                          current_activity: str,
-                          ui_dom_tree: str,
                           attempt: int = 1) -> Dict[str, Any]:
         """
-        Planner produces a JSON array plan (<=5 steps). Executor runs steps in order.
+        Tool-planning mode uses the same dynamic stop condition as ReAct:
+        the model plans exactly one next tool call per cycle, receives the
+        observation, and stops only after submit_patch succeeds.
         """
         log_dir = self.results_dir / app_name / task_id
         log_dir.mkdir(parents=True, exist_ok=True)
@@ -756,197 +941,269 @@ class AgentRunner:
                 f.write(msg + "\n")
 
         planner_system_prompt = (
-            "You are an Android architect. Your task is NOT to write code, but to plan how to find and modify the necessary source code.\n"
+            "You are an Android architect controlling source-code discovery tools.\n"
             "\n"
-            "You ONLY see: the current Activity/Fragment name, the UI DOM tree (XML structure), and the user's Instruction.\n"
+            "You ONLY see: the user's Instruction.\n"
+            "You do NOT have source code until you use tools.\n"
             "\n"
-            "Output a JSON array of <=5 exploration steps. Each step must specify which Tool to call and what to search/read.\n"
+            "Work in cycles. In each cycle, choose exactly ONE next tool call based on all previous Observations.\n"
+            "Do not make a fixed multi-step plan. After every Observation, re-plan the next single action.\n"
+            "When the task is implemented, call submit_patch. A successful submit_patch ends the task.\n"
             "\n"
-            "Example output format:\n"
-            "[\n"
-            "  {\"step\": 1, \"action\": \"search_keyword btn_delete\"},\n"
-            "  {\"step\": 2, \"action\": \"read_file FoodYou-develop/app/src/.../NotificationSettings.kt 1 50\"},\n"
-            "  {\"step\": 3, \"action\": \"search_keyword MutablePreferences\"},\n"
-            "  {\"step\": 4, \"action\": \"read_file FoodYou-develop/app/src/.../NotificationPreferences.kt\"},\n"
-            "  {\"step\": 5, \"action\": \"submit_patch FoodYou-develop/app/src/.../NotificationPreferences.kt old_code new_code\"}\n"
-            "]\n"
+            "Available Tools (call them EXACTLY as shown):\n"
+            "  1. search_keyword(keyword) — Search the project repo for a keyword. Use broader terms when a search returns no matches.\n"
+            "  2. list_dir(path) — List directory entries (one level) to explore project structure.\n"
+            "  3. read_file(file_path, start_line, end_line) — Read a file's content. Use line numbers from search_keyword.\n"
+            "  4. submit_patch(file_path, old_snippet, new_snippet) — Apply a patch (old_snippet -> new_snippet) to file_path. This ends your task.\n"
             "\n"
-            "Available Tools:\n"
-            "  - search_keyword <keyword> — Find files containing a keyword.\n"
-            "  - read_file <file_path> [start_line] [end_line] — Read file content.\n"
-            "  - submit_patch <file_path> <old_snippet> <new_snippet> — Apply and submit a code patch.\n"
+            "Planning rules:\n"
+            "  - Never repeat an identical action after it already produced an Observation.\n"
+            "  - If a keyword has zero matches, switch to a different broader keyword, file name, package concept, or UI string.\n"
+            "  - Prefer reading concrete search hits before patching.\n"
+            "  - Before creating a new settings file, search and read the existing settings screen implementation.\n"
+            "  - Do not assume Android XML PreferenceScreen architecture; follow the app's actual UI framework.\n"
+            "  - old_snippet in submit_patch must EXACTLY match existing code, including whitespace.\n"
+            "  - old_snippet may be empty only for a brand-new file that does not already exist.\n"
             "\n"
-            "Do NOT output code blocks or natural language explanations. Output ONLY the JSON array."
+            "CRITICAL: Output EXACTLY ONE tool call in plain text. Do NOT output JSON, markdown, explanations, or multiple actions.\n"
+            "Examples:\n"
+            "  search_keyword(\"Settings\")\n"
+            "  list_dir(\"app/src/main\")\n"
+            "  read_file(\"app/src/main/res/xml/root_preferences.xml\", 1, 80)\n"
+            "  submit_patch(\"app/src/main/res/xml/root_preferences.xml\", \"<old>\", \"<new>\")\n"
+            "Once you output an Action, STOP generating. The system will provide the Observation."
         )
 
-        # Phase A: Planner
-        planner_input = json.dumps({
+        prompt_context = {
             'Instruction': instruction,
-            'Current_Activity': current_activity,
-            'UI_DOM_Tree': ui_dom_tree,
-        }, ensure_ascii=False, indent=2)
-        _log_to_file("\n[Planner] System Prompt:\n" + planner_system_prompt)
-        _log_to_file("\n[Planner] User Input:\n" + planner_input)
-        planner_resp = self._call_llm_with_system(planner_system_prompt, planner_input, temperature=self.temperature)
-        _log_to_file(f"\n[Planner] Raw Response ({len(planner_resp)} chars):\n{planner_resp}\n")
-
-        # Parse planner output (expect JSON array)
-        try:
-            plan = json.loads(planner_resp)
-        except Exception:
-            # try to extract JSON substring
-            jmatch = re.search(r"\[.*\]", planner_resp, re.DOTALL)
-            plan = json.loads(jmatch.group(0)) if jmatch else []
-        _log_to_file("[Planner] Parsed Plan:\n" + json.dumps(plan, ensure_ascii=False, indent=2))
-
-        # Validate into PlannerStep list
-        steps: List[AgentRunner.PlannerStep] = []
-        for item in plan[:5]:
-            steps.append(self.PlannerStep(step=item.get('step'), action=item.get('action')))
-
-        # Phase B: execute the exploration plan locally.
-        _log_to_file("\n[Executor-Tools] Begin local tool execution")
-        exec_history = []
-        base_src = self.workspace_dir / app_name / task_id
-        observed_files: dict[str, str] = {}
-        for ps in steps:
-            action = ps.action or ''
-            exec_history.append({'step': ps.step, 'action': action})
-            _log_to_file(f"\n[Executor-Tools][Step {ps.step}] Action: {action}")
-            # support actions like: search_keyword btn_delete
-            m = re.match(r"search_keyword\s+(\S+)", action)
-            if m:
-                kw = m.group(1).strip()
-                obs = self.tool_search_keyword(base_src, kw)
-                exec_history[-1]['observation'] = obs['observation']
-                exec_history[-1]['matches'] = obs['matches']
-                _log_to_file(
-                    f"[Executor-Tools][Step {ps.step}] search_keyword('{kw}') -> "
-                    f"{obs['observation']}\n"
-                    f"{json.dumps(obs['matches'], ensure_ascii=False, indent=2)}"
-                )
-                continue
-            m = re.match(r"read_file\s+(\S+)(?:\s+(\d+)\s*(\d+)?)?", action)
-            if m:
-                path = m.group(1)
-                s = int(m.group(2)) if m.group(2) else None
-                e = int(m.group(3)) if m.group(3) else None
-                try:
-                    txt = self.tool_read_file(path, s, e)
-                    resolved = self._resolve_workspace_file_path(path, must_exist=True)
-                    observed_files[self._workspace_relative_path(resolved)] = txt
-                    _log_to_file(
-                        f"[Executor-Tools][Step {ps.step}] read_file('{path}', {s}, {e}) "
-                        f"-> SUCCESS length={len(txt)} resolved={self._workspace_relative_path(resolved)}"
-                    )
-                except Exception as exc:
-                    txt = f"ERROR: {exc}"
-                    _log_to_file(
-                        f"[Executor-Tools][Step {ps.step}] read_file('{path}', {s}, {e}) "
-                        f"-> ERROR: {exc}"
-                    )
-                exec_history[-1]['observation'] = {'path': path, 'content': txt}
-                continue
-            m = re.match(r"submit_patch\s+(\S+)\s+(.+)", action, re.DOTALL)
-            if m:
-                exec_history[-1]['observation'] = {
-                    'note': 'submit_patch is generated by the executor LLM after reading files'
-                }
-                _log_to_file(
-                    f"[Executor-Tools][Step {ps.step}] submit_patch in plan noted; "
-                    "actual patch is generated by Executor LLM."
-                )
-                continue
-            exec_history[-1]['observation'] = {'error': 'unsupported_action'}
-            _log_to_file(f"[Executor-Tools][Step {ps.step}] unsupported action")
-
-        # If the planner only searched but did not read files, read the top search hits.
-        if not observed_files:
-            for item in exec_history:
-                for match in item.get('matches', [])[:3]:
-                    path = match.get('path')
-                    if not path:
-                        continue
-                    try:
-                        txt = self.tool_read_file(path)
-                        resolved = self._resolve_workspace_file_path(path, must_exist=True)
-                        observed_files[self._workspace_relative_path(resolved)] = txt
-                        _log_to_file(
-                            f"[Executor-Tools] auto-read search hit '{path}' -> "
-                            f"SUCCESS length={len(txt)} resolved={self._workspace_relative_path(resolved)}"
-                        )
-                    except Exception:
-                        _log_to_file(f"[Executor-Tools] auto-read search hit '{path}' -> ERROR")
-                        continue
-                    if len(observed_files) >= 5:
-                        break
-                if len(observed_files) >= 5:
-                    break
-
-        if not observed_files:
-            _log_to_file("\n[Executor-LLM] Skipped: NO_FILES_OBSERVED")
-            return {
-                'plan': plan,
-                'execution': exec_history,
-                'patch_response': '',
-                'error': 'NO_FILES_OBSERVED',
-            }
-
-        executor_system_prompt = (
-            "You are an expert Android developer. Use the provided files to implement the requested change.\n"
-            "Your only output must be parseable patch blocks. Do not output explanations, planning, JSON, or full-file rewrites for existing files.\n"
-            "Use this exact format for existing files:\n"
-            "```patchfile:RELATIVE_PATH\n"
-            "<<<<<<< SEARCH\n"
-            "<exact existing text copied from the current file; never empty>\n"
-            "=======\n"
-            "<replacement text>\n"
-            ">>>>>>> REPLACE\n"
-            "```\n"
-            "Use this exact format for new files:\n"
-            "```patchfile:RELATIVE_PATH:NEW\n"
-            "<<<<<<< NEW\n"
-            "<complete new file content>\n"
-            ">>>>>>> NEW_END\n"
-            "```\n"
-            "Rules: RELATIVE_PATH must be relative to workspace/app_name/task_id. "
-            "SEARCH text must match the provided file content exactly and include enough context to be unique."
-        )
-
-        observed_context = self._build_tool_planning_context(observed_files)
-        _log_to_file(
-            "\n[Executor-LLM] Observed Files:\n"
-            + json.dumps(list(observed_files.keys()), ensure_ascii=False, indent=2)
-            + f"\n[Executor-LLM] Observed context chars={len(observed_context)}"
-        )
-        executor_input = json.dumps({
-            'Instruction': instruction,
-            'Current_Activity': current_activity,
-            'UI_DOM_Tree': ui_dom_tree,
-            'Plan': plan,
-            'Execution': exec_history,
-            'Observed_Files': observed_context,
-        }, ensure_ascii=False, indent=2)
-        _log_to_file("\n[Executor-LLM] System Prompt:\n" + executor_system_prompt)
-        _log_to_file("\n[Executor-LLM] User Input:\n" + executor_input)
-        patch_response = self._call_llm_with_system(
-            executor_system_prompt,
-            executor_input,
-            temperature=self.temperature,
-            stop=None,
-        )
-        _log_to_file(f"\n[Executor-LLM] Raw Response ({len(patch_response)} chars):\n{patch_response}\n")
-        _log_to_file("=== FINISHED ===")
-
-        return {
-            'plan': plan,
-            'execution': exec_history,
-            'observed_files': list(observed_files.keys()),
-            'patch_response': patch_response,
         }
+        _log_to_file("\n[Planner] System Prompt:\n" + planner_system_prompt)
+        _log_to_file("\n[Planner] Initial User Input:\n" + json.dumps(prompt_context, ensure_ascii=False, indent=2))
+
+        env_limit = os.getenv("TOOL_PLANNING_MAX_STEPS") or os.getenv("REACT_MAX_STEPS")
+        if env_limit is not None:
+            try:
+                max_steps = int(env_limit)
+            except ValueError:
+                max_steps = 0
+            max_steps = max_steps if max_steps > 0 else None
+        else:
+            max_steps = 50
+
+        base_src = self.workspace_dir / app_name / task_id
+        previous_active_workspace = self._active_workspace_path
+        self._active_workspace_path = base_src
+        history: List[Dict[str, Any]] = []
+        conversation_log = ""
+        executed_actions: set[str] = set()
+        read_files: set[str] = set()
+        max_empty_retries = 2
+
+        def _normalize_task_path(path: str) -> str:
+            cleaned = path.strip().lstrip("/")
+            if cleaned.startswith("workspace/"):
+                cleaned = cleaned[len("workspace/"):]
+            task_prefix = f"{app_name}/{task_id}/"
+            if not cleaned.startswith(task_prefix):
+                cleaned = task_prefix + cleaned
+            return cleaned
+
+        def _action_key(parsed: Dict[str, Any]) -> str:
+            tool_name = parsed.get("tool")
+            if tool_name == "search_keyword":
+                return f"search_keyword:{parsed.get('keyword', '').strip().lower()}"
+            if tool_name == "list_dir":
+                return f"list_dir:{parsed.get('path', '').strip()}"
+            if tool_name == "read_file":
+                return (
+                    f"read_file:{_normalize_task_path(parsed.get('path', ''))}:"
+                    f"{parsed.get('start_line')}:{parsed.get('end_line')}"
+                )
+            if tool_name == "submit_patch":
+                return f"submit_patch:{_normalize_task_path(parsed.get('file_path', ''))}:{hash(parsed.get('old_snip', ''))}"
+            return str(parsed.get("normalized", "")).strip().lower()
+
+        steps = 0
+        invalid_steps = 0
+        duplicate_steps = 0
+        try:
+            while True:
+                steps += 1
+                if max_steps is not None and steps > max_steps:
+                    _log_to_file("=== FINISHED (TIMEOUT) ===")
+                    return {'result': 'TIMEOUT', 'history': history}
+
+                user_input = json.dumps(prompt_context, ensure_ascii=False, indent=2)
+                if conversation_log:
+                    user_input += "\n\n=== Planning / Tool History ===\n" + conversation_log
+
+                resp = ""
+                for attempt_idx in range(max_empty_retries + 1):
+                    resp = self._call_llm_with_system(
+                        planner_system_prompt,
+                        user_input,
+                        temperature=self.temperature,
+                        stop=["Observation:", "Observation:\n", "\nObservation:", "\nObservation:\n"],
+                    )
+                    if resp and not resp.strip().startswith("Observation: System Error: API returned empty content"):
+                        break
+                    _log_to_file(
+                        f"[Step {steps}] Empty response retry {attempt_idx + 1}/{max_empty_retries + 1}"
+                    )
+                resp_l = resp.strip()
+                history.append({'step': steps, 'planner_response': resp_l})
+                _log_to_file(f"\n[Step {steps}] Planner Output:\n{resp_l}\n")
+
+                if resp_l.startswith("Observation: System Error: API returned empty content"):
+                    conversation_log += f"\n{resp_l}\n"
+                    _log_to_file(f"[Step {steps}] API empty response persisted; retry next step.")
+                    continue
+                if resp_l.startswith("Observation: System Error:"):
+                    conversation_log += f"\n{resp_l}\n"
+                    _log_to_file(f"[Step {steps}] API fallback Observation injected into conversation.")
+                    continue
+
+                conversation_log += f"\n{resp_l}\n"
+                parsed = self._extract_react_tool_call(resp_l)
+                if not parsed.get("ok"):
+                    invalid_steps += 1
+                    if parsed.get("final_without_tool"):
+                        _log_to_file("=== FINISHED (MODEL STOPPED WITHOUT TOOL CALL) ===")
+                        return {'result': 'MODEL_STOPPED_WITHOUT_TOOL_CALL', 'history': history}
+                    if parsed.get("error", "").startswith("malformed_"):
+                        err_msg = f"Observation: Format Error, malformed {parsed.get('error', '').replace('malformed_', '')} call. Output exactly one valid tool call."
+                    else:
+                        err_msg = "Observation: Format Error, use exactly one of search_keyword(...), read_file(...), submit_patch(...)."
+                    _log_to_file(f"[Step {steps}] Notice: invalid tool call.")
+                    conversation_log += f"\n{err_msg}\n"
+                    history[-1]['observation'] = err_msg
+                    if invalid_steps >= 3:
+                        _log_to_file("=== FINISHED (INVALID OUTPUTS) ===")
+                        return {'result': 'INVALID_TOOL_CALL', 'history': history}
+                    continue
+
+                if parsed.get("discarded_actions"):
+                    _log_to_file(
+                        f"[Step {steps}] Notice: discarded {parsed['discarded_actions']} extra tool call(s) from the same model response."
+                    )
+                    conversation_log += (
+                        "\nObservation: Only the first tool call from your previous response was executed. "
+                        "Extra tool calls and completion prose were ignored.\n"
+                    )
+
+                action_key = _action_key(parsed)
+                if action_key in executed_actions:
+                    duplicate_steps += 1
+                    dup_msg = (
+                        "Observation: Duplicate Action skipped. This exact action was already executed; "
+                        "choose a different keyword, read a different file/range, or patch based on what you have learned."
+                    )
+                    _log_to_file(f"[Step {steps}] Duplicate action skipped: {action_key}")
+                    conversation_log += f"\n{dup_msg}\n"
+                    history[-1]['observation'] = dup_msg
+                    if duplicate_steps >= 3:
+                        _log_to_file("=== FINISHED (DUPLICATE ACTION LOOP) ===")
+                        return {'result': 'DUPLICATE_ACTION_LOOP', 'history': history}
+                    continue
+                executed_actions.add(action_key)
+                invalid_steps = 0
+                duplicate_steps = 0
+
+                tool_name = parsed.get("tool")
+                if tool_name == "search_keyword":
+                    kw = parsed["keyword"]
+                    obs = self.tool_search_keyword(base_src, kw)
+                    guidance = ""
+                    if obs["total_matches"] == 0:
+                        guidance = " Try a broader or app-specific term instead of repeating this keyword."
+                    observation = obs["observation"] + guidance
+                    conversation_log += f"\n{observation}\n"
+                    if obs.get("files_only"):
+                        conversation_log += f"Observation Files: {json.dumps(obs['files'], ensure_ascii=False, indent=2)}\n"
+                    else:
+                        conversation_log += f"Observation Results: {json.dumps(obs['matches'], ensure_ascii=False, indent=2)}\n"
+                    history[-1]['observation'] = observation
+                    history[-1]['matches'] = obs['matches']
+                    _log_to_file(
+                        f"[Step {steps}] Tool: search_keyword('{kw}') -> {observation}\n"
+                        f"{json.dumps(obs['matches'], ensure_ascii=False, indent=2)}"
+                    )
+                    continue
+
+                if tool_name == "list_dir":
+                    path = parsed["path"]
+                    try:
+                        listing = self.tool_list_dir(path)
+                        _log_to_file(
+                            f"[Step {steps}] Tool: list_dir('{path}') -> SUCCESS (entries: {len(listing['entries'])})"
+                        )
+                        conversation_log += (
+                            f"\nObservation: list_dir('{path}') -> {json.dumps(listing['entries'], ensure_ascii=False)}\n"
+                        )
+                        history[-1]['observation'] = listing
+                    except Exception as exc:
+                        err_msg = f"ERROR: {exc}"
+                        _log_to_file(f"[Step {steps}] Tool: list_dir('{path}') -> ERROR: {exc}")
+                        conversation_log += f"\nObservation: {err_msg}\n"
+                        history[-1]['observation'] = err_msg
+                    continue
+
+                if tool_name == "read_file":
+                    path = _normalize_task_path(parsed["path"])
+                    s = parsed.get("start_line")
+                    e = parsed.get("end_line")
+                    try:
+                        txt = self.tool_read_file(path, s, e)
+                        _log_to_file(f"[Step {steps}] Tool: read_file('{path}', {s}, {e}) -> SUCCESS length={len(txt)}")
+                        read_files.add(path)
+                    except Exception as exc:
+                        txt = f"ERROR: {exc}"
+                        _log_to_file(f"[Step {steps}] Tool: read_file('{path}', {s}, {e}) -> ERROR: {exc}")
+                    conversation_log += f"\nObservation: {{'path': '{path}', 'content': ... (length: {len(str(txt))})}}\n"
+                    if read_files:
+                        conversation_log += (
+                            "Observation: Read files so far: "
+                            + json.dumps(sorted(read_files), ensure_ascii=False)
+                            + "\n"
+                        )
+                    conversation_log += f"--- FILE CONTENT START ---\n{txt}\n--- FILE CONTENT END ---\n"
+                    history[-1]['observation'] = {'path': path, 'content_length': len(str(txt)), 'error': txt if txt.startswith("ERROR:") else None}
+                    continue
+
+                if tool_name == "submit_patch":
+                    file_path = _normalize_task_path(parsed["file_path"])
+                    old_snip = parsed["old_snip"]
+                    new_snip = parsed["new_snip"]
+                    if not file_path:
+                        _log_to_file(f"[Step {steps}] Tool: submit_patch called with empty file_path; treating as done.")
+                        return {'result': 'DONE_NO_PATCH', 'history': history}
+                    _log_to_file(f"[Step {steps}] Tool: submit_patch to '{file_path}'")
+                    try:
+                        res = self.tool_submit_patch(file_path, old_snip, new_snip)
+                        _log_to_file(f"[Step {steps}] Result: {res}")
+                        if res.get("ok"):
+                            _log_to_file("=== FINISHED ===")
+                            return {'result': res, 'history': history}
+                        err_msg = f"Observation: submit_patch failed: {res}"
+                    except Exception as exc:
+                        err_msg = f"Observation: ERROR executing submit_patch: {exc}"
+                    _log_to_file(f"[Step {steps}] {err_msg}")
+                    conversation_log += f"\n{err_msg}\n"
+                    history[-1]['observation'] = err_msg
+                    continue
+
+            return {'result': 'TIMEOUT', 'history': history}
+
+        except Exception as exc:
+            err_msg = f"CRITICAL RUNTIME ERROR: {exc}"
+            _log_to_file(f"[Exception] {err_msg}")
+            history.append({'step': steps, 'planner_response': err_msg})
+            return {'result': err_msg, 'history': history}
+        finally:
+            self._active_workspace_path = previous_active_workspace
 
     # ----------------------------------------------------------------------- #
-    #  向后兼容入口 — benchmark_runner.py 仍调用 run(combined_id)
+    #  向后兼容入口
     # ----------------------------------------------------------------------- #
 
     def run(self, combined_id: str) -> Dict:
@@ -1191,9 +1448,15 @@ class AgentRunner:
         elif rel_path.startswith(f"{workspace_path.name}/"):
             rel_path = rel_path[len(workspace_path.name) + 1:]
         rel_path = self._normalize_rel_path(rel_path)
-        candidates = [workspace_path / rel_path]
 
         nested_roots = [p for p in workspace_path.iterdir() if p.is_dir()]
+        for root in nested_roots:
+            prefix = f"{root.name}/"
+            if rel_path.startswith(prefix):
+                rel_path = rel_path[len(prefix):]
+                break
+
+        candidates = [workspace_path / rel_path]
         candidates.extend(root / rel_path for root in nested_roots)
 
         for c in candidates:
@@ -1222,6 +1485,7 @@ class AgentRunner:
           - workspace/app_foodyou/task_005_notice/FoodYou-develop/app/src/...
         """
         cleaned = str(file_path).replace("\\", "/").strip().strip('"').strip("'")
+        cleaned = cleaned.replace('"', '').replace("'", "").rstrip("\\")
         if not cleaned:
             raise ValueError("empty file_path")
 
@@ -1230,8 +1494,7 @@ class AgentRunner:
             try:
                 cleaned = absolute.relative_to(self.workspace_dir).as_posix()
             except ValueError:
-                if absolute.exists() or not must_exist:
-                    return absolute
+                raise ValueError(f"Path escapes workspace: {file_path}")
 
         cleaned = cleaned.lstrip("/")
         if cleaned.startswith("workspace/"):
@@ -1243,6 +1506,13 @@ class AgentRunner:
             if workspace_path.exists():
                 rel_path = "/".join(parts[2:])
                 return self._resolve_target_path(workspace_path, rel_path, must_exist=must_exist)
+
+        if self._active_workspace_path is not None:
+            return self._resolve_target_path(
+                self._active_workspace_path,
+                cleaned,
+                must_exist=must_exist,
+            )
 
         # If the path does not include app/task, fall back only when a single
         # task workspace exists. This keeps ad-hoc CLI usage convenient without

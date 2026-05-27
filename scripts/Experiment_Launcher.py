@@ -43,7 +43,7 @@ sys.path.insert(0, str(_SCRIPTS_DIR))
 from agent_runner import AgentRunner
 from Env_Manager  import EnvManager
 from Evaluator    import Evaluator
-from tools.logger import ExperimentLogger, ExperimentRecord
+from logger import ExperimentLogger, ExperimentRecord
 
 
 # --------------------------------------------------------------------------- #
@@ -199,10 +199,14 @@ class ExperimentLauncher:
                 app_name, task_id, timeout=self.compile_timeout
             )
             run.record.csr = compile_result.get("success", False)
+            run.record.extra["level1_score"] = compile_result.get("level1_score")
+            run.record.extra["level1_category"] = compile_result.get("level1_category")
+            run.record.extra["level1_reason"] = compile_result.get("level1_reason")
+            run.record.extra["warning_count"] = compile_result.get("warning_count", 0)
 
             if not run.record.csr:
                 run.record.vsm = False
-                run.record.error_category = "logic_error"
+                run.record.error_category = self._level1_error_category(compile_result)
                 return
 
             # Step 4: Appium 测试（获取截图）
@@ -243,6 +247,19 @@ class ExperimentLauncher:
             run.record.vsm            = eval_result.get("vsm", False)
             run.record.vlm_score      = eval_result.get("vlm_score")
             run.record.error_category = eval_result.get("error_category")
+            run.record.extra["level1_score"] = eval_result.get("level1_score")
+            run.record.extra["level1_reason"] = eval_result.get("level1_reason")
+            run.record.extra["level2_score"] = eval_result.get("level2_score")
+            run.record.extra["level2_reason"] = eval_result.get("level2_reason")
+            run.record.extra["level3_score"] = eval_result.get("level3_score")
+            run.record.extra["level3_reason"] = eval_result.get("level3_reason")
+            run.record.extra["total_score"] = eval_result.get("total_score")
+            run.record.extra["vlm_binary_checks"] = eval_result.get("vlm_binary_checks")
+            level2_detail = (eval_result.get("stream2") or {}).get("level2_detail") or {}
+            file_fallback = level2_detail.get("file_fallback") or {}
+            run.record.extra["modified_files"] = file_fallback.get("predicted_modified_files", [])
+            run.record.extra["golden_key"] = file_fallback.get("golden_key")
+            run.record.extra["golden_overlap_files"] = file_fallback.get("overlap_files", [])
 
     def _clear_task_results(self, app_name: str, task_id: str) -> None:
         """每次运行前清空 results/app_name/task_id 下的历史产物。"""
@@ -283,6 +300,17 @@ class ExperimentLauncher:
         out_file = out_dir / "appium_result.json"
         with open(out_file, "w", encoding="utf-8") as f:
             json.dump(appium_result, f, ensure_ascii=False, indent=2)
+
+    def _level1_error_category(self, compile_result: dict) -> str:
+        """将 Level 1 编译失败分类映射到实验日志错误类别。"""
+        category = compile_result.get("level1_category")
+        if category == "dependency_or_context_error":
+            return "missing_context"
+        if category == "invalid_code_output":
+            return "invalid_code"
+        if category == "syntax_or_local_error":
+            return "syntax_error"
+        return "compile_error"
 
     # ----------------------------------------------------------------------- #
     #  RQ5 反馈回调工厂
@@ -371,14 +399,24 @@ class ExperimentLauncher:
         for r in records:
             grid[(r["model"], r["strategy"])].append(r)
 
-        header = f"  {'Model':<25} {'Strategy':<16} {'N':>4} {'CSR':>7} {'VSM':>7}"
+        header = (
+            f"  {'Model':<25} {'Strategy':<16} {'N':>4} {'CSR':>7} {'VSM':>7} "
+            f"{'L1':>5} {'L2':>5} {'L3':>5} {'Total':>7}"
+        )
         print(header)
         print("  " + "-" * (len(header) - 2))
         for (m, s), recs in sorted(grid.items()):
             n    = len(recs)
             csr  = sum(1 for r in recs if r.get("csr"))
             vsm  = sum(1 for r in recs if r.get("vsm"))
-            print(f"  {m:<25} {s:<16} {n:>4} {csr/n*100:>6.1f}% {vsm/n*100:>6.1f}%")
+            l1 = _avg_extra(recs, "level1_score")
+            l2 = _avg_extra(recs, "level2_score")
+            l3 = _avg_extra(recs, "level3_score")
+            total_score = _avg_extra(recs, "total_score")
+            print(
+                f"  {m:<25} {s:<16} {n:>4} {csr/n*100:>6.1f}% {vsm/n*100:>6.1f}% "
+                f"{l1:>5.2f} {l2:>5.2f} {l3:>5.2f} {total_score:>7.2f}"
+            )
 
         # --- Pass@k ---
         for k in self.pass_k_values:
@@ -401,24 +439,15 @@ class ExperimentLauncher:
         out_path   = self.results_dir / "experiment_summary.json"
         from collections import defaultdict
 
-        by_model: dict = defaultdict(lambda: {"total": 0, "csr": 0, "vsm": 0})
-        by_strategy: dict = defaultdict(lambda: {"total": 0, "csr": 0, "vsm": 0})
+        by_model: dict = defaultdict(lambda: _empty_summary_bucket())
+        by_strategy: dict = defaultdict(lambda: _empty_summary_bucket())
 
         for r in records:
             for grp, key in [(by_model, r["model"]), (by_strategy, r["strategy"])]:
-                grp[key]["total"] += 1
-                if r.get("csr"):
-                    grp[key]["csr"] += 1
-                if r.get("vsm"):
-                    grp[key]["vsm"] += 1
+                _add_record_to_summary_bucket(grp[key], r)
 
         def add_rates(d):
-            return {
-                k: {**v,
-                    "csr_rate": round(v["csr"]/v["total"], 4) if v["total"] else 0,
-                    "vsm_rate": round(v["vsm"]/v["total"], 4) if v["total"] else 0}
-                for k, v in d.items()
-            }
+            return {k: _finalize_summary_bucket(v) for k, v in d.items()}
 
         summary = {
             "total_runs":    len(records),
@@ -448,6 +477,70 @@ def _count_field(records: list, field: str) -> dict:
     return dict(Counter(r.get(field, "none") for r in records))
 
 
+def _extra_value(record: dict, key: str):
+    return (record.get("extra") or {}).get(key)
+
+
+def _avg_extra(records: list[dict], key: str) -> float:
+    vals = [_extra_value(r, key) for r in records]
+    nums = [float(v) for v in vals if isinstance(v, (int, float))]
+    return sum(nums) / len(nums) if nums else 0.0
+
+
+def _empty_summary_bucket() -> dict:
+    return {
+        "total": 0,
+        "csr": 0,
+        "vsm": 0,
+        "level1_sum": 0.0,
+        "level1_n": 0,
+        "level2_sum": 0.0,
+        "level2_n": 0,
+        "level3_sum": 0.0,
+        "level3_n": 0,
+        "total_score_sum": 0.0,
+        "total_score_n": 0,
+    }
+
+
+def _add_score(bucket: dict, sum_key: str, n_key: str, value) -> None:
+    if isinstance(value, (int, float)):
+        bucket[sum_key] += float(value)
+        bucket[n_key] += 1
+
+
+def _add_record_to_summary_bucket(bucket: dict, record: dict) -> None:
+    bucket["total"] += 1
+    if record.get("csr"):
+        bucket["csr"] += 1
+    if record.get("vsm"):
+        bucket["vsm"] += 1
+    extra = record.get("extra") or {}
+    _add_score(bucket, "level1_sum", "level1_n", extra.get("level1_score"))
+    _add_score(bucket, "level2_sum", "level2_n", extra.get("level2_score"))
+    _add_score(bucket, "level3_sum", "level3_n", extra.get("level3_score"))
+    _add_score(bucket, "total_score_sum", "total_score_n", extra.get("total_score"))
+
+
+def _finalize_summary_bucket(bucket: dict) -> dict:
+    total = bucket["total"]
+    return {
+        "total": total,
+        "csr": bucket["csr"],
+        "vsm": bucket["vsm"],
+        "csr_rate": round(bucket["csr"] / total, 4) if total else 0,
+        "vsm_rate": round(bucket["vsm"] / total, 4) if total else 0,
+        "avg_level1_score": round(bucket["level1_sum"] / bucket["level1_n"], 4)
+        if bucket["level1_n"] else 0,
+        "avg_level2_score": round(bucket["level2_sum"] / bucket["level2_n"], 4)
+        if bucket["level2_n"] else 0,
+        "avg_level3_score": round(bucket["level3_sum"] / bucket["level3_n"], 4)
+        if bucket["level3_n"] else 0,
+        "avg_total_score": round(bucket["total_score_sum"] / bucket["total_score_n"], 4)
+        if bucket["total_score_n"] else 0,
+    }
+
+
 # --------------------------------------------------------------------------- #
 #  CLI 入口
 # --------------------------------------------------------------------------- #
@@ -460,7 +553,7 @@ def parse_args():
     parser.add_argument(
         "--model", nargs="+", default=["deepseek-r1"],
         help="底座模型列表，例如: gpt-4o claude-4-5 gemini\n"
-             "可用简写见 llm_api/client.py MODEL_ALIASES"
+             "可用简写见 llm_client.py MODEL_ALIASES"
     )
     parser.add_argument(
         "--strategy", nargs="+", default=["ReAct"],
