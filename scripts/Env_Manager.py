@@ -88,6 +88,36 @@ class EnvManager:
         print(f"[EnvManager] ✓ Workspace ready: {dst}")
         return dst
 
+    def apply_ground_truth(self, app_name: str, task_id: str) -> Path:
+        """
+        用 data/app_name/task_id/ground_truth_src 覆盖当前 workspace。
+
+        这个入口用于 oracle/标准答案回放：跳过 LLM 生成代码，但仍然让后续
+        build_project -> Appium -> Evaluator 走完整评分流程。
+        """
+        ground_truth_src = self.data_dir / app_name / task_id / "ground_truth_src"
+        dst = self.workspace_dir / app_name / task_id
+
+        if not ground_truth_src.exists():
+            raise FileNotFoundError(f"ground_truth_src not found: {ground_truth_src}")
+
+        print(f"[EnvManager] Applying ground truth: {ground_truth_src} -> {dst}")
+
+        if dst.exists():
+            self._stop_gradle_daemon(dst)
+            self._clear_dir_with_retry(dst)
+
+        shutil.copytree(
+            ground_truth_src,
+            dst,
+            ignore=self._ignore_fn,
+            dirs_exist_ok=True,
+        )
+        self._ensure_gradlew_executable(self._resolve_gradle_project_root(dst))
+        self._save_workspace_manifest(app_name, task_id, ground_truth_src, dst)
+        print(f"[EnvManager] ✓ Ground truth workspace ready: {dst}")
+        return dst
+
     def build_project(
         self,
         app_name: str,

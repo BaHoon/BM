@@ -70,6 +70,7 @@ class ExperimentLauncher:
         skip_if_apk:       bool       = False,
         vlm_model:         str        = "gpt-4o",
         pass_k:            list[int]  = None,
+        use_ground_truth:   bool       = False,
     ):
         self.models             = models
         self.strategies         = strategies
@@ -83,6 +84,7 @@ class ExperimentLauncher:
         self.skip_if_apk        = skip_if_apk
         self.vlm_model          = vlm_model
         self.pass_k_values      = pass_k or [1, 3]
+        self.use_ground_truth   = use_ground_truth
 
         self.root        = Path(__file__).parent.parent
         self.data_dir    = self.root / "data"
@@ -158,33 +160,56 @@ class ExperimentLauncher:
                 print(f"  [reset] FAIL: {exc}")
                 return
 
-            # Step 2: Agent 代码生成
-            agent = AgentRunner(
-                model=model,
-                strategy=strategy,
-                retriever_top_k=self.retriever_top_k,
-            )
-
-            try:
-                if self.feedback_loop:
-                    # RQ5：注入反馈闭环
-                    histories = agent.run_with_feedback_loop(
-                        app_name, task_id,
-                        get_feedback=self._make_feedback_fn(app_name, task_id),
-                        max_rounds=self.feedback_rounds,
-                    )
-                    agent_result = histories[-1]
-                    run.record.attempt = len(histories)
-                else:
-                    agent_result = agent.run_task(app_name, task_id, attempt=1)
+            # Step 2: Agent 代码生成；oracle 模式下直接应用标准答案源码。
+            if self.use_ground_truth:
+                try:
+                    gt_path = self.env_mgr.apply_ground_truth(app_name, task_id)
+                    agent_result = {
+                        "success": True,
+                        "files_written": 0,
+                        "write_results": {},
+                        "llm_response": "",
+                        "retrieved_files": [str(gt_path)],
+                        "total_files": 0,
+                    }
                     run.record.attempt = 1
-            except Exception as exc:
-                run.record.csr = False
-                run.record.vsm = False
-                run.record.error_category = "llm_api_error"
-                run.record.extra["agent_error"] = str(exc)
-                print(f"  [agent] FAIL: {exc}")
-                return
+                    run.record.extra["oracle_mode"] = True
+                    run.record.extra["ground_truth_src"] = str(gt_path)
+                    print("  [agent] SKIP: using ground_truth_src")
+                except Exception as exc:
+                    run.record.csr = False
+                    run.record.vsm = False
+                    run.record.error_category = "ground_truth_error"
+                    run.record.extra["ground_truth_error"] = str(exc)
+                    print(f"  [ground_truth] FAIL: {exc}")
+                    return
+            else:
+                agent = AgentRunner(
+                    model=model,
+                    strategy=strategy,
+                    retriever_top_k=self.retriever_top_k,
+                )
+
+                try:
+                    if self.feedback_loop:
+                        # RQ5：注入反馈闭环
+                        histories = agent.run_with_feedback_loop(
+                            app_name, task_id,
+                            get_feedback=self._make_feedback_fn(app_name, task_id),
+                            max_rounds=self.feedback_rounds,
+                        )
+                        agent_result = histories[-1]
+                        run.record.attempt = len(histories)
+                    else:
+                        agent_result = agent.run_task(app_name, task_id, attempt=1)
+                        run.record.attempt = 1
+                except Exception as exc:
+                    run.record.csr = False
+                    run.record.vsm = False
+                    run.record.error_category = "llm_api_error"
+                    run.record.extra["agent_error"] = str(exc)
+                    print(f"  [agent] FAIL: {exc}")
+                    return
 
             run.record.retrieved_files = agent_result.get("retrieved_files", [])
 
@@ -581,6 +606,8 @@ def parse_args():
     parser.add_argument("--appium-timeout",  type=int, default=300)
     parser.add_argument("--pass-k",      nargs="+", type=int, default=[1, 3],
                         help="计算 Pass@k 的 k 值列表")
+    parser.add_argument("--use-ground-truth", action="store_true",
+                        help="跳过 LLM 代码生成，直接用 data/<app>/<task>/ground_truth_src 跑完整评分流程")
     return parser.parse_args()
 
 
@@ -598,6 +625,7 @@ def main():
         feedback_rounds    = args.feedback_rounds,
         vlm_model          = args.vlm_model,
         pass_k             = args.pass_k,
+        use_ground_truth   = args.use_ground_truth,
     )
     launcher.launch()
 
