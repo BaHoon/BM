@@ -120,12 +120,11 @@ class Evaluator:
             level2_score = stream2.get("level2_score")
             level3_score = stream2.get("level3_score")
         else:
-            stream2 = {
-                "skipped": True,
-                "reason": "compilation failed",
-                "level2_score": None,
-                "level3_score": None,
-            }
+            stream2 = self._stream2_static_fallback_after_compile_failure(
+                app_name, task_id, meta
+            )
+            level2_score = stream2.get("level2_score")
+            level3_score = stream2.get("level3_score")
 
         total_score = self._compute_total_score(
             stream1.get("level1_score"), level2_score, level3_score
@@ -232,6 +231,31 @@ class Evaluator:
     # ----------------------------------------------------------------------- #
     #  Stream 2a: 功能性验证（UI 树硬核校验）
     # ----------------------------------------------------------------------- #
+
+    def _stream2_static_fallback_after_compile_failure(
+        self,
+        app_name: str,
+        task_id: str,
+        meta: dict,
+    ) -> dict:
+        """
+        编译失败时仍保留可计算的静态 Level 2 fallback。
+
+        没有 APK 时无法运行 Appium，也无法生成 UI tree / screenshots，因此 Level 2
+        只能检查实际改动文件是否命中 golden mapping；Level 3 继续跳过。
+        """
+        level2 = self._score_level2(app_name, task_id, meta)
+        return {
+            "passed": False,
+            "skipped": True,
+            "source": "static_file_fallback_after_compile_failure",
+            "reason": "compilation failed; dynamic Appium/VLM checks skipped",
+            "level2_score": level2["score"],
+            "level2_reason": level2["reason"],
+            "level2_detail": level2,
+            "level3_score": None,
+            "level3_reason": "Level 3 skipped: compilation failed, so no APK/screenshots are available.",
+        }
 
     def _stream2_functional(
         self,

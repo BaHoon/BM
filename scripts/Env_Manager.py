@@ -524,8 +524,8 @@ class EnvManager:
                 except Exception:
                     continue
                 stripped = text.lstrip()
-                if "```" in text:
-                    evidence.append(f"{path.relative_to(project_root)} contains Markdown code fence ```")
+                if stripped.startswith("```"):
+                    evidence.append(f"{path.relative_to(project_root)} starts with Markdown code fence ```")
                 elif re.match(r"^(Here is|Below is|Sure[, ]|This code|Explanation:)", stripped, re.IGNORECASE):
                     first_line = stripped.splitlines()[0][:120]
                     evidence.append(f"{path.relative_to(project_root)} starts with prose: {first_line}")
@@ -535,8 +535,6 @@ class EnvManager:
             pass
 
         lower_log = build_log.lower()
-        if "```" in build_log:
-            evidence.append("compiler log contains Markdown code fence")
         if "illegal character: '`'" in lower_log or "illegal char <:>" in lower_log:
             evidence.append("compiler reported illegal Markdown-like characters")
         return evidence
@@ -554,6 +552,10 @@ class EnvManager:
             r"cannot access class .+",
             r"classnotfoundexception",
             r"noclassdeffounderror",
+            r"sdk location not found",
+            r"android_home",
+            r"android_sdk_root",
+            r"sdk\.dir",
             r"unresolved reference: [A-Z][A-Za-z0-9_]*(?:\b|$)",
             r"unresolved reference '[A-Z][A-Za-z0-9_]*'",
             r"unresolved import",
