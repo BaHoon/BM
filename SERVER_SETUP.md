@@ -8,10 +8,10 @@
 
 ```text
 BM/
-├── requirements.txt
-├── SERVER_SETUP.md
-├── scripts/
-│   ├── Experiment_Launcher.py   # 批量调度入口：reset -> agent/oracle -> build -> Appium -> evaluate
+├── requirements.txt             (github上面已上传)
+├── SERVER_SETUP.md              (github上面已上传)
+├── scripts/                     (github上面已上传)
+│   ├── Experiment_Launcher.py   # 批量调度入口
 │   ├── Env_Manager.py           # workspace 重置、标准答案回放、Gradle 编译
 │   ├── agent_runner.py          # LLM 代码生成与 ReAct/tool_planning 工具执行
 │   ├── appium_runner.py         # Appium 启动、APK 安装、UI 测试、截图/UI tree 采集
@@ -19,7 +19,7 @@ BM/
 │   ├── llm_client.py            # OpenAI-compatible LLM API 封装
 │   ├── retriever.py             # RAG 文件检索
 │   └── logger.py                # 实验日志与 raw_data 输出
-├── data/                        # 本地数据，不进 Git；队友运行时必须提供
+├── data/                        （打包到飞书上面了）# 本地数据，不进 Git；队友运行时必须提供
 │   ├── app_foodyou/
 │   │   ├── base_src/
 │   │   ├── task_001_theme/
@@ -27,9 +27,6 @@ BM/
 │   │   │   ├── test_script.py
 │   │   │   └── ground_truth_src/
 │   │   └── ...
-│   ├── app_newsreader/
-│   │   ├── base_src/
-│   │   └── task_xxx/
 │   └── TODO1_output/
 │       └── *_golden_mapping.json
 ├── workspace/                   # 运行时生成，不进 Git
@@ -62,7 +59,7 @@ sudo apt-get install -y \
   nodejs npm
 ```
 
-本项目里 FoodYou 使用 Java 21，NewsReader 是 Java 8 兼容源码但用 Java 21 通常也能跑 Gradle。`Env_Manager.py` 会尝试自动选择匹配 JDK；服务器至少建议装 JDK 21。
+JDK版本要装Java 21，不要装17。
 
 验证：
 
@@ -105,7 +102,7 @@ Define a valid SDK location with an ANDROID_HOME environment variable
 or by setting the sdk.dir path in local.properties
 ```
 
-推荐安装到：
+ai推荐安装到：
 
 ```text
 $HOME/android-sdk
@@ -223,22 +220,7 @@ ADB_DEVICE = "127.0.0.1:7555"
 
 ## 7. LLM API 配置
 
-如果跑真实模型生成代码，需要配置 API key。`scripts/llm_client.py` 会读取仓库根目录 `.env` 或系统环境变量。
-
-`.env` 示例：
-
-```dotenv
-TONGJI_API_KEY=你的key
-TONGJI_BASE_URL=https://llmapi.tongji.edu.cn/v1
-
-# 或者 OpenAI-compatible
-OPENAI_API_KEY=你的key
-OPENAI_BASE_URL=https://xxx/v1
-```
-
-如果只是跑标准答案 oracle 模式，不调用 LLM 生成代码，可以不配置 LLM key。
-
-注意：视觉类任务的 Level 3 如果需要 VLM 打分，仍可能调用 `vlm_model`，这和“生成代码的 LLM”是两件事。
+这个先不用管，后续会加。
 
 ## 8. 运行方式
 
@@ -262,33 +244,6 @@ results/<app>/<task>/compile_stdout.txt
 results/<app>/<task>/compile_stderr.txt
 results/<app>/<task>/appium_result.json
 results/<app>/<task>/eval_result.json
-```
-
-### 8.2 跑真实 LLM 实验
-
-```bash
-python scripts/Experiment_Launcher.py \
-  --model deepseek-r1 \
-  --strategy ReAct \
-  --tasks app_foodyou/task_005_notice
-```
-
-跑某个 app 的全部任务：
-
-```bash
-python scripts/Experiment_Launcher.py \
-  --model deepseek-r1 \
-  --strategy ReAct \
-  --tasks app_foodyou
-```
-
-跑全部任务：
-
-```bash
-python scripts/Experiment_Launcher.py \
-  --model deepseek-r1 \
-  --strategy ReAct \
-  --tasks all
 ```
 
 ## 9. 常见错误排查
