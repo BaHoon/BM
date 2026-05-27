@@ -1,9 +1,0 @@
-{
-  "id": "app_003",
-  "name": "foodyou",
-  "app_package": "com.maksimowiczm.foodyou",
-  "build_command": "gradlew.bat :app:assembleDebug",
-  "apk_path": "app/build/outputs/apk/debug/app-debug.apk",
-  "prompt": "This is the source code of a healthy diet app. I would like to add an undo delete feature to the app. After a user deletes content, they should have a limited amount of time to undo the deletion, and if they choose to do so within that time period, the deleted content should be restored.",
-  "eval_script": "test_script.py"
-}

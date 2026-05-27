@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <bool name="is_tablet">true</bool>
-    <dimen name="cardCornerRadius">8dp</dimen>
-    <dimen name="dialogCornerRadius">16dp</dimen>
-    <dimen name="dialogPadding">16dp</dimen>
-    <dimen name="fab_margin">24dp</dimen>
-</resources>

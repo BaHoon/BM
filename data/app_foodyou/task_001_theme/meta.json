@@ -1,9 +1,0 @@
-{
-  "id": "app_001",
-  "name": "foodyou",
-  "app_package": "com.maksimowiczm.foodyou",
-  "build_command": "gradlew.bat assembleDebug",
-  "apk_path": "app/build/outputs/apk/debug/app-debug.apk",
-  "prompt": "This is the source code of a healthy diet app. I noticed that it currently has three theme styles: “System”, “Light”, and “Dark”. I would like to add a new theme called “Girly Skull”. This theme should use a pink color scheme, with skull elements incorporated into the buttons and background images.",
-  "eval_script": "test_script.py"
-}

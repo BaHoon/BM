@@ -1,9 +1,0 @@
-{
-  "id": "app_010",
-  "name": "newsreader",
-  "app_package": "livio.rssreader",
-  "build_command": "gradlew.bat assembleDebug",
-  "apk_path": "app/build/outputs/apk/debug/app-debug.apk",
-  "prompt": "This is the source code of a news app. I want to add a text display paragraph-spacing setting in the app settings, with an option for larger paragraph spacing.",
-  "eval_script": "test_script.py"
-}

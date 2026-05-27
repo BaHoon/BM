@@ -1,2 +1,0 @@
-Bug fixes
-- Fixed crash occurring while downloading from USDA FoodData Central.

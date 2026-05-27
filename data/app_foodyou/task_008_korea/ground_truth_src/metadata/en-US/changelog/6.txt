@@ -1,2 +1,0 @@
-New Features
-- use new product nutrients list in product details
