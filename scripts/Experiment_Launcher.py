@@ -229,18 +229,16 @@ class ExperimentLauncher:
             run.record.extra["level1_reason"] = compile_result.get("level1_reason")
             run.record.extra["warning_count"] = compile_result.get("warning_count", 0)
 
-            if not run.record.csr:
-                run.record.vsm = False
-                run.record.error_category = self._level1_error_category(compile_result)
-                return
-
             # Step 4: Appium 测试（获取截图）
             apk_path    = compile_result.get("apk_path")
             screenshots = []
             appium_log  = ""
             appium_result = None
 
-            if apk_path:
+            if not run.record.csr:
+                appium_log = compile_result.get("error_summary", "")
+                print("  [appium] SKIP: build failed; evaluator will run static fallback")
+            elif apk_path:
                 runner = self._get_appium()
                 if runner:
                     try:

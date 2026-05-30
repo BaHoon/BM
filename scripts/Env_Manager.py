@@ -148,7 +148,8 @@ class EnvManager:
 
         project_root = self._resolve_gradle_project_root(workspace_path)
         self._ensure_gradlew_executable(project_root)
-        cmd = self._GRADLE_CMD_WIN if os.name == "nt" else self._GRADLE_CMD_UNIX
+        meta = self._load_meta(app_name, task_id)
+        cmd = self._resolve_build_command(meta)
         required_java = self._detect_required_java_version(project_root)
         java_home_used: Optional[str] = None
         attempted_versions: list[int] = []
@@ -394,6 +395,22 @@ class EnvManager:
             raise FileNotFoundError(f"meta.json not found: {meta_path}")
         with open(meta_path, "r", encoding="utf-8") as f:
             return json.load(f)
+
+    def _resolve_build_command(self, meta: dict) -> str:
+        """优先使用任务 meta.json 的 build_command，并兼容 macOS/Linux wrapper 写法。"""
+        cmd = (meta.get("build_command") or "").strip()
+        if not cmd:
+            return self._GRADLE_CMD_WIN if os.name == "nt" else self._GRADLE_CMD_UNIX
+
+        if os.name == "nt":
+            return cmd.replace("./gradlew", ".\\gradlew.bat").replace("gradlew ", ".\\gradlew.bat ")
+
+        cmd = cmd.replace("gradlew.bat", "gradlew")
+        if cmd == "gradlew":
+            return "./gradlew"
+        if cmd.startswith("gradlew "):
+            return "./" + cmd
+        return cmd
 
     def _extract_errors(self, text: str, max_lines: int = 30) -> str:
         """从编译输出中提取包含 error/exception/failure 的关键行。"""

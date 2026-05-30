@@ -786,7 +786,11 @@ class Evaluator:
                 root = ET.parse(tree_path).getroot()
             except Exception:
                 continue
-            for node in root.iter("node"):
+            # Appium may serialize UI nodes either as generic <node> elements
+            # or as class-name elements such as <android.widget.TextView>.
+            for node in root.iter():
+                if node is root:
+                    continue
                 attrs = {
                     "text": node.attrib.get("text", ""),
                     "content-desc": node.attrib.get("content-desc", ""),

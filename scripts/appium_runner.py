@@ -47,7 +47,7 @@ class AppiumRunner:
     APPIUM_TIMEOUT = 30  # 等待 Appium 启动的超时
 
     # ADB 设备配置
-    ADB_DEVICE = "127.0.0.1:7555"  # 本地模拟器端口
+    ADB_DEVICE = os.getenv("ADB_DEVICE", "127.0.0.1:7555")  # 可用环境变量覆盖
 
     def __init__(self):
         self.root_dir = Path(__file__).parent.parent
@@ -247,10 +247,21 @@ class AppiumRunner:
                 text=True,
                 timeout=10,
             )
-            output = result.stdout.lower()
-            if "device" in output and "offline" not in output:
+            devices = []
+            for raw_line in result.stdout.splitlines()[1:]:
+                parts = raw_line.split()
+                if len(parts) >= 2 and parts[1] == "device":
+                    devices.append(parts[0])
+            if self.ADB_DEVICE in {"", "auto"} and devices:
+                self.ADB_DEVICE = devices[0]
+            if self.ADB_DEVICE in devices:
                 print(f"[AppiumRunner] ADB device available: {self.ADB_DEVICE}")
                 return True
+            if devices:
+                print(
+                    f"[AppiumRunner] ADB devices found {devices}, "
+                    f"but configured device is {self.ADB_DEVICE}"
+                )
         except Exception as e:
             print(f"[AppiumRunner] ADB check failed: {e}")
         return False
@@ -280,9 +291,10 @@ class AppiumRunner:
         try:
             cmd = [
                 "appium",
-                "--host", self.APPIUM_HOST,
+                "server",
+                "--address", self.APPIUM_HOST,
                 "--port", str(self.APPIUM_PORT),
-                "--allow-insecure", "adb_screen_recording",
+                "--allow-insecure", "*:adb_screen_recording",
             ]
             self._appium_process = subprocess.Popen(
                 cmd,
@@ -308,8 +320,9 @@ class AppiumRunner:
         Returns:
             Appium WebDriver 实例
         """
-        # 从 meta.json 中读取包名
+        # 从 meta.json 中读取包名和入口 Activity
         package_name = None
+        app_activity = None
         if task_id:
             meta_path = self.data_dir / app_name / task_id / "meta.json"
             if meta_path.exists():
@@ -317,6 +330,7 @@ class AppiumRunner:
                     with open(meta_path, "r", encoding="utf-8") as f:
                         meta = json.load(f)
                         package_name = meta.get("app_package")
+                        app_activity = meta.get("target_activity")
                 except Exception as e:
                     print(f"[AppiumRunner] Warning: Failed to read meta.json: {e}")
 
@@ -328,20 +342,24 @@ class AppiumRunner:
                 "app_todoagenda": "com.example.todoagenda",
             }
             package_name = package_map.get(app_name, f"com.example.{app_name}")
+        if not app_activity:
+            app_activity = f"{package_name}.MainActivity"
         
         print(f"[AppiumRunner] Package name: {package_name}")
+        print(f"[AppiumRunner] App activity: {app_activity}")
 
         # 构建 AppiumOptions 或 desired capabilities（根据客户端可用性回退）
         if AppiumOptions is not None:
             options = AppiumOptions()
-            options.platform_name = "Android"
-            options.device_name = self.ADB_DEVICE
-            options.app = apk_path
-            options.app_package = package_name
-            options.app_activity = f"{package_name}.MainActivity"
-            options.automation_name = "UiAutomator2"
-            options.auto_grant_permissions = True
-            options.new_command_timeout = 300
+            options.set_capability("platformName", "Android")
+            options.set_capability("appium:deviceName", self.ADB_DEVICE)
+            options.set_capability("appium:udid", self.ADB_DEVICE)
+            options.set_capability("appium:app", apk_path)
+            options.set_capability("appium:appPackage", package_name)
+            options.set_capability("appium:appActivity", app_activity)
+            options.set_capability("appium:automationName", "UiAutomator2")
+            options.set_capability("appium:autoGrantPermissions", True)
+            options.set_capability("appium:newCommandTimeout", 300)
             use_options = True
         else:
             # 回退到旧式 desiredCapabilities 字典
@@ -350,7 +368,7 @@ class AppiumRunner:
                 "deviceName": self.ADB_DEVICE,
                 "app": apk_path,
                 "appPackage": package_name,
-                "appActivity": f"{package_name}.MainActivity",
+                "appActivity": app_activity,
                 "automationName": "UiAutomator2",
                 "autoGrantPermissions": True,
                 "newCommandTimeout": 300,
