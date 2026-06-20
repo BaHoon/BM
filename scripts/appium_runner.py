@@ -12,18 +12,28 @@ Appium Runner - 移动应用 UI 自动化测试执行引擎
 
 import json
 import os
-import shutil
 import subprocess
 import sys
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List
-from urllib.request import urlopen
 
 from appium import webdriver
-from appium.webdriver.common.appium_options import AppiumOptions
-from appium.webdriver.common.by import AppiumBy
+# AppiumOptions: different appium client versions expose this in different locations.
+# Try several import paths and fall back to None if not available.
+try:
+    from appium.webdriver.common.appium_options import AppiumOptions
+except Exception:
+    try:
+        from appium.options.common import AppiumOptions
+    except Exception:
+        try:
+            from appium.options.common.base import AppiumOptions
+        except Exception:
+            AppiumOptions = None
+
+from appium.webdriver.common.appiumby import AppiumBy
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -31,7 +41,13 @@ from selenium.webdriver.support import expected_conditions as EC
 class AppiumRunner:
     """Appium 自动化测试执行器。"""
 
+    # Appium 服务配置
+    APPIUM_HOST = "localhost"
+    APPIUM_PORT = 4723
     APPIUM_TIMEOUT = 30  # 等待 Appium 启动的超时
+
+    # ADB 设备配置
+    ADB_DEVICE = os.getenv("ADB_DEVICE", "127.0.0.1:7555")  # 可用环境变量覆盖
 
     def __init__(self):
         self.root_dir = Path(__file__).parent.parent
@@ -39,18 +55,6 @@ class AppiumRunner:
         self.results_dir = self.root_dir / "results"
         self.driver: Optional[webdriver.Remote] = None
         self._appium_process: Optional[subprocess.Popen] = None
-        self.appium_host = os.getenv("APPIUM_HOST", "127.0.0.1")
-        self.appium_port = int(os.getenv("APPIUM_PORT", "4723"))
-        self.appium_base_path = os.getenv("APPIUM_BASE_PATH", "/wd/hub")
-        self.appium_url = os.getenv(
-            "APPIUM_URL",
-            f"http://{self.appium_host}:{self.appium_port}{self.appium_base_path}",
-        )
-        self.appium_autostart = os.getenv("APPIUM_AUTOSTART", "1").lower() in {"1", "true", "yes"}
-        self.appium_start_cmd = os.getenv("APPIUM_START_CMD", "").strip()
-        self.adb_device = os.getenv("ANDROID_SERIAL", "127.0.0.1:7555")
-        self.emulator_start_cmd = os.getenv("EMULATOR_START_CMD", "").strip()
-        self.emulator_wait_s = int(os.getenv("EMULATOR_WAIT_SECONDS", "35"))
 
     def check_appium_server(self) -> bool:
         """
@@ -60,10 +64,6 @@ class AppiumRunner:
         if self._is_appium_running():
             print("[AppiumRunner] Appium server already running")
             return True
-
-        if not self.appium_autostart:
-            print("[AppiumRunner] Appium auto-start disabled (APPIUM_AUTOSTART=0)")
-            return False
 
         print("[AppiumRunner] Appium server not running, attempting to start...")
         if self._start_appium_server():
@@ -111,6 +111,7 @@ class AppiumRunner:
 
         t0 = time.time()
         screenshots = []
+        ui_trees = []
         log = ""
 
         try:
@@ -145,6 +146,8 @@ class AppiumRunner:
             # 创建截图保存目录
             screenshot_dir = self.results_dir / app_name / task_id / "screenshots"
             screenshot_dir.mkdir(parents=True, exist_ok=True)
+            ui_tree_dir = self.results_dir / app_name / task_id / "ui_trees"
+            ui_tree_dir.mkdir(parents=True, exist_ok=True)
 
             # 准备注入的全局环境
             screenshot_count = [0]  # 使用列表以允许嵌套函数修改
@@ -152,10 +155,18 @@ class AppiumRunner:
             def take_screenshot(name: str) -> str:
                 """截图函数，注入到 test_script 的全局环境中。"""
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                filename = f"{screenshot_count[0]:02d}_{name}_{timestamp}.png"
+                idx = screenshot_count[0]
+                filename = f"{idx:02d}_{name}_{timestamp}.png"
                 filepath = screenshot_dir / filename
                 try:
                     self.driver.save_screenshot(str(filepath))
+                    ui_tree_path = self._save_ui_tree(ui_tree_dir, idx, name, timestamp)
+                    if ui_tree_path:
+                        ui_trees.append({
+                            "name": name,
+                            "path": str(ui_tree_path),
+                            "screenshot": str(filepath),
+                        })
                     screenshot_count[0] += 1
                     screenshots.append(str(filepath))
                     print(f"  [screenshot] {filename}")
@@ -181,12 +192,21 @@ class AppiumRunner:
 
             exec(test_code, globals_dict)
             print(f"[AppiumRunner] test_script completed successfully")
+            final_ui_tree = self._save_ui_tree(ui_tree_dir, screenshot_count[0], "final_state")
+            if final_ui_tree:
+                ui_trees.append({
+                    "name": "final_state",
+                    "path": str(final_ui_tree),
+                    "screenshot": None,
+                })
 
             elapsed = round(time.time() - t0, 2)
             return {
                 "success": True,
                 "elapsed_time": elapsed,
                 "screenshots": screenshots,
+                "ui_trees": ui_trees,
+                "final_ui_tree": str(final_ui_tree) if final_ui_tree else None,
                 "log": f"Test passed. {len(screenshots)} screenshots captured.",
                 "test_type": "custom",
                 "timestamp": datetime.now().isoformat(),
@@ -200,6 +220,8 @@ class AppiumRunner:
                 "success": False,
                 "elapsed_time": elapsed,
                 "screenshots": screenshots,
+                "ui_trees": ui_trees,
+                "final_ui_tree": ui_trees[-1]["path"] if ui_trees else None,
                 "log": error_msg,
                 "test_type": "custom",
                 "timestamp": datetime.now().isoformat(),
@@ -225,116 +247,66 @@ class AppiumRunner:
                 text=True,
                 timeout=10,
             )
-            devices = self._parse_adb_devices(result.stdout)
-            if self.adb_device in devices:
-                print(f"[AppiumRunner] ADB device available: {self.adb_device}")
+            devices = []
+            for raw_line in result.stdout.splitlines()[1:]:
+                parts = raw_line.split()
+                if len(parts) >= 2 and parts[1] == "device":
+                    devices.append(parts[0])
+            if self.ADB_DEVICE in {"", "auto"} and devices:
+                self.ADB_DEVICE = devices[0]
+            if self.ADB_DEVICE in devices:
+                print(f"[AppiumRunner] ADB device available: {self.ADB_DEVICE}")
                 return True
-
-            # 若指定设备不可用，且有其他在线设备，自动使用第一个。
             if devices:
-                self.adb_device = devices[0]
-                print(f"[AppiumRunner] ADB fallback device selected: {self.adb_device}")
-                return True
-
-            if self.emulator_start_cmd:
-                print("[AppiumRunner] No ADB device found, starting emulator...")
-                self._start_emulator_once()
-                result2 = subprocess.run(["adb", "devices"], capture_output=True, text=True, timeout=10)
-                devices2 = self._parse_adb_devices(result2.stdout)
-                if devices2:
-                    self.adb_device = devices2[0]
-                    print(f"[AppiumRunner] ADB device ready after emulator start: {self.adb_device}")
-                    return True
+                print(
+                    f"[AppiumRunner] ADB devices found {devices}, "
+                    f"but configured device is {self.ADB_DEVICE}"
+                )
         except Exception as e:
             print(f"[AppiumRunner] ADB check failed: {e}")
         return False
 
-    def _parse_adb_devices(self, adb_output: str) -> list[str]:
-        devices = []
-        for line in (adb_output or "").splitlines():
-            line = line.strip()
-            if not line or line.startswith("List of devices attached"):
-                continue
-            parts = line.split()
-            if len(parts) >= 2 and parts[1] == "device":
-                devices.append(parts[0])
-        return devices
-
     def _is_appium_running(self) -> bool:
-        """检查 Appium 服务器是否在运行。"""
-        candidate_urls = []
-        base = self.appium_url.rstrip("/")
-        candidate_urls.append(base + "/status")
-        if not base.endswith("/wd/hub"):
-            candidate_urls.append(base + "/wd/hub/status")
-        candidate_urls.append(f"http://{self.appium_host}:{self.appium_port}/status")
-        candidate_urls.append(f"http://{self.appium_host}:{self.appium_port}/wd/hub/status")
+        """检查 Appium 服务器是否在运行（兼容 Appium 1/2 端点）。"""
+        try:
+            from urllib.request import urlopen
 
-        for url in candidate_urls:
-            try:
-                response = urlopen(url, timeout=2)
-                if response.status == 200:
-                    return True
-            except Exception:
-                continue
-        return False
+            status_urls = [
+                f"http://{self.APPIUM_HOST}:{self.APPIUM_PORT}/status",        # Appium 2 默认
+                f"http://{self.APPIUM_HOST}:{self.APPIUM_PORT}/wd/hub/status", # Appium 1 / 兼容模式
+            ]
+            for url in status_urls:
+                try:
+                    response = urlopen(url, timeout=2)
+                    if response.status == 200:
+                        return True
+                except Exception:
+                    continue
+            return False
+        except Exception:
+            return False
 
     def _start_appium_server(self) -> bool:
         """启动 Appium 服务器（本地）。"""
-        commands = self._candidate_appium_commands()
-        for cmd in commands:
-            try:
-                self._appium_process = subprocess.Popen(
-                    cmd,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-                print(f"[AppiumRunner] Appium start command: {' '.join(cmd)}")
-                deadline = time.time() + self.APPIUM_TIMEOUT
-                while time.time() < deadline:
-                    if self._is_appium_running():
-                        print(f"[AppiumRunner] Appium started on {self.appium_host}:{self.appium_port}")
-                        return True
-                    time.sleep(1)
-            except Exception as e:
-                print(f"[AppiumRunner] Failed to start with {' '.join(cmd)}: {e}")
-                continue
-        return False
-
-    def _candidate_appium_commands(self) -> list[list[str]]:
-        if self.appium_start_cmd:
-            return [self.appium_start_cmd.split()]
-
-        common_args = [
-            "--host", self.appium_host,
-            "--port", str(self.appium_port),
-            "--allow-insecure", "adb_screen_recording",
-        ]
-        if self.appium_base_path and self.appium_base_path != "/wd/hub":
-            common_args += ["--base-path", self.appium_base_path]
-
-        candidates: list[list[str]] = []
-        if shutil.which("appium"):
-            candidates.append(["appium", *common_args])
-        if shutil.which("npx"):
-            candidates.append(["npx", "appium", *common_args])
-        if not candidates:
-            candidates.append(["appium", *common_args])
-        return candidates
-
-    def _start_emulator_once(self) -> None:
-        if not self.emulator_start_cmd:
-            return
         try:
-            subprocess.Popen(
-                self.emulator_start_cmd,
-                shell=True,
+            cmd = [
+                "appium",
+                "server",
+                "--address", self.APPIUM_HOST,
+                "--port", str(self.APPIUM_PORT),
+                "--allow-insecure", "*:adb_screen_recording",
+            ]
+            self._appium_process = subprocess.Popen(
+                cmd,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-            time.sleep(max(1, self.emulator_wait_s))
+            print(f"[AppiumRunner] Appium started on {self.APPIUM_HOST}:{self.APPIUM_PORT}")
+            time.sleep(3)  # 等待服务启动
+            return self._is_appium_running()
         except Exception as e:
-            print(f"[AppiumRunner] Emulator start failed: {e}")
+            print(f"[AppiumRunner] Failed to start Appium: {e}")
+            return False
 
     def _create_driver(self, apk_path: str, app_name: str, task_id: str = None) -> webdriver.Remote:
         """
@@ -348,8 +320,9 @@ class AppiumRunner:
         Returns:
             Appium WebDriver 实例
         """
-        # 从 meta.json 中读取包名
+        # 从 meta.json 中读取包名和入口 Activity
         package_name = None
+        app_activity = None
         if task_id:
             meta_path = self.data_dir / app_name / task_id / "meta.json"
             if meta_path.exists():
@@ -357,6 +330,7 @@ class AppiumRunner:
                     with open(meta_path, "r", encoding="utf-8") as f:
                         meta = json.load(f)
                         package_name = meta.get("app_package")
+                        app_activity = meta.get("target_activity")
                 except Exception as e:
                     print(f"[AppiumRunner] Warning: Failed to read meta.json: {e}")
 
@@ -368,26 +342,80 @@ class AppiumRunner:
                 "app_todoagenda": "com.example.todoagenda",
             }
             package_name = package_map.get(app_name, f"com.example.{app_name}")
+        if not app_activity:
+            app_activity = f"{package_name}.MainActivity"
         
         print(f"[AppiumRunner] Package name: {package_name}")
+        print(f"[AppiumRunner] App activity: {app_activity}")
 
-        # 构建 Desired Capabilities
-        options = AppiumOptions()
-        options.platform_name = "Android"
-        options.device_name = self.adb_device
-        options.udid = self.adb_device
-        options.app = apk_path
-        options.app_package = package_name
-        options.app_activity = f"{package_name}.MainActivity"
-        options.automation_name = "UiAutomator2"
-        options.auto_grant_permissions = True
-        options.new_command_timeout = 300
+        # 构建 AppiumOptions 或 desired capabilities（根据客户端可用性回退）
+        if AppiumOptions is not None:
+            options = AppiumOptions()
+            options.set_capability("platformName", "Android")
+            options.set_capability("appium:deviceName", self.ADB_DEVICE)
+            options.set_capability("appium:udid", self.ADB_DEVICE)
+            options.set_capability("appium:app", apk_path)
+            options.set_capability("appium:appPackage", package_name)
+            options.set_capability("appium:appActivity", app_activity)
+            options.set_capability("appium:automationName", "UiAutomator2")
+            options.set_capability("appium:autoGrantPermissions", True)
+            options.set_capability("appium:newCommandTimeout", 300)
+            use_options = True
+        else:
+            # 回退到旧式 desiredCapabilities 字典
+            caps = {
+                "platformName": "Android",
+                "deviceName": self.ADB_DEVICE,
+                "app": apk_path,
+                "appPackage": package_name,
+                "appActivity": app_activity,
+                "automationName": "UiAutomator2",
+                "autoGrantPermissions": True,
+                "newCommandTimeout": 300,
+            }
+            use_options = False
 
-        # 连接到 Appium
-        driver = webdriver.Remote(self.appium_url, options=options)
-        driver.implicitly_wait(10)
+        # 连接到 Appium（兼容 Appium 1/2）
+        candidate_urls = [
+            f"http://{self.APPIUM_HOST}:{self.APPIUM_PORT}",
+            f"http://{self.APPIUM_HOST}:{self.APPIUM_PORT}/wd/hub",
+        ]
+        last_error = None
+        for appium_url in candidate_urls:
+            try:
+                if AppiumOptions is not None and use_options:
+                    driver = webdriver.Remote(appium_url, options=options)
+                else:
+                    driver = webdriver.Remote(appium_url, desired_capabilities=caps)
+                driver.implicitly_wait(10)
+                print(f"[AppiumRunner] Connected to Appium endpoint: {appium_url}")
+                return driver
+            except Exception as exc:
+                last_error = exc
 
-        return driver
+        raise RuntimeError(f"Failed to connect to Appium endpoints: {last_error}")
+
+    def _save_ui_tree(
+        self,
+        ui_tree_dir: Path,
+        index: int,
+        name: str,
+        timestamp: Optional[str] = None,
+    ) -> Optional[Path]:
+        """保存当前页面 UI hierarchy，供 Level 2 节点匹配使用。"""
+        if not self.driver:
+            return None
+        timestamp = timestamp or datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_name = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in name)[:80]
+        path = ui_tree_dir / f"{index:02d}_{safe_name}_{timestamp}.xml"
+        try:
+            source = self.driver.page_source or ""
+            path.write_text(source, encoding="utf-8")
+            print(f"  [ui-tree] {path.name}")
+            return path
+        except Exception as exc:
+            print(f"  [ui-tree] ERROR: {exc}")
+            return None
 
     def __del__(self):
         """清理：关闭驱动和 Appium 进程。"""
