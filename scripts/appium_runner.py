@@ -12,6 +12,8 @@ Appium Runner - 移动应用 UI 自动化测试执行引擎
 
 import json
 import os
+import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -37,24 +39,40 @@ from appium.webdriver.common.appiumby import AppiumBy
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+try:
+    from runtime_env import ensure_android_runtime_env
+except Exception:
+    def ensure_android_runtime_env():
+        return None
+
+ensure_android_runtime_env()
+
 
 class AppiumRunner:
     """Appium 自动化测试执行器。"""
 
     # Appium 服务配置
-    APPIUM_HOST = "localhost"
-    APPIUM_PORT = 4723
-    APPIUM_TIMEOUT = 30  # 等待 Appium 启动的超时
+    APPIUM_HOST = os.getenv("APPIUM_HOST", "localhost")
+    APPIUM_PORT = int(os.getenv("APPIUM_PORT", "4723"))
+    APPIUM_TIMEOUT = int(os.getenv("APPIUM_TIMEOUT", "30"))  # 等待 Appium 启动的超时
 
     # ADB 设备配置
-    ADB_DEVICE = os.getenv("ADB_DEVICE", "127.0.0.1:7555")  # 可用环境变量覆盖
+    ADB_DEVICE = os.getenv("ADB_DEVICE", "auto")  # 可用环境变量覆盖
+    AVD_NAME = os.getenv("BM_AVD_NAME") or os.getenv("ANDROID_AVD_NAME") or "bm_api36"
+    EMULATOR_BOOT_TIMEOUT = int(os.getenv("EMULATOR_BOOT_TIMEOUT", "300"))
 
     def __init__(self):
         self.root_dir = Path(__file__).parent.parent
         self.data_dir = self.root_dir / "data"
         self.results_dir = self.root_dir / "results"
+        self.ADB_DEVICE = os.getenv("ADB_DEVICE", self.ADB_DEVICE)
+        self.avd_name = os.getenv("BM_AVD_NAME") or os.getenv("ANDROID_AVD_NAME") or self.AVD_NAME
         self.driver: Optional[webdriver.Remote] = None
         self._appium_process: Optional[subprocess.Popen] = None
+        self._emulator_process: Optional[subprocess.Popen] = None
+        self._appium_log_handle = None
+        self._emulator_log_handle = None
+        self._restart_dedicated_adb_server()
 
     def check_appium_server(self) -> bool:
         """
@@ -240,6 +258,105 @@ class AppiumRunner:
 
     def _verify_adb_device(self) -> bool:
         """验证 ADB 设备是否可用。"""
+        devices = self._list_adb_devices()
+        if self._select_adb_device(devices):
+            return True
+
+        print("[AppiumRunner] No configured ADB device available; attempting emulator startup")
+        if self._start_emulator():
+            devices = self._list_adb_devices()
+            return self._select_adb_device(devices)
+
+        return False
+
+    def _restart_dedicated_adb_server(self) -> None:
+        """Restart only a non-default per-user adb server so env changes take effect."""
+        adb_port = os.getenv("ADB_SERVER_PORT")
+        if not adb_port or adb_port == "5037":
+            return
+        if os.getenv("BM_RESTART_ADB_SERVER", "1") == "0":
+            return
+        try:
+            subprocess.run(["adb", "kill-server"], capture_output=True, text=True, timeout=10)
+            subprocess.run(["adb", "start-server"], capture_output=True, text=True, timeout=20)
+        except Exception as exc:
+            print(f"[AppiumRunner] WARN: failed to restart adb server on {adb_port}: {exc}")
+
+    def _list_adb_devices(self, start_server: bool = True) -> List[str]:
+        """Return online ADB device ids."""
+        try:
+            if start_server:
+                subprocess.run(
+                    ["adb", "start-server"],
+                    capture_output=True,
+                    text=True,
+                    timeout=20,
+                )
+                self._ensure_tcp_adb_connection()
+            result = subprocess.run(
+                ["adb", "devices"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            devices = []
+            for raw_line in result.stdout.splitlines()[1:]:
+                parts = raw_line.split()
+                if len(parts) >= 2 and parts[1] == "device":
+                    devices.append(parts[0])
+            return devices
+        except Exception as e:
+            print(f"[AppiumRunner] ADB check failed: {e}")
+        return []
+
+    def _select_adb_device(self, devices: List[str]) -> bool:
+        """Select an online ADB device according to ADB_DEVICE."""
+        if self.ADB_DEVICE in {"", "auto"} and devices:
+            self.ADB_DEVICE = self._preferred_adb_device(devices)
+        if self.ADB_DEVICE in devices:
+            print(f"[AppiumRunner] ADB device available: {self.ADB_DEVICE}")
+            return True
+        if devices:
+            print(
+                f"[AppiumRunner] ADB devices found {devices}, "
+                f"but configured device is {self.ADB_DEVICE}"
+            )
+        return False
+
+    def _preferred_adb_device(self, devices: List[str]) -> str:
+        preferred_targets = [
+            target.strip()
+            for target in os.getenv("ADB_TCP_DEVICE", "").split(",")
+            if target.strip()
+        ]
+        for target in preferred_targets:
+            if target in devices:
+                return target
+        for device in devices:
+            if device.startswith("emulator-"):
+                return device
+        for device in devices:
+            if device.startswith(("127.0.0.1:", "localhost:")):
+                return device
+        return devices[0]
+
+    def _ensure_tcp_adb_connection(self) -> Optional[str]:
+        """Connect to the emulator over TCP so adb forward works reliably on servers."""
+        targets = [
+            target.strip()
+            for target in os.getenv("ADB_TCP_DEVICE", "127.0.0.1:5555").split(",")
+            if target.strip()
+        ]
+        for target in targets:
+            try:
+                subprocess.run(
+                    ["adb", "connect", target],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+            except Exception:
+                continue
         try:
             result = subprocess.run(
                 ["adb", "devices"],
@@ -252,19 +369,115 @@ class AppiumRunner:
                 parts = raw_line.split()
                 if len(parts) >= 2 and parts[1] == "device":
                     devices.append(parts[0])
-            if self.ADB_DEVICE in {"", "auto"} and devices:
-                self.ADB_DEVICE = devices[0]
-            if self.ADB_DEVICE in devices:
-                print(f"[AppiumRunner] ADB device available: {self.ADB_DEVICE}")
-                return True
-            if devices:
-                print(
-                    f"[AppiumRunner] ADB devices found {devices}, "
-                    f"but configured device is {self.ADB_DEVICE}"
-                )
-        except Exception as e:
-            print(f"[AppiumRunner] ADB check failed: {e}")
+            for target in targets:
+                if target in devices:
+                    return target
+        except Exception:
+            pass
+        return None
+
+    def _start_emulator(self) -> bool:
+        """Start the configured headless Android emulator if no device is online."""
+        emulator_bin = shutil.which("emulator")
+        if not emulator_bin:
+            print("[AppiumRunner] emulator command not found in PATH")
+            return False
+
+        try:
+            listed = subprocess.run(
+                ["emulator", "-list-avds"],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            avds = {line.strip() for line in listed.stdout.splitlines() if line.strip()}
+            if self.avd_name not in avds:
+                print(f"[AppiumRunner] AVD not found: {self.avd_name}; available={sorted(avds)}")
+                return False
+        except Exception as exc:
+            print(f"[AppiumRunner] Failed to list AVDs: {exc}")
+            return False
+
+        log_dir = self.results_dir / "_logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_path = log_dir / f"emulator_{self.avd_name}.log"
+        self._emulator_log_handle = open(log_path, "ab", buffering=0)
+
+        cmd = [
+            "emulator",
+            "-avd", self.avd_name,
+            "-no-window",
+            "-no-audio",
+            "-no-boot-anim",
+            "-no-snapshot",
+            "-no-snapshot-save",
+            "-gpu", os.getenv("BM_EMULATOR_GPU", "swiftshader_indirect"),
+        ]
+        extra_args = os.getenv("BM_EMULATOR_EXTRA_ARGS", "").strip()
+        if extra_args:
+            cmd.extend(shlex.split(extra_args))
+
+        print(f"[AppiumRunner] Starting emulator {self.avd_name}; log={log_path}")
+        try:
+            self._emulator_process = subprocess.Popen(
+                cmd,
+                stdout=self._emulator_log_handle,
+                stderr=subprocess.STDOUT,
+                env=os.environ.copy(),
+            )
+        except Exception as exc:
+            print(f"[AppiumRunner] Failed to start emulator: {exc}")
+            return False
+
+        return self._wait_for_emulator_boot()
+
+    def _wait_for_emulator_boot(self) -> bool:
+        deadline = time.time() + self.EMULATOR_BOOT_TIMEOUT
+        while time.time() < deadline:
+            self._ensure_tcp_adb_connection()
+            devices = [
+                d for d in self._list_adb_devices(start_server=False)
+                if d.startswith(("emulator-", "127.0.0.1:", "localhost:"))
+            ]
+            for device in devices:
+                try:
+                    boot = subprocess.run(
+                        ["adb", "-s", device, "shell", "getprop", "sys.boot_completed"],
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
+                    if boot.stdout.strip() == "1":
+                        self._prepare_device(device)
+                        self._ensure_tcp_adb_connection()
+                        current_devices = self._list_adb_devices(start_server=False)
+                        self.ADB_DEVICE = (
+                            self._preferred_adb_device(current_devices)
+                            if current_devices
+                            else device
+                        )
+                        print(f"[AppiumRunner] Emulator boot completed: {self.ADB_DEVICE}")
+                        return True
+                except Exception:
+                    pass
+            time.sleep(5)
+
+        print(f"[AppiumRunner] Emulator boot timeout after {self.EMULATOR_BOOT_TIMEOUT}s")
         return False
+
+    def _prepare_device(self, device: str) -> None:
+        """Make the emulator less flaky for UI automation."""
+        commands = [
+            ["adb", "-s", device, "shell", "settings", "put", "global", "window_animation_scale", "0"],
+            ["adb", "-s", device, "shell", "settings", "put", "global", "transition_animation_scale", "0"],
+            ["adb", "-s", device, "shell", "settings", "put", "global", "animator_duration_scale", "0"],
+            ["adb", "-s", device, "shell", "input", "keyevent", "82"],
+        ]
+        for cmd in commands:
+            try:
+                subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            except Exception:
+                pass
 
     def _is_appium_running(self) -> bool:
         """检查 Appium 服务器是否在运行（兼容 Appium 1/2 端点）。"""
@@ -289,6 +502,10 @@ class AppiumRunner:
     def _start_appium_server(self) -> bool:
         """启动 Appium 服务器（本地）。"""
         try:
+            log_dir = self.results_dir / "_logs"
+            log_dir.mkdir(parents=True, exist_ok=True)
+            log_path = log_dir / "appium_server.log"
+            self._appium_log_handle = open(log_path, "ab", buffering=0)
             cmd = [
                 "appium",
                 "server",
@@ -298,10 +515,14 @@ class AppiumRunner:
             ]
             self._appium_process = subprocess.Popen(
                 cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=self._appium_log_handle,
+                stderr=subprocess.STDOUT,
+                env=os.environ.copy(),
             )
-            print(f"[AppiumRunner] Appium started on {self.APPIUM_HOST}:{self.APPIUM_PORT}")
+            print(
+                f"[AppiumRunner] Appium started on {self.APPIUM_HOST}:{self.APPIUM_PORT}; "
+                f"log={log_path}"
+            )
             time.sleep(3)  # 等待服务启动
             return self._is_appium_running()
         except Exception as e:
@@ -347,6 +568,7 @@ class AppiumRunner:
         
         print(f"[AppiumRunner] Package name: {package_name}")
         print(f"[AppiumRunner] App activity: {app_activity}")
+        adb_server_port = os.getenv("ADB_SERVER_PORT")
 
         # 构建 AppiumOptions 或 desired capabilities（根据客户端可用性回退）
         if AppiumOptions is not None:
@@ -360,6 +582,19 @@ class AppiumRunner:
             options.set_capability("appium:automationName", "UiAutomator2")
             options.set_capability("appium:autoGrantPermissions", True)
             options.set_capability("appium:newCommandTimeout", 300)
+            options.set_capability("appium:adbExecTimeout", int(os.getenv("ADB_EXEC_TIMEOUT", "120000")))
+            options.set_capability(
+                "appium:uiautomator2ServerLaunchTimeout",
+                int(os.getenv("UIAUTOMATOR2_SERVER_LAUNCH_TIMEOUT", "120000")),
+            )
+            options.set_capability(
+                "appium:uiautomator2ServerInstallTimeout",
+                int(os.getenv("UIAUTOMATOR2_SERVER_INSTALL_TIMEOUT", "120000")),
+            )
+            options.set_capability("appium:disableWindowAnimation", True)
+            options.set_capability("appium:systemPort", int(os.getenv("APPIUM_SYSTEM_PORT", "8200")))
+            if adb_server_port:
+                options.set_capability("appium:adbPort", int(adb_server_port))
             use_options = True
         else:
             # 回退到旧式 desiredCapabilities 字典
@@ -372,15 +607,26 @@ class AppiumRunner:
                 "automationName": "UiAutomator2",
                 "autoGrantPermissions": True,
                 "newCommandTimeout": 300,
+                "adbExecTimeout": int(os.getenv("ADB_EXEC_TIMEOUT", "120000")),
+                "uiautomator2ServerLaunchTimeout": int(
+                    os.getenv("UIAUTOMATOR2_SERVER_LAUNCH_TIMEOUT", "120000")
+                ),
+                "uiautomator2ServerInstallTimeout": int(
+                    os.getenv("UIAUTOMATOR2_SERVER_INSTALL_TIMEOUT", "120000")
+                ),
+                "disableWindowAnimation": True,
+                "systemPort": int(os.getenv("APPIUM_SYSTEM_PORT", "8200")),
             }
+            if adb_server_port:
+                caps["adbPort"] = int(adb_server_port)
             use_options = False
 
         # 连接到 Appium（兼容 Appium 1/2）
-        candidate_urls = [
-            f"http://{self.APPIUM_HOST}:{self.APPIUM_PORT}",
-            f"http://{self.APPIUM_HOST}:{self.APPIUM_PORT}/wd/hub",
-        ]
-        last_error = None
+        base_url = f"http://{self.APPIUM_HOST}:{self.APPIUM_PORT}"
+        candidate_urls = [base_url]
+        if self._status_endpoint_ok(f"{base_url}/wd/hub/status"):
+            candidate_urls.append(f"{base_url}/wd/hub")
+        errors = []
         for appium_url in candidate_urls:
             try:
                 if AppiumOptions is not None and use_options:
@@ -391,9 +637,18 @@ class AppiumRunner:
                 print(f"[AppiumRunner] Connected to Appium endpoint: {appium_url}")
                 return driver
             except Exception as exc:
-                last_error = exc
+                errors.append(f"{appium_url}: {type(exc).__name__}: {exc}")
 
-        raise RuntimeError(f"Failed to connect to Appium endpoints: {last_error}")
+        raise RuntimeError(f"Failed to connect to Appium endpoints: {' || '.join(errors)}")
+
+    def _status_endpoint_ok(self, url: str) -> bool:
+        try:
+            from urllib.request import urlopen
+
+            response = urlopen(url, timeout=2)
+            return response.status == 200
+        except Exception:
+            return False
 
     def _save_ui_tree(
         self,
@@ -428,6 +683,12 @@ class AppiumRunner:
             try:
                 self._appium_process.terminate()
                 self._appium_process.wait(timeout=5)
+            except Exception:
+                pass
+        for handle in (self._appium_log_handle, self._emulator_log_handle):
+            try:
+                if handle:
+                    handle.close()
             except Exception:
                 pass
 

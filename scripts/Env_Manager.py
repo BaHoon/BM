@@ -25,6 +25,14 @@ import time
 from pathlib import Path
 from typing import Optional
 
+try:
+    from runtime_env import ensure_android_runtime_env
+except Exception:
+    def ensure_android_runtime_env():
+        return None
+
+ensure_android_runtime_env()
+
 
 class EnvManager:
     """工作空间生命周期管理器：重置 → 编译 → APK 路径查询。"""
