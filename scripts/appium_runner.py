@@ -5,13 +5,14 @@ Appium Runner - 移动应用 UI 自动化测试执行引擎
 职责：
   1. 检查/启动 Appium 服务器
   2. 连接到 ADB 设备（本地模拟器或真机）
-  3. 执行 test_script.py（注入 driver/take_screenshot/AppiumBy 上下文）
-  4. 采集截图 → 保存到 results/app_name/task_id/screenshots/
-  5. 返回执行结果（success, screenshots[], log）
+  3. 使用 UI crawler 自动寻找目标页面
+  4. 抓取目标页面 XML 和截图 → 保存到 results/app_name/task_id/
+  5. 返回执行结果（success, target_page, log）
 """
 
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -20,8 +21,17 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List
+import xml.etree.ElementTree as ET
 
 from appium import webdriver
+try:
+    from appium.webdriver.common.appiumby import AppiumBy
+except Exception:
+    AppiumBy = None
+try:
+    from selenium.webdriver.common.by import By
+except Exception:
+    By = None
 # AppiumOptions: different appium client versions expose this in different locations.
 # Try several import paths and fall back to None if not available.
 try:
@@ -35,10 +45,6 @@ except Exception:
         except Exception:
             AppiumOptions = None
 
-from appium.webdriver.common.appiumby import AppiumBy
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-
 try:
     from runtime_env import ensure_android_runtime_env
 except Exception:
@@ -46,6 +52,8 @@ except Exception:
         return None
 
 ensure_android_runtime_env()
+
+from tools.level2_utils import build_level2_spec, match_target_xml, normalize_text
 
 
 class AppiumRunner:
@@ -68,6 +76,7 @@ class AppiumRunner:
         self.ADB_DEVICE = os.getenv("ADB_DEVICE", self.ADB_DEVICE)
         self.avd_name = os.getenv("BM_AVD_NAME") or os.getenv("ANDROID_AVD_NAME") or self.AVD_NAME
         self.driver: Optional[webdriver.Remote] = None
+        self._target_package_name: Optional[str] = None
         self._appium_process: Optional[subprocess.Popen] = None
         self._emulator_process: Optional[subprocess.Popen] = None
         self._appium_log_handle = None
@@ -97,7 +106,7 @@ class AppiumRunner:
         timeout: int = 300,
     ) -> Dict:
         """
-        执行一个测试任务：启动应用 → 运行 test_script → 收集截图。
+        执行一个测试任务：启动应用 → crawler 自动寻找目标页 → 收集目标页 XML。
 
         Args:
             combined_id: 任务标识，格式 "app_name/task_id"
@@ -129,8 +138,14 @@ class AppiumRunner:
 
         t0 = time.time()
         screenshots = []
-        ui_trees = []
-        log = ""
+        target_page = {
+            "found": False,
+            "current_activity": None,
+            "ui_dom_tree_path": None,
+            "screenshot": None,
+            "matched_nodes": [],
+            "source": None,
+        }
 
         try:
             # 步骤 1: 验证 ADB 设备
@@ -140,7 +155,8 @@ class AppiumRunner:
                     "elapsed_time": round(time.time() - t0, 2),
                     "screenshots": [],
                     "log": "ADB device not available",
-                    "test_type": "custom",
+                    "test_type": "crawler",
+                    "target_page": target_page,
                     "timestamp": datetime.now().isoformat(),
                 }
 
@@ -148,85 +164,79 @@ class AppiumRunner:
             self.driver = self._create_driver(apk_path, app_name, task_id)
             print(f"[AppiumRunner] Application started: {app_name}")
 
-            # 步骤 3: 加载并执行 test_script
-            test_script_path = self.data_dir / app_name / task_id / "test_script.py"
-            if not test_script_path.exists():
-                self.driver.quit()
-                return {
-                    "success": False,
-                    "elapsed_time": round(time.time() - t0, 2),
-                    "screenshots": [],
-                    "log": f"test_script not found: {test_script_path}",
-                    "test_type": "custom",
-                    "timestamp": datetime.now().isoformat(),
-                }
+            meta = self._load_meta(app_name, task_id)
+            level2_spec = build_level2_spec(meta)
 
-            # 创建截图保存目录
+            # 创建截图和目标 XML 保存目录
             screenshot_dir = self.results_dir / app_name / task_id / "screenshots"
             screenshot_dir.mkdir(parents=True, exist_ok=True)
-            ui_tree_dir = self.results_dir / app_name / task_id / "ui_trees"
-            ui_tree_dir.mkdir(parents=True, exist_ok=True)
+            ui_dir = self.results_dir / app_name / task_id / "ui_context"
+            ui_dir.mkdir(parents=True, exist_ok=True)
 
-            # 准备注入的全局环境
-            screenshot_count = [0]  # 使用列表以允许嵌套函数修改
-
-            def take_screenshot(name: str) -> str:
-                """截图函数，注入到 test_script 的全局环境中。"""
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                idx = screenshot_count[0]
-                filename = f"{idx:02d}_{name}_{timestamp}.png"
-                filepath = screenshot_dir / filename
+            def capture_target_if_match(source_label: str, screenshot_path: Optional[str] = None) -> bool:
+                """如果当前页面是目标页，只保存这个目标页 XML。"""
+                if target_page["found"]:
+                    return True
                 try:
-                    self.driver.save_screenshot(str(filepath))
-                    ui_tree_path = self._save_ui_tree(ui_tree_dir, idx, name, timestamp)
-                    if ui_tree_path:
-                        ui_trees.append({
-                            "name": name,
-                            "path": str(ui_tree_path),
-                            "screenshot": str(filepath),
-                        })
-                    screenshot_count[0] += 1
-                    screenshots.append(str(filepath))
-                    print(f"  [screenshot] {filename}")
-                    return str(filepath)
-                except Exception as e:
-                    print(f"  [screenshot] ERROR: {e}")
-                    raise
+                    xml_text = self.driver.page_source
+                    self._capture_debug_step(ui_dir, source_label, xml_text)
+                    match = match_target_xml(xml_text, level2_spec)
+                    if not match.get("matched"):
+                        return False
 
-            # 注入全局环境
-            globals_dict = {
-                "driver": self.driver,
-                "take_screenshot": take_screenshot,
-                "AppiumBy": AppiumBy,
-                "time": time,
-                "WebDriverWait": WebDriverWait,
-                "EC": EC,
-            }
+                    if screenshot_path is None:
+                        filepath = screenshot_dir / "target_page.png"
+                        self.driver.save_screenshot(str(filepath))
+                        screenshot_path = str(filepath)
+                        screenshots.append(screenshot_path)
 
-            # 执行 test_script
-            print(f"[AppiumRunner] Running test_script: {test_script_path}")
-            with open(test_script_path, "r", encoding="utf-8") as f:
-                test_code = f.read()
+                    xml_path = ui_dir / "target_page.xml"
+                    xml_path.write_text(xml_text, encoding="utf-8")
+                    target_page.update({
+                        "found": True,
+                        "current_activity": self._safe_current_activity(),
+                        "ui_dom_tree_path": str(xml_path),
+                        "screenshot": screenshot_path,
+                        "matched_nodes": match.get("matched_nodes", []),
+                        "source": source_label,
+                    })
+                    (ui_dir / "target_page.json").write_text(
+                        json.dumps(target_page, ensure_ascii=False, indent=2),
+                        encoding="utf-8",
+                    )
+                    print(f"  [target-page] FOUND via {source_label}")
+                    return True
+                except Exception as exc:
+                    print(f"  [target-page] WARN: {exc}")
+                    return False
 
-            exec(test_code, globals_dict)
-            print(f"[AppiumRunner] test_script completed successfully")
-            final_ui_tree = self._save_ui_tree(ui_tree_dir, screenshot_count[0], "final_state")
-            if final_ui_tree:
-                ui_trees.append({
-                    "name": "final_state",
-                    "path": str(final_ui_tree),
-                    "screenshot": None,
-                })
+            # 步骤 3: 使用 crawler 自动找目标页面，不执行人工脚本。
+            crawler_result = self._crawl_to_target_page(
+                level2_spec=level2_spec,
+                capture_target=capture_target_if_match,
+                timeout=timeout,
+            )
+            screenshots.extend(crawler_result.get("screenshots", []))
+            crawler_debug = {}
+            if not target_page["found"]:
+                crawler_debug = self._capture_crawler_debug(
+                    ui_dir=ui_dir,
+                    screenshot_dir=screenshot_dir,
+                    level2_spec=level2_spec,
+                    steps=crawler_result.get("steps", []),
+                )
 
             elapsed = round(time.time() - t0, 2)
             return {
-                "success": True,
+                "success": bool(target_page["found"]),
                 "elapsed_time": elapsed,
                 "screenshots": screenshots,
-                "ui_trees": ui_trees,
-                "final_ui_tree": str(final_ui_tree) if final_ui_tree else None,
-                "log": f"Test passed. {len(screenshots)} screenshots captured.",
-                "test_type": "custom",
+                "log": crawler_result.get("log", ""),
+                "crawler_steps": crawler_result.get("steps", []),
+                "crawler_debug": crawler_debug,
+                "test_type": "crawler",
+                "target_page": target_page,
+                "level2_spec": level2_spec,
                 "timestamp": datetime.now().isoformat(),
             }
 
@@ -238,10 +248,9 @@ class AppiumRunner:
                 "success": False,
                 "elapsed_time": elapsed,
                 "screenshots": screenshots,
-                "ui_trees": ui_trees,
-                "final_ui_tree": ui_trees[-1]["path"] if ui_trees else None,
                 "log": error_msg,
-                "test_type": "custom",
+                "test_type": "crawler",
+                "target_page": target_page,
                 "timestamp": datetime.now().isoformat(),
             }
 
@@ -551,7 +560,7 @@ class AppiumRunner:
                     with open(meta_path, "r", encoding="utf-8") as f:
                         meta = json.load(f)
                         package_name = meta.get("app_package")
-                        app_activity = meta.get("target_activity")
+                        app_activity = meta.get("app_activity") or meta.get("target_activity")
                 except Exception as e:
                     print(f"[AppiumRunner] Warning: Failed to read meta.json: {e}")
 
@@ -565,6 +574,7 @@ class AppiumRunner:
             package_name = package_map.get(app_name, f"com.example.{app_name}")
         if not app_activity:
             app_activity = f"{package_name}.MainActivity"
+        self._target_package_name = package_name
         
         print(f"[AppiumRunner] Package name: {package_name}")
         print(f"[AppiumRunner] App activity: {app_activity}")
@@ -641,6 +651,405 @@ class AppiumRunner:
 
         raise RuntimeError(f"Failed to connect to Appium endpoints: {' || '.join(errors)}")
 
+    def _load_meta(self, app_name: str, task_id: str) -> dict:
+        meta_path = self.data_dir / app_name / task_id / "meta.json"
+        if not meta_path.exists():
+            return {}
+        try:
+            with open(meta_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"[AppiumRunner] Warning: Failed to read meta.json: {e}")
+            return {}
+
+    def _crawl_to_target_page(self, level2_spec: dict, capture_target, timeout: int) -> dict:
+        """
+        自动探索 App，只保存最终命中的目标页面 XML。
+
+        沿途 XML 只在内存中用于导航，不作为 Level 2 评分输入。
+        """
+        t0 = time.time()
+        screenshots: list[str] = []
+        visited: set[str] = set()
+        tried: set[str] = set()
+        steps = 0
+        max_steps = int(os.getenv("UI_CRAWLER_MAX_STEPS", "18"))
+        dead_end_scrolls = int(os.getenv("UI_CRAWLER_DEAD_END_SCROLLS", "5"))
+        scroll_streak = 0
+        prefer_scroll_up_steps = 0
+        log_lines: list[str] = []
+
+        while time.time() - t0 < timeout and steps < max_steps:
+            steps += 1
+            time.sleep(1)
+
+            if capture_target(f"crawler:step{steps}"):
+                return {
+                    "success": True,
+                    "screenshots": screenshots,
+                    "log": f"Target page found by crawler in {steps} steps.",
+                    "steps": log_lines,
+                }
+
+            try:
+                xml_text = self.driver.page_source
+            except Exception as exc:
+                return {"success": False, "screenshots": screenshots, "log": f"crawler page_source failed: {exc}"}
+
+            current_package = self._safe_current_package()
+            if self._is_outside_target_app(current_package):
+                popup = self._find_popup_candidate(xml_text, level2_spec)
+                if popup and self._tap_bounds(popup["bounds"]):
+                    log_lines.append(
+                        f"step {steps}: dismiss external {current_package} "
+                        f"{popup.get('label', '')[:80]}"
+                    )
+                    continue
+                if self._return_to_target_app():
+                    log_lines.append(f"step {steps}: return to target app from {current_package}")
+                    continue
+                log_lines.append(f"step {steps}: outside target app {current_package}")
+                break
+
+            signature = self._xml_signature(xml_text)
+            if signature in visited and len(visited) > 0:
+                if not self._try_scroll():
+                    log_lines.append(f"step {steps}: repeated page, no scroll")
+            visited.add(signature)
+
+            popup = self._find_popup_candidate(xml_text, level2_spec)
+            candidate = popup or self._choose_click_candidate(xml_text, level2_spec, tried)
+            if not candidate:
+                if scroll_streak >= dead_end_scrolls and self._has_back_candidate(xml_text):
+                    if self._go_back():
+                        log_lines.append(f"step {steps}: back from dead end")
+                        scroll_streak = 0
+                        prefer_scroll_up_steps = 3
+                        tried.clear()
+                        continue
+                if prefer_scroll_up_steps > 0 and self._try_scroll(direction="up"):
+                    prefer_scroll_up_steps -= 1
+                    scroll_streak += 1
+                    log_lines.append(f"step {steps}: scroll up")
+                    continue
+                if self._try_scroll(direction="down"):
+                    scroll_streak += 1
+                    log_lines.append(f"step {steps}: scroll")
+                    continue
+                if self._has_back_candidate(xml_text) and self._go_back():
+                    log_lines.append(f"step {steps}: back after no scroll")
+                    scroll_streak = 0
+                    prefer_scroll_up_steps = 3
+                    tried.clear()
+                    continue
+                log_lines.append(f"step {steps}: no clickable candidate")
+                break
+
+            tried.add(candidate["key"])
+            if self._tap_candidate(candidate):
+                scroll_streak = 0
+                label = candidate.get("label", "")
+                log_lines.append(f"step {steps}: tap {label[:80]} {candidate.get('bounds', '')}")
+                continue
+
+            log_lines.append(f"step {steps}: tap failed {candidate.get('label', '')[:80]}")
+            break
+
+        return {
+            "success": False,
+            "screenshots": screenshots,
+            "log": "Target page not found by crawler. " + " | ".join(log_lines),
+            "steps": log_lines,
+        }
+
+    def _capture_crawler_debug(
+        self,
+        ui_dir: Path,
+        screenshot_dir: Path,
+        level2_spec: dict,
+        steps: list[str],
+    ) -> dict:
+        """Save only the final failed screen for debugging; scoring ignores it."""
+        debug = {
+            "current_package": self._safe_current_package(),
+            "current_activity": self._safe_current_activity(),
+            "last_ui_dom_tree_path": None,
+            "last_screenshot": None,
+            "last_page_match": None,
+            "steps": steps,
+        }
+        try:
+            xml_text = self.driver.page_source
+            xml_path = ui_dir / "crawler_last.xml"
+            xml_path.write_text(xml_text, encoding="utf-8")
+            debug["last_ui_dom_tree_path"] = str(xml_path)
+            debug["last_page_match"] = match_target_xml(xml_text, level2_spec)
+        except Exception as exc:
+            debug["xml_error"] = f"{type(exc).__name__}: {exc}"
+
+        try:
+            screenshot_path = screenshot_dir / "crawler_last.png"
+            self.driver.save_screenshot(str(screenshot_path))
+            debug["last_screenshot"] = str(screenshot_path)
+        except Exception as exc:
+            debug["screenshot_error"] = f"{type(exc).__name__}: {exc}"
+
+        try:
+            (ui_dir / "crawler_last.json").write_text(
+                json.dumps(debug, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
+        return debug
+
+    def _capture_debug_step(self, ui_dir: Path, source_label: str, xml_text: str) -> None:
+        if os.getenv("UI_CRAWLER_DEBUG_STEPS", "0") != "1":
+            return
+        safe_label = re.sub(r"[^0-9A-Za-z_.-]+", "_", source_label)
+        try:
+            (ui_dir / f"{safe_label}.xml").write_text(xml_text, encoding="utf-8")
+        except Exception:
+            pass
+
+    def _find_popup_candidate(self, xml_text: str, level2_spec: dict) -> Optional[dict]:
+        popup_terms = [normalize_text(x) for x in level2_spec.get("popup_terms", [])]
+        candidates = self._click_candidates_from_xml(xml_text)
+        for c in candidates:
+            label = normalize_text(c.get("label", ""))
+            if any(term and (term == label or term in label) for term in popup_terms):
+                return c
+        return None
+
+    def _choose_click_candidate(self, xml_text: str, level2_spec: dict, tried: set[str]) -> Optional[dict]:
+        candidates = self._click_candidates_from_xml(xml_text)
+        if not candidates:
+            return None
+
+        nav_terms = [normalize_text(x) for x in level2_spec.get("navigation_terms", [])]
+        score_terms = [normalize_text(x) for x in level2_spec.get("score_terms", [])]
+
+        scored = []
+        for c in candidates:
+            if c["key"] in tried:
+                continue
+            label = normalize_text(c.get("label", ""))
+            score = 0
+            for term in score_terms:
+                if term and term in label:
+                    score += 8
+            for term in nav_terms:
+                if term and term in label:
+                    score += 4
+            if score <= 0:
+                continue
+            if c.get("clickable") == "true":
+                score += 2
+            area = c.get("area", 0)
+            if 0 < area <= 40_000:
+                score += 3
+            elif area >= 350_000:
+                score -= 5
+            if label in {"back", "返回", "navigate up"}:
+                score -= 10
+            scored.append((score, area, c))
+
+        if not scored:
+            return None
+        scored.sort(key=lambda item: (-item[0], item[1]))
+        return scored[0][2]
+
+    def _click_candidates_from_xml(self, xml_text: str) -> list[dict]:
+        try:
+            root = ET.fromstring(xml_text)
+        except Exception:
+            return []
+
+        candidates: list[dict] = []
+        for node in root.iter():
+            attrs = node.attrib
+            bounds = attrs.get("bounds")
+            parsed_bounds = self._parse_bounds(bounds)
+            if not bounds or not parsed_bounds:
+                continue
+
+            clickable = attrs.get("clickable", "false").lower()
+            enabled = attrs.get("enabled", "true").lower()
+            displayed = attrs.get("displayed", "true").lower()
+            if enabled == "false" or displayed == "false":
+                continue
+            if clickable != "true":
+                continue
+
+            label = self._label_from_node(node)
+            if not label.strip():
+                continue
+
+            candidates.append({
+                "bounds": bounds,
+                "clickable": clickable,
+                "label": label,
+                "area": self._bounds_area(parsed_bounds),
+                "key": f"{bounds}:{normalize_text(label)}",
+            })
+        return candidates
+
+    def _bounds_area(self, bounds: tuple[int, int, int, int]) -> int:
+        x1, y1, x2, y2 = bounds
+        return max(0, x2 - x1) * max(0, y2 - y1)
+
+    def _label_from_node(self, node: ET.Element) -> str:
+        """Compose often puts visible text on non-clickable children."""
+        label_parts: list[str] = []
+        seen: set[str] = set()
+        for current in node.iter():
+            for attr in ("text", "content-desc", "resource-id"):
+                value = current.attrib.get(attr, "")
+                if not value:
+                    continue
+                normalized = normalize_text(value)
+                if not normalized or normalized in seen:
+                    continue
+                seen.add(normalized)
+                label_parts.append(value)
+            if len(label_parts) >= 8:
+                break
+        return " ".join(label_parts)
+
+    def _has_back_candidate(self, xml_text: str) -> bool:
+        back_terms = {"back", "go back", "navigate up", "返回"}
+        for candidate in self._click_candidates_from_xml(xml_text):
+            label = normalize_text(candidate.get("label", ""))
+            if label in back_terms or any(term in label for term in back_terms):
+                return True
+        return False
+
+    def _go_back(self) -> bool:
+        try:
+            self.driver.back()
+            time.sleep(1)
+            return True
+        except Exception:
+            return False
+
+    def _tap_candidate(self, candidate: dict) -> bool:
+        label = normalize_text(candidate.get("label", ""))
+        if AppiumBy is not None:
+            self._set_implicit_wait(0)
+            try:
+                for phrase in ("Go to settings", "Settings"):
+                    if normalize_text(phrase) in label:
+                        try:
+                            self.driver.find_element(AppiumBy.ACCESSIBILITY_ID, phrase).click()
+                            return True
+                        except Exception:
+                            pass
+            finally:
+                self._set_implicit_wait(10)
+        return self._tap_bounds(candidate.get("bounds", ""))
+
+    def _tap_bounds(self, bounds: str) -> bool:
+        parsed = self._parse_bounds(bounds)
+        if not parsed:
+            return False
+        if By is not None:
+            self._set_implicit_wait(0)
+            try:
+                for element in self.driver.find_elements(By.XPATH, f"//*[@bounds='{bounds}']"):
+                    if str(element.get_attribute("clickable")).lower() == "true":
+                        element.click()
+                        return True
+            except Exception:
+                pass
+            finally:
+                self._set_implicit_wait(10)
+        x1, y1, x2, y2 = parsed
+        x = int((x1 + x2) / 2)
+        y = int((y1 + y2) / 2)
+        if self._bounds_area(parsed) <= 40_000 and self._tap_with_driver_tap(x, y):
+            return True
+        try:
+            self.driver.execute_script("mobile: clickGesture", {"x": x, "y": y})
+            return True
+        except Exception:
+            if self._tap_with_driver_tap(x, y):
+                return True
+            print("[AppiumRunner] tap failed")
+            return False
+
+    def _tap_with_driver_tap(self, x: int, y: int) -> bool:
+        try:
+            self.driver.tap([(x, y)])
+            return True
+        except Exception:
+            return False
+
+    def _set_implicit_wait(self, seconds: int) -> None:
+        try:
+            self.driver.implicitly_wait(seconds)
+        except Exception:
+            pass
+
+    def _try_scroll(self, direction: str = "down") -> bool:
+        try:
+            size = self.driver.get_window_size()
+            width = int(size.get("width", 0))
+            height = int(size.get("height", 0))
+            if width <= 0 or height <= 0:
+                return False
+            self.driver.execute_script("mobile: scrollGesture", {
+                "left": int(width * 0.1),
+                "top": int(height * 0.2),
+                "width": int(width * 0.8),
+                "height": int(height * 0.6),
+                "direction": direction,
+                "percent": 0.7,
+            })
+            return True
+        except Exception:
+            return False
+
+    def _parse_bounds(self, bounds: str) -> Optional[tuple[int, int, int, int]]:
+        m = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", bounds or "")
+        if not m:
+            return None
+        return tuple(int(x) for x in m.groups())
+
+    def _xml_signature(self, xml_text: str) -> str:
+        return str(hash(xml_text[:5000]))
+
+    def _safe_current_activity(self) -> Optional[str]:
+        try:
+            return self.driver.current_activity
+        except Exception:
+            return None
+
+    def _safe_current_package(self) -> Optional[str]:
+        try:
+            return self.driver.current_package
+        except Exception:
+            return None
+
+    def _is_outside_target_app(self, current_package: Optional[str]) -> bool:
+        if not self._target_package_name or not current_package:
+            return False
+        return current_package != self._target_package_name
+
+    def _return_to_target_app(self) -> bool:
+        if not self.driver or not self._target_package_name:
+            return False
+        try:
+            self.driver.back()
+        except Exception:
+            pass
+        try:
+            self.driver.activate_app(self._target_package_name)
+            time.sleep(1)
+            return True
+        except Exception as exc:
+            print(f"[AppiumRunner] failed to activate target app: {exc}")
+            return False
+
     def _status_endpoint_ok(self, url: str) -> bool:
         try:
             from urllib.request import urlopen
@@ -649,28 +1058,6 @@ class AppiumRunner:
             return response.status == 200
         except Exception:
             return False
-
-    def _save_ui_tree(
-        self,
-        ui_tree_dir: Path,
-        index: int,
-        name: str,
-        timestamp: Optional[str] = None,
-    ) -> Optional[Path]:
-        """保存当前页面 UI hierarchy，供 Level 2 节点匹配使用。"""
-        if not self.driver:
-            return None
-        timestamp = timestamp or datetime.now().strftime("%Y%m%d_%H%M%S")
-        safe_name = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in name)[:80]
-        path = ui_tree_dir / f"{index:02d}_{safe_name}_{timestamp}.xml"
-        try:
-            source = self.driver.page_source or ""
-            path.write_text(source, encoding="utf-8")
-            print(f"  [ui-tree] {path.name}")
-            return path
-        except Exception as exc:
-            print(f"  [ui-tree] ERROR: {exc}")
-            return None
 
     def __del__(self):
         """清理：关闭驱动和 Appium 进程。"""

@@ -40,7 +40,6 @@ from typing import Optional
 _SCRIPTS_DIR = Path(__file__).parent
 sys.path.insert(0, str(_SCRIPTS_DIR))
 
-from agent_runner import AgentRunner
 from Env_Manager  import EnvManager
 from Evaluator    import Evaluator
 from logger import ExperimentLogger, ExperimentRecord
@@ -184,6 +183,8 @@ class ExperimentLauncher:
                     print(f"  [ground_truth] FAIL: {exc}")
                     return
             else:
+                from agent_runner import AgentRunner
+
                 agent = AgentRunner(
                     model=model,
                     strategy=strategy,

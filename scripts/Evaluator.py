@@ -7,7 +7,7 @@ Evaluator.py - CSR & VSM 双流评测引擎
       检查 APK 是否编译成功 → 计算 CSR (Compilation Success Rate)
 
   Stream 2 (Dynamic / Functional + Visual):
-      2a. 功能性验证：调用 data/app_name/task_xxx/test_script.py（UI 树硬核校验）
+      2a. 功能性验证：读取 Appium crawler 的目标页 XML
       2b. 视觉性验证：若 meta.json 中 eval_type == "visual"，
                      将截图传给 VLM 打分 → 计算 VSM (Visual Success Metric)
 
@@ -23,9 +23,7 @@ import json
 import hashlib
 import os
 import re
-import subprocess
 import sys
-import time
 from pathlib import Path
 from typing import Optional
 import xml.etree.ElementTree as ET
@@ -33,7 +31,7 @@ import xml.etree.ElementTree as ET
 _SCRIPTS_DIR = Path(__file__).parent
 sys.path.insert(0, str(_SCRIPTS_DIR))
 
-from llm_client import LLMClient, has_configured_api_key
+from tools.level2_utils import build_level2_spec, match_target_xml
 
 
 class Evaluator:
@@ -56,7 +54,7 @@ class Evaluator:
         self.data_dir    = root / data_dir
         self.results_dir = root / results_dir
         self.vlm_model   = vlm_model
-        self._vlm: Optional[LLMClient] = None   # 懒加载，仅视觉任务才用
+        self._vlm: Optional[object] = None   # 懒加载，仅视觉任务才用
 
     # ----------------------------------------------------------------------- #
     #  主入口
@@ -266,8 +264,7 @@ class Evaluator:
         screenshots: Optional[list[str]],
     ) -> tuple[dict, bool]:
         """
-        功能性校验优先使用 Appium 执行结果，避免注入式脚本被 subprocess 误判。
-        若无 Appium 结果，且脚本可独立执行，则回退到 subprocess。
+        功能性校验使用 Appium crawler 执行结果；不再运行人工 UI 脚本。
         """
         level2 = self._score_level2(app_name, task_id, meta)
         appium_result = self._load_appium_result(app_name, task_id)
@@ -283,7 +280,7 @@ class Evaluator:
                 "level3_score": None,
                 "elapsed_s":   appium_result.get("elapsed_time"),
                 "shots_used":  len(shots),
-                "ui_trees_used": len(level2.get("ui_tree_paths", [])),
+                "target_page_xml": level2.get("target_xml_path"),
                 "test_type":   appium_result.get("test_type", "custom"),
                 "timestamp":   appium_result.get("timestamp"),
                 "appium_log":  (appium_log or "")[-2000:],
@@ -301,8 +298,8 @@ class Evaluator:
                 "level2_detail": level2,
                 "level3_score": None,
                 "shots_used": len(screenshots),
-                "ui_trees_used": len(level2.get("ui_tree_paths", [])),
-                "note":       "appium_result.json missing; Level 2 evaluated from saved UI trees or file fallback",
+                "target_page_xml": level2.get("target_xml_path"),
+                "note":       "appium_result.json missing; Level 2 evaluated from target-page XML or file fallback",
             }
             print(f"  [S2-func] level2={level2['score']}  source=screenshots_only")
             return detail, passed
@@ -321,78 +318,18 @@ class Evaluator:
             print("  [S2-func] FAIL  source=appium_log_only")
             return detail, False
 
-        test_script = self.data_dir / app_name / task_id / "test_script.py"
-        if not test_script.exists():
-            print(f"  [S2-func] test_script.py not found: {test_script}")
-            return {
-                "skipped": True,
-                "reason": "test_script.py not found",
-                "level2_score": level2["score"],
-                "level2_reason": level2["reason"],
-                "level2_detail": level2,
-                "level3_score": None,
-            }, False
-
-        if self._requires_appium_runtime(test_script):
-            print("  [S2-func] SKIP  script requires Appium runtime injection")
-            return {
-                "passed": False,
-                "skipped": True,
-                "level2_score": level2["score"],
-                "level2_reason": level2["reason"],
-                "level2_detail": level2,
-                "level3_score": None,
-                "error": "appium_runtime_required",
-                "reason": "test_script expects injected driver/take_screenshot context",
-            }, False
-
-        print(f"  [S2-func] Running test_script: {test_script}")
-        t0 = time.time()
-        try:
-            proc = subprocess.run(
-                [sys.executable, str(test_script)],
-                capture_output=True,
-                text=True,
-                timeout=120,
-                encoding="utf-8",
-                errors="replace",
-            )
-            elapsed = round(time.time() - t0, 2)
-            passed  = proc.returncode == 0
-            detail  = {
-                "passed":      level2["score"] == 2 if proc.returncode == 0 else False,
-                "level2_score": level2["score"],
-                "level2_reason": level2["reason"],
-                "level2_detail": level2,
-                "level3_score": None,
-                "return_code": proc.returncode,
-                "elapsed_s":   elapsed,
-                "stdout":      proc.stdout[-3000:],
-                "stderr":      proc.stderr[-2000:],
-            }
-            print(f"  [S2-func] {'PASS' if passed else 'FAIL'}  RC={proc.returncode}  t={elapsed}s")
-            return detail, passed
-
-        except subprocess.TimeoutExpired:
-            print("  [S2-func] TIMEOUT")
-            return {
-                "passed": False,
-                "level2_score": level2["score"],
-                "level2_reason": level2["reason"],
-                "level2_detail": level2,
-                "level3_score": None,
-                "error": "timeout",
-            }, False
-        except Exception as exc:
-            print(f"  [S2-func] ERROR: {exc}")
-            return {
-                "passed": False,
-                "level2_score": level2["score"],
-                "level2_reason": level2["reason"],
-                "level2_detail": level2,
-                "level3_score": None,
-                "error": str(exc),
-            }, False
+        print("  [S2-func] appium_result.json missing")
+        return {
+            "passed": False,
+            "skipped": True,
+            "source": "appium_result_missing",
+            "level2_score": level2["score"],
+            "level2_reason": level2["reason"],
+            "level2_detail": level2,
+            "level3_score": None,
+            "error": "appium_result_missing",
+            "reason": "Level 2/functional scoring now relies on Appium crawler output.",
+        }, False
 
     # ----------------------------------------------------------------------- #
     #  Stream 2b: 视觉性验证（VLM 打分）
@@ -436,6 +373,8 @@ class Evaluator:
             base_detail["level3_reason"] = "Level 3 skipped: no valid screenshots available."
             print("  [S3-visual] SKIP  no valid screenshots")
             return base_detail, False, None
+
+        from llm_client import LLMClient, has_configured_api_key
 
         if not has_configured_api_key(self.vlm_model):
             base_detail["skipped"] = True
@@ -615,7 +554,7 @@ class Evaluator:
                 return "syntax_error"
             return "compile_error"
 
-        if stream2.get("error") == "appium_runtime_required":
+        if stream2.get("error") in {"appium_result_missing", "appium_runtime_required"}:
             return "missing_context"
 
         if stream2.get("error") or "exception" in log_lower or "crash" in log_lower:
@@ -638,73 +577,88 @@ class Evaluator:
     def _score_level2(self, app_name: str, task_id: str, meta: dict) -> dict:
         """
         Level 2 评分：
-          2 分：目标页面 UI 树中精确匹配关键节点属性。
-          1 分：UI 树未命中，但实际改动文件与 TODO1 golden mapping 命中。
-          0 分：UI 树未命中，且改动文件未命中 golden mapping。
+          2 分：crawler 找到的目标页面 XML 中精确匹配关键节点属性。
+          1 分：目标页 XML 未命中，但实际改动文件与 TODO1 golden mapping 命中。
+          0 分：目标页 XML 未命中，且改动文件未命中 golden mapping。
 
-        “列表较长”明确定义为 golden modified_files 数量 > 10。长列表允许
-        overlap/golden >= 0.2；短列表要求 overlap/predicted >= 0.3，以减少乱改文件
-        偶然碰撞带来的假阳性。
+        注意：这里只使用 crawler 最终认定的目标页 XML，不遍历沿途页面 XML。
         """
-        ui_tree_paths = self._collect_ui_tree_paths(app_name, task_id)
+        target_xml_path = self._collect_target_xml_path(app_name, task_id)
         expected_nodes = self._expected_level2_nodes(app_name, task_id, meta)
-        node_match = self._match_expected_nodes(ui_tree_paths, expected_nodes)
+        spec = build_level2_spec(meta)
+        node_match = None
+        xml_error = None
+
+        if target_xml_path and target_xml_path.exists():
+            node_match = self._match_expected_nodes([target_xml_path], expected_nodes)
+            if node_match is None:
+                try:
+                    xml_text = target_xml_path.read_text(encoding="utf-8", errors="replace")
+                    util_match = match_target_xml(xml_text, spec)
+                    if util_match.get("matched"):
+                        first = (util_match.get("matched_nodes") or [{}])[0]
+                        attr = first.get("attribute")
+                        node_match = {
+                            "tree_path": str(target_xml_path),
+                            "matched_attribute": attr,
+                            "expected": first.get("keyword"),
+                            "node": {attr: first.get("value", "")} if attr else {},
+                            "matched_nodes": util_match.get("matched_nodes", []),
+                        }
+                except Exception as exc:
+                    xml_error = str(exc)
+        else:
+            xml_error = "target_page_xml_missing"
+
         if node_match is not None:
             return {
                 "score": 2,
-                "reason": "UI 树中精确匹配到任务要求的关键节点属性。",
-                "ui_tree_paths": [str(p) for p in ui_tree_paths],
+                "reason": "目标页面 XML 中精确匹配到任务要求的关键节点属性。",
+                "target_xml_path": str(target_xml_path) if target_xml_path else None,
                 "expected_nodes": expected_nodes,
+                "level2_spec": spec,
                 "matched_node": node_match,
                 "file_fallback": None,
+                "xml_error": xml_error,
             }
 
         file_fallback = self._score_level2_file_fallback(app_name, task_id, meta)
         if file_fallback["passed"]:
             return {
                 "score": 1,
-                "reason": "UI 树未匹配关键节点，但实际改动文件命中标准答案关键文件。",
-                "ui_tree_paths": [str(p) for p in ui_tree_paths],
+                "reason": "目标页面 XML 未匹配关键节点，但实际改动文件命中标准答案关键文件。",
+                "target_xml_path": str(target_xml_path) if target_xml_path else None,
                 "expected_nodes": expected_nodes,
+                "level2_spec": spec,
                 "matched_node": None,
                 "file_fallback": file_fallback,
+                "xml_error": xml_error,
             }
 
         return {
             "score": 0,
-            "reason": "UI 树未匹配关键节点，实际改动文件也未达到标准答案命中阈值。",
-            "ui_tree_paths": [str(p) for p in ui_tree_paths],
+            "reason": "目标页面 XML 未匹配关键节点，实际改动文件也未达到标准答案命中阈值。",
+            "target_xml_path": str(target_xml_path) if target_xml_path else None,
             "expected_nodes": expected_nodes,
+            "level2_spec": spec,
             "matched_node": None,
             "file_fallback": file_fallback,
+            "xml_error": xml_error,
         }
 
-    def _collect_ui_tree_paths(self, app_name: str, task_id: str) -> list[Path]:
-        paths: list[Path] = []
-        appium_result = self._load_appium_result(app_name, task_id)
-        if appium_result:
-            for item in appium_result.get("ui_trees") or []:
-                p = Path(item.get("path", ""))
-                if p.exists():
-                    paths.append(p)
-            final_tree = appium_result.get("final_ui_tree")
-            if final_tree:
-                p = Path(final_tree)
-                if p.exists():
-                    paths.append(p)
+    def _collect_target_xml_path(self, app_name: str, task_id: str) -> Optional[Path]:
+        appium_result = self._load_appium_result(app_name, task_id) or {}
+        target_page = appium_result.get("target_page") or {}
+        xml_path = target_page.get("ui_dom_tree_path")
+        if xml_path:
+            p = Path(xml_path)
+            if p.exists():
+                return p
 
-        tree_dir = self.results_dir / app_name / task_id / "ui_trees"
-        if tree_dir.exists():
-            paths.extend(sorted(tree_dir.glob("*.xml")))
-
-        seen: set[str] = set()
-        unique: list[Path] = []
-        for p in paths:
-            key = str(p.resolve())
-            if key not in seen:
-                unique.append(p)
-                seen.add(key)
-        return unique
+        fallback = self.results_dir / app_name / task_id / "ui_context" / "target_page.xml"
+        if fallback.exists():
+            return fallback
+        return None
 
     def _expected_level2_nodes(self, app_name: str, task_id: str, meta: dict) -> list[dict]:
         configured = meta.get("level2_expected_nodes") or meta.get("target_ui_nodes")
@@ -715,9 +669,6 @@ class Evaluator:
 
         terms: list[str] = []
         terms.extend(self._extract_prompt_terms(meta.get("prompt", "")))
-        test_script = self.data_dir / app_name / task_id / "test_script.py"
-        if test_script.exists():
-            terms.extend(self._extract_test_script_terms(test_script))
 
         filtered = []
         seen: set[str] = set()
@@ -745,21 +696,6 @@ class Evaluator:
             terms.extend(m.group(0) for m in re.finditer(pattern, prompt, re.IGNORECASE))
         return terms
 
-    def _extract_test_script_terms(self, test_script: Path) -> list[str]:
-        text = test_script.read_text(encoding="utf-8", errors="replace")
-        terms: list[str] = []
-        patterns = [
-            r"ACCESSIBILITY_ID\s*,\s*[\"']([^\"']+)[\"']",
-            r"text(?:Contains|Matches)?\([\"']([^\"']+)[\"']\)",
-            r"@text\s*=\s*[\"']([^\"']+)[\"']",
-            r"contains\(@text,\s*[\"']([^\"']+)[\"']\)",
-            r"contains\(@content-desc,\s*[\"']([^\"']+)[\"']\)",
-            r"descriptionContains\([\"']([^\"']+)[\"']\)",
-            r"resourceId\([\"']([^\"']+)[\"']\)",
-        ]
-        for pattern in patterns:
-            terms.extend(m.group(1) for m in re.finditer(pattern, text))
-        return terms
 
     def _split_selector_term(self, term: str) -> list[str]:
         raw_parts = re.split(r"\||/", term)
@@ -1005,9 +941,6 @@ class Evaluator:
     ) -> list[dict]:
         terms = []
         terms.extend(self._extract_prompt_terms(meta.get("prompt", "")))
-        test_script = self.data_dir / app_name / task_id / "test_script.py"
-        if test_script.exists():
-            terms.extend(self._extract_test_script_terms(test_script))
         terms.extend(self._language_alias_terms(meta.get("prompt", "")))
         normalized_terms = {
             self._normalize_path_token(t)
@@ -1206,27 +1139,6 @@ class Evaluator:
         if success:
             return 4, "perfect_compile", "旧版编译结果缺少 Level 1 字段；根据编译成功且无 warning_count 推断。"
         return 2, "compile_failed_unknown", "旧版编译结果缺少 Level 1 字段；无法细分失败类型。"
-
-    def _requires_appium_runtime(self, test_script: Path) -> bool:
-        """判断脚本是否依赖外部注入的 Appium 运行时。"""
-        try:
-            text = test_script.read_text(encoding="utf-8", errors="replace")
-        except Exception:
-            return False
-
-        uses_injected_symbols = (
-            "take_screenshot(" in text
-            or "AppiumBy." in text
-            or "driver." in text
-        )
-        has_local_setup = (
-            "def take_screenshot(" in text
-            or "webdriver.Remote(" in text
-            or "from appium" in text
-            or "import appium" in text
-            or "driver =" in text
-        )
-        return uses_injected_symbols and not has_local_setup
 
     def _save_eval_result(self, app_name: str, task_id: str, result: dict) -> None:
         out_dir = self.results_dir / app_name / task_id
