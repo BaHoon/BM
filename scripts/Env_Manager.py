@@ -221,9 +221,14 @@ class EnvManager:
         # 提取关键诊断信息
         error_summary = self._extract_errors(combined_log)
         warning_lines = self._extract_warnings(combined_log)
+        introduced_warnings, baseline_warnings = self._partition_warnings(
+            warning_lines,
+            project_root,
+            self.data_dir / app_name / "base_src",
+        )
         level1 = self._score_level1(
             success=success,
-            warning_lines=warning_lines,
+            warning_lines=introduced_warnings,
             build_log=combined_log,
             project_root=project_root,
         )
@@ -243,6 +248,10 @@ class EnvManager:
             "error_summary": error_summary,
             "warning_count":  len(warning_lines),
             "warning_summary": "\n".join(warning_lines[:30]),
+            "introduced_warning_count": len(introduced_warnings),
+            "introduced_warning_summary": "\n".join(introduced_warnings[:30]),
+            "baseline_warning_count": len(baseline_warnings),
+            "baseline_warning_summary": "\n".join(baseline_warnings[:30]),
             "level1_score":   level1["score"],
             "level1_category": level1["category"],
             "level1_reason":  level1["reason"],
@@ -499,6 +508,47 @@ class EnvManager:
                 break
         return warning_lines
 
+    def _partition_warnings(
+        self,
+        warning_lines: list[str],
+        project_root: Path,
+        base_src: Path,
+    ) -> tuple[list[str], list[str]]:
+        """Separate warnings from unchanged baseline files from model warnings."""
+        base_root = self._resolve_gradle_project_root(base_src)
+        introduced: list[str] = []
+        baseline: list[str] = []
+        known_baseline = (
+            "no signing config found",
+            "namespace via the package attribute",
+            "android.experimental.",
+            "deprecated gradle features were used",
+            "--warning-mode all",
+            "docs.gradle.org/",
+        )
+        for warning in warning_lines:
+            lower = warning.lower()
+            if any(marker in lower for marker in known_baseline):
+                baseline.append(warning)
+                continue
+            path_match = re.search(
+                r"(?:file://)?(/[^:\n]+\.(?:kt|kts|java|xml))(?::\d+)?",
+                warning,
+            )
+            if path_match:
+                candidate = Path(path_match.group(1))
+                try:
+                    rel = candidate.resolve().relative_to(project_root.resolve())
+                    base_file = base_root / rel
+                    if base_file.exists() and candidate.exists():
+                        if candidate.read_bytes() == base_file.read_bytes():
+                            baseline.append(warning)
+                            continue
+                except (OSError, ValueError):
+                    pass
+            introduced.append(warning)
+        return introduced, baseline
+
     def _score_level1(
         self,
         success: bool,
@@ -508,8 +558,8 @@ class EnvManager:
     ) -> dict:
         """
         按用户定义的 Level 1 五档标准评分：
-          4: 编译成功且零 warning
-          3: 编译成功但有 warning
+          4: 编译成功且零模型引入 warning
+          3: 编译成功但有模型引入 warning
           2: 编译失败，局部语法/拼写类错误
           1: 编译失败，依赖/上下文错误
           0: 输出不是合法代码
@@ -525,7 +575,7 @@ class EnvManager:
             return {
                 "score": 4,
                 "category": "perfect_compile",
-                "reason": "编译成功，且未检测到 warning。",
+                "reason": "编译成功，且未检测到模型引入的 warning（基线 warning 单独记录）。",
                 "evidence": [],
             }
 

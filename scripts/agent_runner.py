@@ -1272,6 +1272,25 @@ class AgentRunner:
                 replace = m.group(2)
                 ops.append((rel_path, search, replace))
 
+        # Some OpenAI-compatible gateways strip Markdown fences while leaving
+        # the patchfile protocol intact. Accept those blocks as well instead
+        # of incorrectly reporting no_code_generated.
+        if not ops:
+            unfenced_re = re.compile(
+                r"patchfile:([^\n]+)\n(.*?)(?=patchfile:[^\n]+\n|\Z)",
+                re.DOTALL,
+            )
+            for file_block in unfenced_re.finditer(llm_response):
+                rel_path = file_block.group(1).strip().strip("`")
+                body = file_block.group(2).rstrip("` \n")
+                if rel_path.endswith(":NEW"):
+                    new_body = new_file_re.search(body)
+                    if new_body:
+                        ops.append((rel_path[:-4], "", new_body.group(1)))
+                    continue
+                for match in op_re.finditer(body):
+                    ops.append((rel_path, match.group(1), match.group(2)))
+
         return ops
 
     def _extract_code_blocks(self, llm_response: str) -> List[Tuple[str, str]]:

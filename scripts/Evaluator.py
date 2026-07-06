@@ -646,10 +646,15 @@ class Evaluator:
             }
 
         file_fallback = self._score_level2_file_fallback(app_name, task_id, meta)
+        preconditions = spec.get("interaction_preconditions") or []
+        precondition_note = (
+            " crawler 尚未构造前置状态：" + ", ".join(preconditions) + "。"
+            if preconditions else ""
+        )
         if file_fallback["passed"]:
             return {
                 "score": 1,
-                "reason": "目标页面 XML 未匹配关键节点，但实际改动文件命中标准答案关键文件。",
+                "reason": "目标页面 XML 未匹配关键节点，但实际改动文件命中标准答案关键文件。" + precondition_note,
                 "target_xml_path": str(target_xml_path) if target_xml_path else None,
                 "expected_nodes": expected_nodes,
                 "level2_spec": spec,
@@ -660,7 +665,7 @@ class Evaluator:
 
         return {
             "score": 0,
-            "reason": "目标页面 XML 未匹配关键节点，实际改动文件也未达到标准答案命中阈值。",
+            "reason": "目标页面 XML 未匹配关键节点，实际改动文件也未达到标准答案命中阈值。" + precondition_note,
             "target_xml_path": str(target_xml_path) if target_xml_path else None,
             "expected_nodes": expected_nodes,
             "level2_spec": spec,

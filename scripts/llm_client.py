@@ -350,14 +350,28 @@ class LLMClient:
             request_kwargs["reasoning_effort"] = os.getenv("BENCHMARK_REASONING_EFFORT", "low")
         else:
             request_kwargs["max_tokens"] = max_tokens
-        response = self._completion_with_retry(
-            lambda: self._client.chat.completions.create(**request_kwargs)
-        )
-        content = getattr(response.choices[0].message, "content", None)
-        if not content:
+        empty_retries = max(0, int(os.getenv("BENCHMARK_EMPTY_RETRIES", "2")))
+        response = None
+        content = None
+        finish_reason = None
+        for empty_attempt in range(empty_retries + 1):
+            response = self._completion_with_retry(
+                lambda: self._client.chat.completions.create(**request_kwargs)
+            )
+            content = getattr(response.choices[0].message, "content", None)
             finish_reason = getattr(response.choices[0], "finish_reason", None)
+            if content and content.strip():
+                break
+            if empty_attempt < empty_retries:
+                print(
+                    "[LLMClient] WARN: empty response "
+                    f"(finish_reason={finish_reason!r}); retry "
+                    f"{empty_attempt + 1}/{empty_retries}"
+                )
+        if not content or not content.strip():
             raise RuntimeError(
-                f"Model returned empty content (finish_reason={finish_reason!r})."
+                f"Model returned empty content after {empty_retries + 1} attempts "
+                f"(finish_reason={finish_reason!r})."
             )
         print(f"[LLMClient] response_chars={len(content)}")
         return content

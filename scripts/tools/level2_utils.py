@@ -76,6 +76,7 @@ def build_level2_spec(
 
     score_terms = _derive_score_terms(phrases)
     nav_terms = _dedupe(NAVIGATION_TERMS + score_terms + _derive_prompt_nav_terms(prompt))
+    interaction_preconditions = _derive_interaction_preconditions(prompt)
 
     return {
         "target_phrases": phrases,
@@ -83,6 +84,7 @@ def build_level2_spec(
         "score_terms": score_terms,
         "navigation_terms": nav_terms,
         "popup_terms": POPUP_TERMS,
+        "interaction_preconditions": interaction_preconditions,
         "match_attributes": [
             "text",
             "content-desc",
@@ -91,6 +93,23 @@ def build_level2_spec(
             "name",
         ],
     }
+
+
+def _derive_interaction_preconditions(prompt: str) -> list[str]:
+    """Describe state a crawler must create before a conditional node exists."""
+    lower = _normalize(prompt)
+    conditions: list[str] = []
+    if "undo" in lower and any(term in lower for term in ("delete", "removed", "restore")):
+        conditions.append("seed_media_then_delete")
+    if any(term in lower for term in ("duplicate file name", "file already exists", "name conflict")):
+        conditions.append("create_duplicate_filename_conflict")
+    if any(term in lower for term in ("edit", "white border", "crop")) and any(
+        term in lower for term in ("picture", "photo", "image")
+    ):
+        conditions.append("seed_media_then_open_editor")
+    if "batch import" in lower or "root directory" in lower:
+        conditions.append("open_document_tree_with_seed_directory")
+    return conditions
 
 
 def derive_golden_ui_phrases(base_src: Path, golden_src: Path) -> list[str]:
