@@ -122,6 +122,7 @@ class Evaluator:
             )
             level2_score = stream2.get("level2_score")
             level3_score = stream2.get("level3_score")
+            print("  [S2] SKIP  level2=—  prerequisite: Level 1 compilation failed")
 
         total_score = self._compute_total_score(
             stream1.get("level1_score"), level2_score, level3_score
@@ -241,10 +242,10 @@ class Evaluator:
             "skipped": True,
             "source": "compile_failure_gate",
             "reason": "Level 2 skipped because Level 1 compilation failed.",
-            "level2_score": 0,
+            "level2_score": None,
             "level2_reason": "Level 2 prerequisite not met: compilation failed.",
             "level2_detail": {
-                "score": 0,
+                "score": None,
                 "skipped": True,
                 "reason": "Level 1 compilation must succeed before Level 2 scoring.",
             },
@@ -356,6 +357,10 @@ class Evaluator:
             "shots_used": len(valid_shots),
             "model": self.vlm_model,
         }
+        print(
+            f"  [S2] level2={level2['score']}  "
+            f"reason={level2['reason']}"
+        )
 
         if level2["score"] != 2:
             base_detail["skipped"] = True
