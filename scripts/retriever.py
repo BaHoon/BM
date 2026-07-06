@@ -15,7 +15,7 @@ from pathlib import Path
 # --------------------------------------------------------------------------- #
 
 # 按文件扩展名决定收集优先级
-_SUPPORTED_EXTS = {".kt", ".java", ".xml", ".gradle", ".json"}
+_SUPPORTED_EXTS = {".kt", ".java", ".xml", ".gradle", ".kts", ".json"}
 
 # 路径关键词 → 主题相关性分数（越高越优先）
 _PATH_SCORE_MAP: list[tuple[str, int]] = [
@@ -80,7 +80,20 @@ class Retriever:
         """
         all_files = self._collect_all_files()
         ranked = self._rank_keyword(task_prompt, all_files)
-        selected = ranked[: self.top_k]
+        # Select files under the total context budget. Previously, if the
+        # highest-ranked file alone exceeded the budget (for example a giant
+        # lint baseline or raw JSON), _build_context stopped immediately and
+        # returned only a 61-character omission marker.
+        selected: list[tuple[str, str]] = []
+        total = 0
+        for rel, content in ranked:
+            block_len = len(f"\n## File: {rel}\n```\n{content}\n```\n")
+            if total + block_len > self.max_context_chars:
+                continue
+            selected.append((rel, content))
+            total += block_len
+            if len(selected) >= self.top_k:
+                break
         selected_paths = [rel for rel, _ in selected]
 
         context = self._build_context(selected)
@@ -110,6 +123,16 @@ class Retriever:
             if fpath.suffix.lower() not in _SUPPORTED_EXTS:
                 continue
             rel = str(fpath.relative_to(self.base_src_dir))
+            rel_lower = rel.lower().replace("\\", "/")
+            if (
+                fpath.name.lower() in {"lint-baseline.xml", "detekt-baseline.xml"}
+                or "/src/test/" in f"/{rel_lower}"
+                or "/src/androidtest/" in f"/{rel_lower}"
+            ):
+                continue
+            # Large generated catalogs crowd out every actual source file.
+            if fpath.stat().st_size > 80_000:
+                continue
             try:
                 content = fpath.read_text(encoding="utf-8", errors="replace")
                 files.append((rel, content))
@@ -164,8 +187,7 @@ class Retriever:
         for rel, content in ranked:
             block = f"\n## File: {rel}\n```\n{content}\n```\n"
             if total + len(block) > self.max_context_chars:
-                parts.append("\n... (remaining files omitted due to context size limit) ...\n")
-                break
+                continue
             parts.append(block)
             total += len(block)
         return "".join(parts)

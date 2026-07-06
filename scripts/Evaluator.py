@@ -48,12 +48,14 @@ class Evaluator:
         self,
         data_dir:    str = "data",
         results_dir: str = "results",
-        vlm_model:   str = "gpt-4o",
+        vlm_model:   str = "visual-judge",
+        enable_level3: bool = True,
     ):
         root = Path(__file__).parent.parent
         self.data_dir    = root / data_dir
         self.results_dir = root / results_dir
         self.vlm_model   = vlm_model
+        self.enable_level3 = enable_level3
         self._vlm: Optional[object] = None   # 懒加载，仅视觉任务才用
 
     # ----------------------------------------------------------------------- #
@@ -107,14 +109,11 @@ class Evaluator:
         level3_score = None
 
         if csr:
-            if eval_type == "visual":
-                stream2, vsm, vlm_score = self._stream2_visual(
-                    app_name, task_id, meta, screenshots
-                )
-            else:
-                stream2, vsm = self._stream2_functional(
-                    app_name, task_id, meta, appium_log, screenshots
-                )
+            # 所有任务都遵循同一三级阶梯：Level 2 满分后才允许进入 Level 3。
+            # 缺截图或 API key 时 Level 3 明确跳过，绝不产生模型调用。
+            stream2, vsm, vlm_score = self._stream2_visual(
+                app_name, task_id, meta, screenshots
+            )
             level2_score = stream2.get("level2_score")
             level3_score = stream2.get("level3_score")
         else:
@@ -236,23 +235,21 @@ class Evaluator:
         task_id: str,
         meta: dict,
     ) -> dict:
-        """
-        编译失败时仍保留可计算的静态 Level 2 fallback。
-
-        没有 APK 时无法运行 Appium，也无法生成 UI tree / screenshots，因此 Level 2
-        只能检查实际改动文件是否命中 golden mapping；Level 3 继续跳过。
-        """
-        level2 = self._score_level2(app_name, task_id, meta)
+        """Level 1 编译失败时，Level 2/3 的前提均不成立。"""
         return {
             "passed": False,
             "skipped": True,
-            "source": "static_file_fallback_after_compile_failure",
-            "reason": "compilation failed; dynamic Appium/VLM checks skipped",
-            "level2_score": level2["score"],
-            "level2_reason": level2["reason"],
-            "level2_detail": level2,
+            "source": "compile_failure_gate",
+            "reason": "Level 2 skipped because Level 1 compilation failed.",
+            "level2_score": 0,
+            "level2_reason": "Level 2 prerequisite not met: compilation failed.",
+            "level2_detail": {
+                "score": 0,
+                "skipped": True,
+                "reason": "Level 1 compilation must succeed before Level 2 scoring.",
+            },
             "level3_score": None,
-            "level3_reason": "Level 3 skipped: compilation failed, so no APK/screenshots are available.",
+            "level3_reason": "Level 3 skipped: Level 1 compilation failed.",
         }
 
     def _stream2_functional(
@@ -367,6 +364,13 @@ class Evaluator:
             print("  [S3-visual] SKIP  level2 gate not satisfied")
             return base_detail, False, None
 
+        if not self.enable_level3:
+            base_detail["skipped"] = True
+            base_detail["level3_score"] = None
+            base_detail["level3_reason"] = "Level 3 disabled for this run."
+            print("  [S3-visual] SKIP  explicitly disabled")
+            return base_detail, False, None
+
         if not valid_shots:
             base_detail["skipped"] = True
             base_detail["level3_score"] = None
@@ -383,16 +387,31 @@ class Evaluator:
             print("  [S3-visual] SKIP  missing VLM API key")
             return base_detail, False, None
 
-        if self._vlm is None:
-            self._vlm = LLMClient(model=self.vlm_model)
-
         checks = self._build_level3_binary_checks(meta, level2.get("matched_node"))
-        vlm_result = self._vlm.score_visual_binary_checks(
-            task_prompt=meta.get("prompt", ""),
-            screenshot_paths=valid_shots,
-            checks=checks,
-            target_node=level2.get("matched_node"),
-        )
+        try:
+            if self._vlm is None:
+                self._vlm = LLMClient(model=self.vlm_model)
+            vlm_result = self._vlm.score_visual_binary_checks(
+                task_prompt=meta.get("prompt", ""),
+                screenshot_paths=valid_shots,
+                checks=checks,
+                target_node=level2.get("matched_node"),
+            )
+        except Exception as exc:
+            # A judge outage must not erase valid Level 1/2 evidence, abort the
+            # experiment, or falsely score the app as a visual failure.
+            error = f"{type(exc).__name__}: {str(exc)[:300]}"
+            detail = {
+                **base_detail,
+                "passed": False,
+                "skipped": True,
+                "level3_score": None,
+                "level3_reason": f"Level 3 unavailable: visual judge request failed: {error}",
+                "vlm_error": error,
+                "vlm_binary_checks": [],
+            }
+            print(f"  [S3-visual] UNAVAILABLE  judge_error={type(exc).__name__}")
+            return detail, False, None
         normalized = self._normalize_vlm_binary_result(vlm_result, checks)
         passed = bool(normalized["passed"])
         score = 1 if passed else 0
@@ -585,7 +604,11 @@ class Evaluator:
         """
         target_xml_path = self._collect_target_xml_path(app_name, task_id)
         expected_nodes = self._expected_level2_nodes(app_name, task_id, meta)
-        spec = build_level2_spec(meta)
+        spec = build_level2_spec(
+            meta,
+            self.data_dir / app_name / "base_src",
+            self.data_dir / app_name / task_id / "golden_src",
+        )
         node_match = None
         xml_error = None
 
@@ -773,21 +796,15 @@ class Evaluator:
     def _score_level2_file_fallback(self, app_name: str, task_id: str, meta: dict) -> dict:
         predicted = self._collect_modified_files(app_name, task_id)
         golden_key, golden_files, candidates = self._load_best_golden_mapping(app_name, task_id, meta)
-        predicted_set = set(predicted)
-        golden_set = set(golden_files)
+        core_exts = {".kt", ".xml", ".java", ".kts"}
+        predicted_set = {p for p in predicted if Path(p).suffix.lower() in core_exts}
+        golden_set = {p for p in golden_files if Path(p).suffix.lower() in core_exts}
         overlap = sorted(predicted_set & golden_set)
         predicted_count = len(predicted_set)
         golden_count = len(golden_set)
         overlap_predicted_ratio = len(overlap) / predicted_count if predicted_count else 0.0
         overlap_golden_ratio = len(overlap) / golden_count if golden_count else 0.0
-        long_golden_list = golden_count > 10
-        passed = (
-            len(overlap) >= 1
-            and (
-                overlap_predicted_ratio >= 0.30
-                or (long_golden_list and overlap_golden_ratio >= 0.20)
-            )
-        )
+        passed = len(overlap) >= 1
         return {
             "passed": passed,
             "golden_key": golden_key,
@@ -798,12 +815,9 @@ class Evaluator:
             "overlap_count": len(overlap),
             "predicted_count": predicted_count,
             "golden_count": golden_count,
-            "long_golden_list": long_golden_list,
-            "long_golden_definition": "golden_count > 10",
+            "core_extensions": sorted(core_exts),
             "thresholds": {
                 "min_overlap": 1,
-                "overlap_predicted_ratio": 0.30,
-                "overlap_golden_ratio_for_long_lists": 0.20,
             },
             "overlap_predicted_ratio": round(overlap_predicted_ratio, 4),
             "overlap_golden_ratio": round(overlap_golden_ratio, 4),
@@ -820,7 +834,7 @@ class Evaluator:
         if not workspace_root.exists() or not base_root.exists():
             return []
 
-        ignore_dirs = {"build", ".gradle", ".idea", ".git", ".kotlin", "cache", ".cxx", "__pycache__"}
+        ignore_dirs = {"build", ".gradle", ".idea", ".git", ".kotlin", ".cxx", "__pycache__"}
         workspace_files = self._relative_file_hashes(workspace_root, ignore_dirs)
         base_files = self._relative_file_hashes(base_root, ignore_dirs)
         changed = []
@@ -871,6 +885,15 @@ class Evaluator:
         explicit_key = meta.get("golden_task_key") or meta.get("todo1_key")
         mappings = self._load_golden_mapping_for_app(app_name, meta)
         if not mappings:
+            task_dir = self.data_dir / app_name / task_id
+            base_src = self.data_dir / app_name / "base_src"
+            for source_name in ("golden_src", "ground_truth_src"):
+                candidate = task_dir / source_name
+                if candidate.exists():
+                    files = self._collect_modified_files_between_roots(base_src, candidate)
+                    if files:
+                        key = f"direct:{source_name}"
+                        return key, files, [{"key": key, "score": "direct_ground_truth_diff"}]
             return None, [], []
         if explicit_key and explicit_key in mappings:
             files = self._normalize_golden_files(mappings[explicit_key].get("modified_files", []))
@@ -910,10 +933,11 @@ class Evaluator:
         if not task_dir.exists() or not base_src.exists():
             return None
 
-        candidates = [task_dir / "ground_truth_src"]
+        candidates = [task_dir / "golden_src", task_dir / "ground_truth_src"]
         candidates.extend(
             p for p in task_dir.iterdir()
-            if p.is_dir() and p.name not in {"ground_truth_src", "__pycache__"}
+            if p.is_dir()
+            and p.name not in {"golden_src", "ground_truth_src", "__pycache__"}
         )
 
         best_key = None
@@ -1154,8 +1178,8 @@ def main():
     parser.add_argument("task_id")
     parser.add_argument("--apk",          default=None, help="APK 文件路径")
     parser.add_argument("--screenshots",  default=None, nargs="+", help="截图路径列表")
-    parser.add_argument("--vlm-model",    default="gpt-4o",
-                        help="VLM 模型（默认 gpt-4o，经 Tongji base_url 路由）")
+    parser.add_argument("--vlm-model",    default="visual-judge",
+                        help="Level 3 专用视觉评委（默认读取 .env 中的 VLM_* 配置）")
     args = parser.parse_args()
 
     ev = Evaluator(vlm_model=args.vlm_model)

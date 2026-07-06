@@ -1377,15 +1377,11 @@ class AgentRunner:
         if not content.strip():
             return replace + ("\n" if not replace.endswith("\n") else "")
 
-        # 常见 Kotlin/Java 文件：尝试插入到文件末尾前一个闭合大括号之前。
-        if "\n}" in content:
-            idx = content.rfind("\n}")
-            if idx != -1:
-                insertion = replace.rstrip() + "\n"
-                return content[:idx] + "\n" + insertion + content[idx:]
-
-        # 兜底：文件末尾追加一个空行再插入。
-        return content.rstrip() + "\n\n" + replace.rstrip() + "\n"
+        # Empty SEARCH is reserved for genuinely new files. Applying a :NEW
+        # block to an existing file previously appended a second XML document
+        # (or a second Java/Kotlin class), producing misleading build failures.
+        # Reject it so the model/feedback loop must provide a real SEARCH hunk.
+        return None
 
     def _apply_fuzzy_patch(self, content: str, search: str, replace: str) -> Optional[str]:
         """对 SEARCH 轻微漂移的补丁做模糊匹配：按空白折叠并寻找唯一候选。"""
@@ -1450,10 +1446,12 @@ class AgentRunner:
         rel_path = self._normalize_rel_path(rel_path)
 
         nested_roots = [p for p in workspace_path.iterdir() if p.is_dir()]
+        explicit_root = None
         for root in nested_roots:
             prefix = f"{root.name}/"
             if rel_path.startswith(prefix):
                 rel_path = rel_path[len(prefix):]
+                explicit_root = root
                 break
 
         candidates = [workspace_path / rel_path]
@@ -1468,6 +1466,13 @@ class AgentRunner:
                 f"Target file not found for patch: {rel_path}. Tried: "
                 + ", ".join(str(p) for p in candidates)
             )
+
+        # If the model explicitly supplied an existing top-level directory
+        # such as app/, preserve it for a new file. Previously app/foo.xml was
+        # stripped to foo.xml and written at the task root whenever multiple
+        # directories (.gradle, gradle, app, ...) existed.
+        if explicit_root is not None:
+            return explicit_root / rel_path
 
         # 新文件优先写入嵌套项目根，避免落到 task 根目录。
         if len(nested_roots) == 1:

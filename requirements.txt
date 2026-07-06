@@ -1,5 +1,6 @@
 # Core dependency for LLM calls (used by scripts/llm_api/client.py)
 openai>=2.24.0
+socksio>=1.0.0  # OpenAI/httpx support when the server uses a SOCKS proxy
 
 # Appium client (used by appium_runner and mobile test execution)
 Appium-Python-Client>=4.0.0

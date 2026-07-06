@@ -67,9 +67,11 @@ class ExperimentLauncher:
         feedback_loop:     bool       = False,
         feedback_rounds:   int        = 2,
         skip_if_apk:       bool       = False,
-        vlm_model:         str        = "gpt-4o",
+        vlm_model:         str        = "visual-judge",
         pass_k:            list[int]  = None,
         use_ground_truth:   bool       = False,
+        skip_level3:        bool       = False,
+        report_md:           Optional[str] = "batch_results.md",
     ):
         self.models             = models
         self.strategies         = strategies
@@ -84,14 +86,18 @@ class ExperimentLauncher:
         self.vlm_model          = vlm_model
         self.pass_k_values      = pass_k or [1, 3]
         self.use_ground_truth   = use_ground_truth
+        self.skip_level3        = skip_level3
 
         self.root        = Path(__file__).parent.parent
         self.data_dir    = self.root / "data"
         self.results_dir = self.root / "results"
 
         self.env_mgr  = EnvManager()
-        self.evaluator = Evaluator(vlm_model=vlm_model)
-        self.logger   = ExperimentLogger(results_dir=self.results_dir)
+        self.evaluator = Evaluator(
+            vlm_model=vlm_model,
+            enable_level3=not skip_level3,
+        )
+        self.logger   = ExperimentLogger(results_dir=self.results_dir, report_md=report_md)
 
         # 懒加载 AppiumRunner
         self._appium = None
@@ -432,14 +438,20 @@ class ExperimentLauncher:
         for (m, s), recs in sorted(grid.items()):
             n    = len(recs)
             csr  = sum(1 for r in recs if r.get("csr"))
-            vsm  = sum(1 for r in recs if r.get("vsm"))
+            level3_recs = [
+                r for r in recs
+                if isinstance(_extra_value(r, "level3_score"), (int, float))
+            ]
+            vsm  = sum(1 for r in level3_recs if r.get("vsm"))
             l1 = _avg_extra(recs, "level1_score")
             l2 = _avg_extra(recs, "level2_score")
             l3 = _avg_extra(recs, "level3_score")
             total_score = _avg_extra(recs, "total_score")
+            vsm_text = f"{vsm/len(level3_recs)*100:>6.1f}%" if level3_recs else f"{'N/A':>7}"
+            l3_text = f"{l3:>5.2f}" if level3_recs else f"{'N/A':>5}"
             print(
-                f"  {m:<25} {s:<16} {n:>4} {csr/n*100:>6.1f}% {vsm/n*100:>6.1f}% "
-                f"{l1:>5.2f} {l2:>5.2f} {l3:>5.2f} {total_score:>7.2f}"
+                f"  {m:<25} {s:<16} {n:>4} {csr/n*100:>6.1f}% {vsm_text} "
+                f"{l1:>5.2f} {l2:>5.2f} {l3_text} {total_score:>7.2f}"
             )
 
         # --- Pass@k ---
@@ -447,7 +459,11 @@ class ExperimentLauncher:
             # 按任务分组，计算每个任务是否有 >= 1 次成功
             by_task: dict[tuple, list] = defaultdict(list)
             for r in records:
-                by_task[(r["app_name"], r["task_id"])].append(r.get("vsm", False))
+                if isinstance(_extra_value(r, "level3_score"), (int, float)):
+                    by_task[(r["app_name"], r["task_id"])].append(r.get("vsm", False))
+            if not by_task:
+                print(f"\n  Pass@{k}: N/A (Level 3 disabled)")
+                continue
             pass_at_k_vals = [
                 Evaluator.compute_pass_at_k(slist, k)
                 for slist in by_task.values()
@@ -596,8 +612,8 @@ def parse_args():
         help="按 App 名称过滤（与 --tasks 合用）"
     )
     parser.add_argument("--top-k",       type=int, default=8)
-    parser.add_argument("--vlm-model",   default="gpt-4o",
-                        help="VLM 视觉评分模型（默认 gpt-4o，经 Tongji base_url 路由）")
+    parser.add_argument("--vlm-model",   default="visual-judge",
+                        help="Level 3 专用视觉评委（默认读取 .env 中的 VLM_* 配置）")
     parser.add_argument("--feedback-loop",  action="store_true",
                         help="开启 RQ5 反馈闭环（最多 feedback-rounds 次自修正）")
     parser.add_argument("--feedback-rounds", type=int, default=2)
@@ -606,7 +622,11 @@ def parse_args():
     parser.add_argument("--pass-k",      nargs="+", type=int, default=[1, 3],
                         help="计算 Pass@k 的 k 值列表")
     parser.add_argument("--use-ground-truth", action="store_true",
-                        help="跳过 LLM 代码生成，直接用 data/<app>/<task>/ground_truth_src 跑完整评分流程")
+                        help="跳过 LLM 代码生成，直接用 data/<app>/<task>/golden_src 跑完整评分流程")
+    parser.add_argument("--skip-level3", action="store_true",
+                        help="显式禁用 Level 3/VLM；不会初始化或调用视觉模型")
+    parser.add_argument("--report-md", default="batch_results.md",
+                        help="逐条追加批处理结果的 Markdown 文件（相对于 results/）")
     return parser.parse_args()
 
 
@@ -625,6 +645,8 @@ def main():
         vlm_model          = args.vlm_model,
         pass_k             = args.pass_k,
         use_ground_truth   = args.use_ground_truth,
+        skip_level3        = args.skip_level3,
+        report_md           = args.report_md,
     )
     launcher.launch()
 

@@ -59,6 +59,15 @@ _TONGJI_BASE_URL = os.getenv("TONGJI_BASE_URL") or os.getenv(
 _TONGJI_API_KEY  = os.getenv("TONGJI_API_KEY") or os.getenv("OPENAI_API_KEY")
 _OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 _OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL")
+_VLM_API_KEY = os.getenv("VLM_API_KEY")
+_VLM_BASE_URL = os.getenv("VLM_BASE_URL")
+_VLM_MODEL = os.getenv("VLM_MODEL", "Gemini-3.5-flash")
+_LOCAL_LLM_API_KEY = os.getenv("LOCAL_LLM_API_KEY", "local")
+_LOCAL_LLM_BASE_URL = os.getenv("LOCAL_LLM_BASE_URL", "http://127.0.0.1:8806/v1")
+_LOCAL_LLM_MODEL = os.getenv("LOCAL_LLM_MODEL", "Qwen3-30B-A3B")
+_BENCHMARK_API_KEY = os.getenv("BENCHMARK_API_KEY")
+_BENCHMARK_BASE_URL = os.getenv("BENCHMARK_BASE_URL", "https://531288.xyz/v1")
+_BENCHMARK_MODEL = os.getenv("BENCHMARK_MODEL", "")
 
 
 def _ensure_no_proxy_for_tongji(base_url: str) -> None:
@@ -113,12 +122,28 @@ def _temporary_clear_proxy(enabled: bool):
 
 # 凡是 model 名以此前缀开头的，都路由到同济端点
 _TONGJI_MODEL_PREFIX = "tongji/"
+_JUDGE_MODEL_PREFIX = "judge/"
+_LOCAL_MODEL_PREFIX = "local/"
+_BENCHMARK_MODEL_PREFIX = "benchmark/"
 
 
 def _resolve_tongji_model(model: str) -> str:
     """返回应通过同济端点访问的真实模型名。"""
     if model.startswith(_TONGJI_MODEL_PREFIX):
         return model[len(_TONGJI_MODEL_PREFIX):]
+    return model
+
+
+def _resolve_routed_model(model: str) -> str:
+    """Strip the internal route prefix before sending a model id upstream."""
+    if model.startswith(_TONGJI_MODEL_PREFIX):
+        return model[len(_TONGJI_MODEL_PREFIX):]
+    if model.startswith(_JUDGE_MODEL_PREFIX):
+        return model[len(_JUDGE_MODEL_PREFIX):]
+    if model.startswith(_LOCAL_MODEL_PREFIX):
+        return model[len(_LOCAL_MODEL_PREFIX):]
+    if model.startswith(_BENCHMARK_MODEL_PREFIX):
+        return model[len(_BENCHMARK_MODEL_PREFIX):]
     return model
 
 
@@ -132,7 +157,14 @@ def _uses_tongji(model: str) -> bool:
 
 def has_configured_api_key(model: str = "deepseek-r1") -> bool:
     """Return whether the API key required by this model route is configured."""
-    return bool(_TONGJI_API_KEY if _uses_tongji(model) else _OPENAI_API_KEY)
+    normalized = _normalize_model(model)
+    if normalized.startswith(_JUDGE_MODEL_PREFIX):
+        return bool(_VLM_API_KEY)
+    if normalized.startswith(_LOCAL_MODEL_PREFIX):
+        return bool(_LOCAL_LLM_BASE_URL)
+    if normalized.startswith(_BENCHMARK_MODEL_PREFIX):
+        return bool(_BENCHMARK_API_KEY and _BENCHMARK_MODEL)
+    return bool(_TONGJI_API_KEY if normalized.startswith(_TONGJI_MODEL_PREFIX) else _OPENAI_API_KEY)
 
 # --------------------------------------------------------------------------- #
 #  预定义模型别名（便于 CLI 传参）
@@ -141,6 +173,10 @@ MODEL_ALIASES: dict[str, str] = {
     "deepseek":        "tongji/DeepSeek-R1",
     "deepseek-r1":     "tongji/DeepSeek-R1",
     "DeepSeek-R1":     "tongji/DeepSeek-R1",
+    # Dedicated visual evaluator. This route is never used as a tested model.
+    "visual-judge":    f"judge/{_VLM_MODEL}",
+    "qwen3-local":     f"local/{_LOCAL_LLM_MODEL}",
+    "benchmark-model": f"benchmark/{_BENCHMARK_MODEL}",
 }
 
 # --------------------------------------------------------------------------- #
@@ -235,8 +271,24 @@ class LLMClient:
         self.model = _normalize_model(model)
         self.strategy = strategy
         self.uses_tongji = self.model.startswith(_TONGJI_MODEL_PREFIX)
-        self.api_key = _TONGJI_API_KEY if self.uses_tongji else _OPENAI_API_KEY
-        self.base_url = _TONGJI_BASE_URL if self.uses_tongji else _OPENAI_BASE_URL
+        self.uses_visual_judge = self.model.startswith(_JUDGE_MODEL_PREFIX)
+        self.uses_local = self.model.startswith(_LOCAL_MODEL_PREFIX)
+        self.uses_benchmark = self.model.startswith(_BENCHMARK_MODEL_PREFIX)
+        if self.uses_benchmark:
+            self.api_key = _BENCHMARK_API_KEY
+            self.base_url = _BENCHMARK_BASE_URL
+        elif self.uses_local:
+            self.api_key = _LOCAL_LLM_API_KEY
+            self.base_url = _LOCAL_LLM_BASE_URL
+        elif self.uses_visual_judge:
+            self.api_key = _VLM_API_KEY
+            self.base_url = _VLM_BASE_URL
+        elif self.uses_tongji:
+            self.api_key = _TONGJI_API_KEY
+            self.base_url = _TONGJI_BASE_URL
+        else:
+            self.api_key = _OPENAI_API_KEY
+            self.base_url = _OPENAI_BASE_URL
         self._validate_api_keys()
         client_kwargs = {"api_key": self.api_key}
         if self.base_url:
@@ -282,21 +334,31 @@ class LLMClient:
             {"role": "user",   "content": user_content},
         ]
 
-        model_name = _resolve_tongji_model(self.model) if self.uses_tongji else self.model
+        model_name = _resolve_routed_model(self.model)
         print(
             f"[LLMClient] model={model_name}  strategy={self.strategy}  "
             f"prompt_chars={sum(len(str(m['content'])) for m in messages)}"
         )
 
+        request_kwargs = {
+            "model": model_name,
+            "messages": messages,
+            "temperature": temperature,
+        }
+        if self.uses_benchmark:
+            request_kwargs["max_completion_tokens"] = max_tokens
+            request_kwargs["reasoning_effort"] = os.getenv("BENCHMARK_REASONING_EFFORT", "low")
+        else:
+            request_kwargs["max_tokens"] = max_tokens
         response = self._completion_with_retry(
-            lambda: self._client.chat.completions.create(
-                model=model_name,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
+            lambda: self._client.chat.completions.create(**request_kwargs)
         )
-        content: str = response.choices[0].message.content
+        content = getattr(response.choices[0].message, "content", None)
+        if not content:
+            finish_reason = getattr(response.choices[0], "finish_reason", None)
+            raise RuntimeError(
+                f"Model returned empty content (finish_reason={finish_reason!r})."
+            )
         print(f"[LLMClient] response_chars={len(content)}")
         return content
 
@@ -358,7 +420,7 @@ class LLMClient:
             }
         ]
 
-        model_name = _resolve_tongji_model(self.model) if self.uses_tongji else self.model
+        model_name = _resolve_routed_model(self.model)
         response = self._completion_with_retry(
             lambda: self._client.chat.completions.create(
                 model=model_name,
@@ -392,21 +454,26 @@ class LLMClient:
             {"role": "user",   "content": user_content},
         ]
 
-        model_name = _resolve_tongji_model(self.model) if self.uses_tongji else self.model
+        model_name = _resolve_routed_model(self.model)
         print(
             f"[LLMClient] custom_system_call model={model_name} "
             f"api_base={self.base_url or 'openai_default'} "
             f"prompt_chars={sum(len(str(m['content'])) for m in messages)}"
         )
         try:
+            request_kwargs = {
+                "model": model_name,
+                "messages": messages,
+                "temperature": temperature,
+                "stop": stop,
+            }
+            if self.uses_benchmark:
+                request_kwargs["max_completion_tokens"] = max_tokens
+                request_kwargs["reasoning_effort"] = os.getenv("BENCHMARK_REASONING_EFFORT", "low")
+            else:
+                request_kwargs["max_tokens"] = max_tokens
             response = self._completion_with_retry(
-                lambda: self._client.chat.completions.create(
-                    model=model_name,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    stop=stop,
-                )
+                lambda: self._client.chat.completions.create(**request_kwargs)
             )
             if response is None:
                 return (
@@ -477,7 +544,14 @@ class LLMClient:
         """启动时检查必要的 API Key 是否已设置，仅打印警告。"""
         if self.api_key:
             return
-        key_name = "TONGJI_API_KEY" if self.uses_tongji else "OPENAI_API_KEY"
+        if self.uses_benchmark:
+            key_name = "BENCHMARK_API_KEY/BENCHMARK_MODEL"
+        elif self.uses_local:
+            key_name = "LOCAL_LLM_BASE_URL"
+        elif self.uses_visual_judge:
+            key_name = "VLM_API_KEY"
+        else:
+            key_name = "TONGJI_API_KEY" if self.uses_tongji else "OPENAI_API_KEY"
         raise RuntimeError(f"{key_name} not set for model {self.model}")
 
     def _completion_with_retry(self, request_fn):
@@ -492,6 +566,10 @@ class LLMClient:
                     return request_fn()
             except Exception as exc:
                 last_exc = exc
+                # Configuration/channel errors are deterministic; retrying the
+                # same unavailable model only wastes judge calls.
+                if "model_not_found" in str(exc).lower():
+                    break
                 if attempt >= _DEFAULT_RETRY_TIMES:
                     break
                 sleep_s = _DEFAULT_RETRY_BASE_SLEEP * attempt + random.uniform(0.0, 1.0)

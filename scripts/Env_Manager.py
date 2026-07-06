@@ -42,7 +42,7 @@ class EnvManager:
     _GRADLE_CMD_UNIX = "./gradlew assembleDebug"
 
     # 忽略复制的目录/文件（缓存、构建产物）
-    _IGNORE_DIRS = {"build", ".gradle", ".idea", ".kotlin", "cache", ".cxx"}
+    _IGNORE_DIRS = {"build", ".gradle", ".idea", ".kotlin", ".cxx"}
 
     def __init__(
         self,
@@ -91,39 +91,47 @@ class EnvManager:
             # Windows 下目录可能短暂残留；允许拷贝到已存在目录可避免 WinError 183。
             dirs_exist_ok=True,
         )
-        self._ensure_gradlew_executable(self._resolve_gradle_project_root(dst))
+        project_root = self._resolve_gradle_project_root(dst)
+        self._ensure_gradlew_executable(project_root)
+        self._write_local_properties(project_root)
         self._save_workspace_manifest(app_name, task_id, base_src, dst)
         print(f"[EnvManager] ✓ Workspace ready: {dst}")
         return dst
 
     def apply_ground_truth(self, app_name: str, task_id: str) -> Path:
         """
-        用 data/app_name/task_id/ground_truth_src 覆盖当前 workspace。
+        用 data/app_name/task_id/golden_src 覆盖当前 workspace。
 
         这个入口用于 oracle/标准答案回放：跳过 LLM 生成代码，但仍然让后续
         build_project -> Appium -> Evaluator 走完整评分流程。
+        新数据优先使用 golden_src，同时兼容旧数据的 ground_truth_src。
         """
-        ground_truth_src = self.data_dir / app_name / task_id / "ground_truth_src"
+        task_dir = self.data_dir / app_name / task_id
+        candidates = [task_dir / "golden_src", task_dir / "ground_truth_src"]
+        oracle_src = next((path for path in candidates if path.exists()), None)
         dst = self.workspace_dir / app_name / task_id
 
-        if not ground_truth_src.exists():
-            raise FileNotFoundError(f"ground_truth_src not found: {ground_truth_src}")
+        if oracle_src is None:
+            searched = ", ".join(str(path) for path in candidates)
+            raise FileNotFoundError(f"golden source not found; searched: {searched}")
 
-        print(f"[EnvManager] Applying ground truth: {ground_truth_src} -> {dst}")
+        print(f"[EnvManager] Applying golden source: {oracle_src} -> {dst}")
 
         if dst.exists():
             self._stop_gradle_daemon(dst)
             self._clear_dir_with_retry(dst)
 
         shutil.copytree(
-            ground_truth_src,
+            oracle_src,
             dst,
             ignore=self._ignore_fn,
             dirs_exist_ok=True,
         )
-        self._ensure_gradlew_executable(self._resolve_gradle_project_root(dst))
-        self._save_workspace_manifest(app_name, task_id, ground_truth_src, dst)
-        print(f"[EnvManager] ✓ Ground truth workspace ready: {dst}")
+        project_root = self._resolve_gradle_project_root(dst)
+        self._ensure_gradlew_executable(project_root)
+        self._write_local_properties(project_root)
+        self._save_workspace_manifest(app_name, task_id, oracle_src, dst)
+        print(f"[EnvManager] ✓ Golden workspace ready: {dst}")
         return dst
 
     def build_project(
@@ -355,12 +363,25 @@ class EnvManager:
             return
         try:
             mode = gradlew.stat().st_mode
-            if mode & 0o111:
+            # Check the owner execute bit specifically. Some copied files carry
+            # an ACL mask that makes a group execute bit appear in st_mode even
+            # though the owning user still cannot execute the wrapper.
+            if mode & 0o100:
                 return
-            gradlew.chmod(mode | 0o755)
+            gradlew.chmod(mode | 0o100)
             print(f"[EnvManager] chmod +x {gradlew}")
         except Exception as exc:
             print(f"[EnvManager] WARN: failed to chmod +x {gradlew}: {exc}")
+
+    def _write_local_properties(self, project_root: Path) -> None:
+        """Write the actual server SDK path so stale workstation paths emit no warning."""
+        sdk_home = os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT")
+        if not sdk_home:
+            return
+        (project_root / "local.properties").write_text(
+            f"sdk.dir={Path(sdk_home).expanduser().resolve()}\n",
+            encoding="utf-8",
+        )
 
     def _check_apk(
         self, app_name: str, task_id: str
@@ -371,7 +392,8 @@ class EnvManager:
         """
         try:
             meta = self._load_meta(app_name, task_id)
-            rel  = meta.get("apk_path", "app/build/outputs/apk/debug/app-debug.apk")
+            rel = meta.get("apk_path", "app/build/outputs/apk/debug/app-debug.apk")
+            rel = re.sub(r"^(?:golden_src|ground_truth_src)/", "", str(rel))
             workspace_task = self.workspace_dir / app_name / task_id
 
             # 1) 兼容既有配置：相对 task 根目录
@@ -387,10 +409,15 @@ class EnvManager:
                 size_mb = round(nested_full.stat().st_size / 1024 / 1024, 2)
                 return nested_full, True, size_mb
 
-            # 3) 兜底：扫描常见产物名
-            candidates = list(workspace_task.glob("**/app/build/outputs/apk/debug/app-debug.apk"))
+            # 3) 兜底：不同 Android 工程会把 applicationId/version/flavor
+            # 写入 APK 文件名，不能假定永远叫 app-debug.apk。
+            candidates = [
+                path for path in workspace_task.glob("**/build/outputs/apk/**/*.apk")
+                if "androidTest" not in path.parts and "test" not in path.name.lower()
+            ]
             if candidates:
-                apk = candidates[0]
+                debug_candidates = [p for p in candidates if "debug" in p.parts or "debug" in p.name.lower()]
+                apk = max(debug_candidates or candidates, key=lambda p: p.stat().st_mtime)
                 size_mb = round(apk.stat().st_size / 1024 / 1024, 2)
                 return apk, True, size_mb
         except Exception:
@@ -409,6 +436,14 @@ class EnvManager:
         cmd = (meta.get("build_command") or "").strip()
         if not cmd:
             return self._GRADLE_CMD_WIN if os.name == "nt" else self._GRADLE_CMD_UNIX
+
+        # oracle 源码会被平铺复制到 workspace 任务根目录，因此去掉数据目录前缀。
+        cmd = re.sub(
+            r"^cd\s+(?:golden_src|ground_truth_src)\s*&&\s*",
+            "",
+            cmd,
+            flags=re.IGNORECASE,
+        )
 
         if os.name == "nt":
             return cmd.replace("./gradlew", ".\\gradlew.bat").replace("gradlew ", ".\\gradlew.bat ")
@@ -675,6 +710,12 @@ class EnvManager:
             for m in re.finditer(r"jvmTarget\s*=\s*[\"'](\d+)[\"']", text):
                 versions.append(int(m.group(1)))
 
+            # Android Gradle Plugin 8+ itself requires a JDK 17 runtime even
+            # when the app deliberately emits Java 8-compatible bytecode.
+            for m in re.finditer(r"com\.android\.tools\.build:gradle:(\d+)", text):
+                if int(m.group(1)) >= 8:
+                    versions.append(17)
+
         if not versions:
             return None
         return max(versions)
@@ -753,6 +794,19 @@ class EnvManager:
                         return candidate
             except Exception:
                 pass
+
+        # 5) Linux/OpenJDK conventional locations.
+        if sys.platform.startswith("linux"):
+            candidates = [
+                Path(f"/usr/lib/jvm/java-{version}-openjdk-amd64"),
+                Path(f"/usr/lib/jvm/java-1.{version}.0-openjdk-amd64"),
+            ]
+            candidates.extend(Path("/usr/lib/jvm").glob(f"*{version}*"))
+            for candidate in candidates:
+                if (candidate / "bin" / "java").exists():
+                    major = self._read_java_major_from_home(str(candidate))
+                    if major == version:
+                        return str(candidate)
 
         return None
 

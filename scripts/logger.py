@@ -75,9 +75,19 @@ class ExperimentLogger:
     _SUMMARY_FILE  = "raw_data_summary.json"
     _LOG_FILE      = "experiment.log"
 
-    def __init__(self, results_dir: str | Path = "results"):
+    def __init__(
+        self,
+        results_dir: str | Path = "results",
+        report_md: str | Path | None = None,
+    ):
         self.results_dir = Path(results_dir)
         self.results_dir.mkdir(parents=True, exist_ok=True)
+        self.report_md = None
+        if report_md:
+            report_path = Path(report_md)
+            self.report_md = report_path if report_path.is_absolute() else self.results_dir / report_path
+            self.report_md.parent.mkdir(parents=True, exist_ok=True)
+            self._ensure_markdown_report()
 
         self._lock  = threading.Lock()
         self._cache: list[dict] = []           # 内存中保留本次进程的所有记录
@@ -95,6 +105,7 @@ class ExperimentLogger:
             self._cache.append(row)
             self._append_jsonl(row)
             self._update_summary()
+            self._append_markdown(row)
 
         status = "✓ CSR+VSM" if record.csr and record.vsm else \
                  "~ CSR only" if record.csr else "✗ FAIL"
@@ -150,6 +161,49 @@ class ExperimentLogger:
         jsonl_path = self.results_dir / self._JSONL_FILE
         with open(jsonl_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+    def _ensure_markdown_report(self) -> None:
+        if self.report_md is None or self.report_md.exists():
+            return
+        header = (
+            "# Batch Experiment Results\n\n"
+            "This file is updated after every task, so it is safe to inspect while the batch is running.\n\n"
+            "| Time (UTC) | Task | Model | Strategy | L1 | L2 | L3 | Total | Status | Error / reason | Latency |\n"
+            "|---|---|---|---|---:|---:|---:|---:|---|---|---:|\n"
+        )
+        self.report_md.write_text(header, encoding="utf-8")
+
+    @staticmethod
+    def _md_cell(value) -> str:
+        if value is None:
+            return "—"
+        return str(value).replace("|", "\\|").replace("\n", " ").replace("\r", " ").strip()
+
+    def _append_markdown(self, row: dict) -> None:
+        if self.report_md is None:
+            return
+        extra = row.get("extra") or {}
+        l1, l2, l3 = (extra.get("level1_score"), extra.get("level2_score"), extra.get("level3_score"))
+        total = extra.get("total_score")
+        if l1 == 4 and l2 == 2 and l3 == 1:
+            status = "PASS"
+        elif row.get("error_category"):
+            status = "FAIL"
+        else:
+            status = "PARTIAL"
+        reason = (
+            extra.get("exception") or extra.get("agent_error") or
+            extra.get("level3_reason") or extra.get("level2_reason") or
+            extra.get("level1_reason") or row.get("error_category") or ""
+        )
+        cells = [
+            row.get("timestamp", ""),
+            f"{row.get('app_name', '')}/{row.get('task_id', '')}",
+            row.get("model", ""), row.get("strategy", ""),
+            l1, l2, l3, total, status, reason, f"{row.get('latency_s', 0):.2f}s",
+        ]
+        with self.report_md.open("a", encoding="utf-8") as f:
+            f.write("| " + " | ".join(self._md_cell(v) for v in cells) + " |\n")
 
     def _update_summary(self) -> None:
         """重写聚合摘要 JSON（基于内存 cache，线程安全由调用者保证）。"""

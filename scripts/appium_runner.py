@@ -162,10 +162,15 @@ class AppiumRunner:
 
             # 步骤 2: 启动应用（通过 Appium）
             self.driver = self._create_driver(apk_path, app_name, task_id)
+            self._grant_special_storage_access()
             print(f"[AppiumRunner] Application started: {app_name}")
 
             meta = self._load_meta(app_name, task_id)
-            level2_spec = build_level2_spec(meta)
+            level2_spec = build_level2_spec(
+                meta,
+                self.data_dir / app_name / "base_src",
+                self.data_dir / app_name / task_id / "golden_src",
+            )
 
             # 创建截图和目标 XML 保存目录
             screenshot_dir = self.results_dir / app_name / task_id / "screenshots"
@@ -538,6 +543,83 @@ class AppiumRunner:
             print(f"[AppiumRunner] Failed to start Appium: {e}")
             return False
 
+    def _inspect_apk_identity(self, apk_path: str) -> tuple[Optional[str], Optional[str]]:
+        """Read the actual package and launchable activity from the built APK."""
+        package_name = None
+        app_activity = None
+        sdk_root = os.getenv("ANDROID_HOME") or os.getenv("ANDROID_SDK_ROOT")
+        aapt = shutil.which("aapt")
+        if not aapt and sdk_root:
+            build_tools = Path(sdk_root) / "build-tools"
+            candidates = sorted(build_tools.glob("*/aapt")) if build_tools.exists() else []
+            if candidates:
+                aapt = str(candidates[-1])
+        if aapt:
+            try:
+                result = subprocess.run(
+                    [aapt, "dump", "badging", apk_path],
+                    capture_output=True, text=True, timeout=30,
+                )
+                package_match = re.search(r"^package: name='([^']+)'", result.stdout, re.MULTILINE)
+                launch_match = re.search(r"^launchable-activity: name='([^']+)'", result.stdout, re.MULTILINE)
+                if package_match:
+                    package_name = package_match.group(1)
+                if launch_match:
+                    app_activity = launch_match.group(1)
+            except Exception as exc:
+                print(f"[AppiumRunner] WARN: failed to inspect APK with aapt: {exc}")
+
+        # Some flavor manifests expose launcher aliases that aapt badging does
+        # not report. Install once, then ask Android's package manager for the
+        # authoritative resolved launcher component.
+        if package_name and not app_activity:
+            try:
+                install = subprocess.run(
+                    ["adb", "-s", self.ADB_DEVICE, "install", "-r", "-g", apk_path],
+                    capture_output=True, text=True, timeout=180,
+                )
+                if install.returncode == 0:
+                    resolved = subprocess.run(
+                        ["adb", "-s", self.ADB_DEVICE, "shell", "cmd", "package",
+                         "resolve-activity", "--brief", package_name],
+                        capture_output=True, text=True, timeout=30,
+                    )
+                    components = [line.strip() for line in resolved.stdout.splitlines() if "/" in line]
+                    if components:
+                        candidate = components[-1].split("/", 1)[1]
+                        if "ResolverActivity" not in candidate:
+                            app_activity = candidate
+                    if not app_activity:
+                        queried = subprocess.run(
+                            ["adb", "-s", self.ADB_DEVICE, "shell", "cmd", "package",
+                             "query-activities", "-a", "android.intent.action.MAIN",
+                             "-c", "android.intent.category.LAUNCHER", package_name],
+                            capture_output=True, text=True, timeout=30,
+                        )
+                        activity_match = re.search(r"^\s*name=([^\s]+)", queried.stdout, re.MULTILINE)
+                        if activity_match:
+                            app_activity = activity_match.group(1)
+            except Exception as exc:
+                print(f"[AppiumRunner] WARN: failed to resolve launcher activity: {exc}")
+        return package_name, app_activity
+
+    def _grant_special_storage_access(self) -> None:
+        """Keep storage-heavy apps out of Android's external settings screen."""
+        package_name = getattr(self, "_active_package", None)
+        if not package_name:
+            return
+        try:
+            result = subprocess.run(
+                ["adb", "-s", self.ADB_DEVICE, "shell", "appops", "set",
+                 package_name, "MANAGE_EXTERNAL_STORAGE", "allow"],
+                capture_output=True, text=True, timeout=15,
+            )
+            if result.returncode == 0 and self.driver:
+                self.driver.activate_app(package_name)
+                time.sleep(1)
+        except Exception as exc:
+            print(f"[AppiumRunner] WARN: special storage permission not granted: {exc}")
+
     def _create_driver(self, apk_path: str, app_name: str, task_id: str = None) -> webdriver.Remote:
         """
         创建 Appium WebDriver 实例。
@@ -564,7 +646,13 @@ class AppiumRunner:
                 except Exception as e:
                     print(f"[AppiumRunner] Warning: Failed to read meta.json: {e}")
 
-        # 备用包名映射（如果 meta.json 不可用）
+        apk_package, apk_activity = self._inspect_apk_identity(apk_path)
+        if apk_package:
+            package_name = apk_package
+        if apk_activity:
+            app_activity = apk_activity
+
+        # 备用包名映射（如果 meta.json 和 APK 均不可用）
         if not package_name:
             package_map = {
                 "app_newsreader": "livio.rssreader",
@@ -574,6 +662,8 @@ class AppiumRunner:
             package_name = package_map.get(app_name, f"com.example.{app_name}")
         if not app_activity:
             app_activity = f"{package_name}.MainActivity"
+
+        self._active_package = package_name
         self._target_package_name = package_name
         
         print(f"[AppiumRunner] Package name: {package_name}")
