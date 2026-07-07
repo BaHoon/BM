@@ -177,7 +177,8 @@ class ExperimentLogger:
     def _md_cell(value) -> str:
         if value is None:
             return "—"
-        return str(value).replace("|", "\\|").replace("\n", " ").replace("\r", " ").strip()
+        cleaned = str(value).replace("|", "\\|").replace("\n", " ").replace("\r", " ").strip()
+        return cleaned if len(cleaned) <= 600 else cleaned[:597] + "..."
 
     def _append_markdown(self, row: dict) -> None:
         if self.report_md is None:

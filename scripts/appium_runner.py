@@ -69,10 +69,10 @@ class AppiumRunner:
     AVD_NAME = os.getenv("BM_AVD_NAME") or os.getenv("ANDROID_AVD_NAME") or "bm_api36"
     EMULATOR_BOOT_TIMEOUT = int(os.getenv("EMULATOR_BOOT_TIMEOUT", "300"))
 
-    def __init__(self):
+    def __init__(self, results_dir: str = "results"):
         self.root_dir = Path(__file__).parent.parent
         self.data_dir = self.root_dir / "data"
-        self.results_dir = self.root_dir / "results"
+        self.results_dir = self.root_dir / results_dir
         self.ADB_DEVICE = os.getenv("ADB_DEVICE", self.ADB_DEVICE)
         self.avd_name = os.getenv("BM_AVD_NAME") or os.getenv("ANDROID_AVD_NAME") or self.AVD_NAME
         self.driver: Optional[webdriver.Remote] = None
@@ -189,6 +189,14 @@ class AppiumRunner:
                     if not match.get("matched"):
                         return False
 
+                    if self._reposition_target_if_edge_clipped(match):
+                        time.sleep(1)
+                        refreshed_xml = self.driver.page_source
+                        refreshed_match = match_target_xml(refreshed_xml, level2_spec)
+                        if refreshed_match.get("matched"):
+                            xml_text = refreshed_xml
+                            match = refreshed_match
+
                     if screenshot_path is None:
                         filepath = screenshot_dir / "target_page.png"
                         self.driver.save_screenshot(str(filepath))
@@ -205,6 +213,18 @@ class AppiumRunner:
                         "matched_nodes": match.get("matched_nodes", []),
                         "source": source_label,
                     })
+                    visual_path = self._capture_post_target_visual_state(
+                        xml_text=xml_text,
+                        level2_spec=level2_spec,
+                        meta=meta,
+                        screenshot_dir=screenshot_dir,
+                    )
+                    if visual_path:
+                        # Preserve the pre-interaction screenshot in target_page
+                        # for Level 2 audit, but judge Level 3 on the applied state.
+                        screenshots[:] = [path for path in screenshots if path != screenshot_path]
+                        screenshots.append(visual_path)
+                        target_page["visual_screenshot"] = visual_path
                     (ui_dir / "target_page.json").write_text(
                         json.dumps(target_page, ensure_ascii=False, indent=2),
                         encoding="utf-8",
@@ -265,6 +285,67 @@ class AppiumRunner:
                     self.driver.quit()
                 except Exception:
                     pass
+
+    def _capture_post_target_visual_state(
+        self,
+        xml_text: str,
+        level2_spec: dict,
+        meta: dict,
+        screenshot_dir: Path,
+    ) -> Optional[str]:
+        """Apply stateful visual choices (such as a theme) before Level 3.
+
+        Level 2 must retain the XML where the target option is visible.  Level 3,
+        however, needs the resulting visual state when the task explicitly asks
+        for a theme/color scheme.  Other buttons remain unclicked so their own
+        affordance can be judged on the target-page screenshot.
+        """
+        prompt = normalize_text(str(meta.get("prompt", "")))
+        if not any(term in prompt for term in ("theme", "color scheme", "主题", "配色")):
+            return None
+        candidate = self._choose_click_candidate(xml_text, level2_spec, set())
+        if not candidate:
+            return None
+        label = normalize_text(candidate.get("label", ""))
+        score_terms = [normalize_text(term) for term in level2_spec.get("score_terms", [])]
+        if not any(term and self._label_contains_term(label, term) for term in score_terms):
+            return None
+        if not self._tap_candidate(candidate):
+            return None
+        time.sleep(1)
+        # Some theme pickers use a radio choice followed by an explicit
+        # confirmation button (for example "Set Theme").
+        try:
+            confirmation = self._choose_confirmation_candidate(self.driver.page_source)
+            if confirmation:
+                self._tap_candidate(confirmation)
+                time.sleep(2)
+            else:
+                time.sleep(1)
+        except Exception:
+            time.sleep(1)
+        filepath = screenshot_dir / "target_visual_state.png"
+        if not self.driver.save_screenshot(str(filepath)):
+            return None
+        return str(filepath)
+
+    def _choose_confirmation_candidate(self, xml_text: str) -> Optional[dict]:
+        action_terms = ("set theme", "apply", "save", "done", "confirm", "ok", "确定", "应用", "保存", "完成")
+        negative_terms = ("cancel", "close", "later", "取消", "关闭", "稍后")
+        scored: list[tuple[int, int, dict]] = []
+        for candidate in self._click_candidates_from_xml(xml_text):
+            label = normalize_text(candidate.get("label", ""))
+            if any(self._label_contains_term(label, term) for term in negative_terms):
+                continue
+            score = sum(
+                4 for term in action_terms if self._label_contains_term(label, normalize_text(term))
+            )
+            if score:
+                scored.append((score, candidate.get("area", 0), candidate))
+        if not scored:
+            return None
+        scored.sort(key=lambda item: (-item[0], item[1]))
+        return scored[0][2]
 
     # ----------------------------------------------------------------------- #
     #  私有方法
@@ -761,6 +842,7 @@ class AppiumRunner:
         t0 = time.time()
         screenshots: list[str] = []
         visited: set[str] = set()
+        repeat_counts: dict[str, int] = {}
         tried: set[str] = set()
         steps = 0
         max_steps = int(os.getenv("UI_CRAWLER_MAX_STEPS", "18"))
@@ -802,20 +884,25 @@ class AppiumRunner:
                 break
 
             signature = self._xml_signature(xml_text)
-            if signature in visited and len(visited) > 0:
-                if not self._try_scroll():
-                    log_lines.append(f"step {steps}: repeated page, no scroll")
+            if signature in visited:
+                repeat_counts[signature] = repeat_counts.get(signature, 0) + 1
             visited.add(signature)
 
             popup = self._find_popup_candidate(xml_text, level2_spec)
             candidate = popup or self._choose_click_candidate(xml_text, level2_spec, tried)
             if not candidate:
-                if scroll_streak >= dead_end_scrolls and self._has_back_candidate(xml_text):
+                # A scroll gesture can report success even when a WebView is already
+                # at its edge. Backtrack after repeated/stagnant pages so the crawler
+                # explores the next menu branch instead of scrolling until timeout.
+                should_backtrack = (
+                    scroll_streak >= dead_end_scrolls
+                    or repeat_counts.get(signature, 0) >= 2
+                )
+                if should_backtrack:
                     if self._go_back():
                         log_lines.append(f"step {steps}: back from dead end")
                         scroll_streak = 0
                         prefer_scroll_up_steps = 3
-                        tried.clear()
                         continue
                 if prefer_scroll_up_steps > 0 and self._try_scroll(direction="up"):
                     prefer_scroll_up_steps -= 1
@@ -830,7 +917,6 @@ class AppiumRunner:
                     log_lines.append(f"step {steps}: back after no scroll")
                     scroll_streak = 0
                     prefer_scroll_up_steps = 3
-                    tried.clear()
                     continue
                 log_lines.append(f"step {steps}: no clickable candidate")
                 break
@@ -907,9 +993,18 @@ class AppiumRunner:
         candidates = self._click_candidates_from_xml(xml_text)
         for c in candidates:
             label = normalize_text(c.get("label", ""))
-            if any(term and (term == label or term in label) for term in popup_terms):
+            if any(term and self._label_contains_term(label, term) for term in popup_terms):
                 return c
         return None
+
+    @staticmethod
+    def _label_contains_term(label: str, term: str) -> bool:
+        """Match popup words without treating `ok` as a substring of Bookmarks."""
+        if not label or not term:
+            return False
+        if re.search(r"[\u3400-\u9fff]", term):
+            return term in label
+        return re.search(rf"(?<![a-z0-9]){re.escape(term)}(?![a-z0-9])", label) is not None
 
     def _choose_click_candidate(self, xml_text: str, level2_spec: dict, tried: set[str]) -> Optional[dict]:
         candidates = self._click_candidates_from_xml(xml_text)
@@ -926,11 +1021,17 @@ class AppiumRunner:
             label = normalize_text(c.get("label", ""))
             score = 0
             for term in score_terms:
-                if term and term in label:
+                if term and self._label_contains_term(label, term):
                     score += 8
             for term in nav_terms:
-                if term and term in label:
+                if term and self._label_contains_term(label, term):
                     score += 4
+            # Generic "menu" resource IDs otherwise dominate useful settings/
+            # overflow entries (for example aiChatIconMenu in DuckDuckGo).
+            if any(term in label for term in ("ai chat", "aichat", "clear data", "fireicon", "tabsmenu")):
+                score -= 8
+            if any(term in label for term in ("settings", "preferences", "overflow", "more options")):
+                score += 8
             if score <= 0:
                 continue
             if c.get("clickable") == "true":
@@ -1094,6 +1195,42 @@ class AppiumRunner:
                 "height": int(height * 0.6),
                 "direction": direction,
                 "percent": 0.7,
+            })
+            return True
+        except Exception:
+            return False
+
+    def _reposition_target_if_edge_clipped(self, match: dict) -> bool:
+        """Nudge a matched node away from screen edges before evidence capture."""
+        try:
+            size = self.driver.get_window_size()
+            width = int(size.get("width", 0))
+            height = int(size.get("height", 0))
+            if width <= 0 or height <= 0:
+                return False
+            parsed_bounds = [
+                self._parse_bounds(item.get("bounds", ""))
+                for item in match.get("matched_nodes", [])
+            ]
+            parsed_bounds = [bounds for bounds in parsed_bounds if bounds]
+            if not parsed_bounds:
+                return False
+            y1 = min(bounds[1] for bounds in parsed_bounds)
+            y2 = max(bounds[3] for bounds in parsed_bounds)
+            direction = None
+            if y2 >= int(height * 0.88):
+                direction = "down"
+            elif y1 <= int(height * 0.12):
+                direction = "up"
+            if not direction:
+                return False
+            self.driver.execute_script("mobile: scrollGesture", {
+                "left": int(width * 0.1),
+                "top": int(height * 0.15),
+                "width": int(width * 0.8),
+                "height": int(height * 0.7),
+                "direction": direction,
+                "percent": 0.3,
             })
             return True
         except Exception:

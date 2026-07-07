@@ -422,7 +422,7 @@ class LLMClient:
             "Return strict JSON only:\n"
             "{"
             "\"passed\": <true only if every check passed>, "
-            "\"checks\": [{\"id\": \"...\", \"question\": \"...\", \"passed\": <bool>, \"evidence\": \"short visible evidence\"}], "
+            "\"checks\": [{\"id\": \"...\", \"passed\": <bool>, \"evidence\": \"short visible evidence\"}], "
             "\"reason\": \"one short sentence\""
             "}"
         )
@@ -440,7 +440,7 @@ class LLMClient:
                 model=model_name,
                 messages=messages,
                 temperature=temperature,
-                max_tokens=800,
+                max_tokens=max(1200, int(os.getenv("VLM_MAX_TOKENS", "2000"))),
             )
         )
         raw = response.choices[0].message.content.strip()

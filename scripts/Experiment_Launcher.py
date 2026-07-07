@@ -72,6 +72,7 @@ class ExperimentLauncher:
         use_ground_truth:   bool       = False,
         skip_level3:        bool       = False,
         report_md:           Optional[str] = "batch_results.md",
+        results_dir:          str = "results",
     ):
         self.models             = models
         self.strategies         = strategies
@@ -90,10 +91,17 @@ class ExperimentLauncher:
 
         self.root        = Path(__file__).parent.parent
         self.data_dir    = self.root / "data"
-        self.results_dir = self.root / "results"
+        self.results_dir = self.root / results_dir
 
-        self.env_mgr  = EnvManager()
+        self.env_mgr  = EnvManager(
+            data_dir=str(self.data_dir),
+            workspace_dir=str(self.root / "workspace"),
+            results_dir=str(self.results_dir),
+        )
         self.evaluator = Evaluator(
+            data_dir=str(self.data_dir),
+            results_dir=str(self.results_dir),
+            workspace_dir=str(self.root / "workspace"),
             vlm_model=vlm_model,
             enable_level3=not skip_level3,
         )
@@ -195,6 +203,9 @@ class ExperimentLauncher:
                     model=model,
                     strategy=strategy,
                     retriever_top_k=self.retriever_top_k,
+                    data_dir=str(self.data_dir),
+                    workspace_dir=str(self.root / "workspace"),
+                    results_dir=str(self.results_dir),
                 )
 
                 try:
@@ -315,7 +326,7 @@ class ExperimentLauncher:
             return self._appium
         try:
             from appium_runner import AppiumRunner
-            runner = AppiumRunner()
+            runner = AppiumRunner(results_dir=str(self.results_dir))
             if runner.check_appium_server():
                 self._appium = runner
                 return self._appium
@@ -627,6 +638,8 @@ def parse_args():
                         help="显式禁用 Level 3/VLM；不会初始化或调用视觉模型")
     parser.add_argument("--report-md", default="batch_results.md",
                         help="逐条追加批处理结果的 Markdown 文件（相对于 results/）")
+    parser.add_argument("--results-dir", default="results",
+                        help="独立结果目录（相对于仓库根目录），用于隔离正式实验与 golden 验收")
     return parser.parse_args()
 
 
@@ -647,6 +660,7 @@ def main():
         use_ground_truth   = args.use_ground_truth,
         skip_level3        = args.skip_level3,
         report_md           = args.report_md,
+        results_dir          = args.results_dir,
     )
     launcher.launch()
 

@@ -448,7 +448,7 @@ class EnvManager:
 
         # oracle 源码会被平铺复制到 workspace 任务根目录，因此去掉数据目录前缀。
         cmd = re.sub(
-            r"^cd\s+(?:golden_src|ground_truth_src)\s*&&\s*",
+            r"^cd\s+(?:golden_src|ground_truth_src)(?:/[^\s&]+)?\s*&&\s*",
             "",
             cmd,
             flags=re.IGNORECASE,
@@ -532,7 +532,7 @@ class EnvManager:
                 baseline.append(warning)
                 continue
             path_match = re.search(
-                r"(?:file://)?(/[^:\n]+\.(?:kt|kts|java|xml))(?::\d+)?",
+                r"(?:file://)?(/[^:\n]+\.(?:kt|kts|java|xml))(?::(\d+))?",
                 warning,
             )
             if path_match:
@@ -544,10 +544,37 @@ class EnvManager:
                         if candidate.read_bytes() == base_file.read_bytes():
                             baseline.append(warning)
                             continue
+                        line_number = int(path_match.group(2)) if path_match.group(2) else None
+                        if line_number and self._warning_line_is_unchanged(
+                            candidate, base_file, line_number
+                        ):
+                            baseline.append(warning)
+                            continue
                 except (OSError, ValueError):
                     pass
             introduced.append(warning)
         return introduced, baseline
+
+    @staticmethod
+    def _warning_line_is_unchanged(candidate: Path, base_file: Path, line_number: int) -> bool:
+        """Treat a warning on source text inherited from base_src as baseline noise.
+
+        Gradle reports line numbers from the candidate. Added lines can shift an old
+        deprecated call, so comparing the same numeric line in base_src is not enough.
+        Exact stripped source text is deliberately used here: a genuinely changed
+        warning-producing expression remains model-introduced.
+        """
+        try:
+            candidate_lines = candidate.read_text(errors="replace").splitlines()
+            if line_number < 1 or line_number > len(candidate_lines):
+                return False
+            warned_source = candidate_lines[line_number - 1].strip()
+            if not warned_source:
+                return False
+            base_lines = {line.strip() for line in base_file.read_text(errors="replace").splitlines()}
+            return warned_source in base_lines
+        except OSError:
+            return False
 
     def _score_level1(
         self,
