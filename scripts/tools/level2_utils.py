@@ -34,6 +34,8 @@ PROMPT_NAV_CONCEPTS = [
 
 POPUP_TERMS = [
     "ok", "okay", "allow", "continue", "skip", "agree", "close", "cancel", "later",
+    "i've been here before", "let's do it", "get started", "next", "not now",
+    "no thanks", "maybe later", "start browsing", "finish",
     "确定", "確定", "好的", "允许", "继续", "跳过", "同意", "关闭", "取消", "稍后", "关闭工作表",
 ]
 

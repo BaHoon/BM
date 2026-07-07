@@ -151,3 +151,77 @@ def test_level2_match_keeps_node_bounds_for_screenshot_repositioning():
         {"target_phrases": ["Background Image"], "explicit_target_phrases": ["Background Image"], "match_attributes": ["text"]},
     )
     assert result["matched_nodes"][0]["bounds"] == "[0,1700][900,1850]"
+
+
+def test_clear_package_state_uses_selected_adb_device(monkeypatch):
+    from types import SimpleNamespace
+    from scripts.appium_runner import AppiumRunner
+
+    seen = {}
+    def fake_run(args, **kwargs):
+        seen["args"] = args
+        return SimpleNamespace(returncode=0, stdout="Success\n")
+
+    monkeypatch.setattr("scripts.appium_runner.subprocess.run", fake_run)
+    runner = AppiumRunner.__new__(AppiumRunner)
+    runner.driver = None
+    runner._appium_process = runner._emulator_process = None
+    runner._appium_log_handle = runner._emulator_log_handle = None
+    runner.ADB_DEVICE = "127.0.0.1:5555"
+    assert runner._clear_package_state("com.example.app")
+    assert seen["args"] == [
+        "adb", "-s", "127.0.0.1:5555", "shell", "pm", "clear", "com.example.app"
+    ]
+
+
+def test_onboarding_prefers_returning_user_shortcut():
+    from scripts.appium_runner import AppiumRunner
+
+    xml = """<hierarchy>
+      <node clickable="true" enabled="true" displayed="true" bounds="[0,0][100,50]" text="Let's do it!" />
+      <node clickable="true" enabled="true" displayed="true" bounds="[0,50][100,100]" text="I've been here before" />
+    </hierarchy>"""
+    runner = AppiumRunner.__new__(AppiumRunner)
+    runner.driver = None
+    runner._appium_process = runner._emulator_process = None
+    runner._appium_log_handle = runner._emulator_log_handle = None
+    chosen = runner._find_popup_candidate(xml, {
+        "popup_terms": ["let's do it", "i've been here before"]
+    })
+    assert chosen["label"] == "I've been here before"
+
+
+def test_onboarding_prefers_real_skip_button_over_clickable_explanation():
+    from scripts.appium_runner import AppiumRunner
+
+    xml = """<hierarchy>
+      <node class="android.widget.TextView" clickable="true" enabled="true" displayed="true"
+            bounds="[0,0][100,40]" text="Got it! I'll skip the other tips." />
+      <node class="android.widget.Button" clickable="true" enabled="true" displayed="true"
+            bounds="[0,40][100,100]" text="Skip Onboarding" resource-id="pkg:id/skipOnboardingButton" />
+    </hierarchy>"""
+    runner = AppiumRunner.__new__(AppiumRunner)
+    runner.driver = None
+    runner._appium_process = runner._emulator_process = None
+    runner._appium_log_handle = runner._emulator_log_handle = None
+    chosen = runner._find_popup_candidate(xml, {"popup_terms": ["skip"]})
+    assert chosen["resource_id"].endswith("skipOnboardingButton")
+
+
+def test_onboarding_uses_start_browsing_when_skip_button_is_absent():
+    from scripts.appium_runner import AppiumRunner
+
+    xml = """<hierarchy>
+      <node class="android.widget.LinearLayout" clickable="true" enabled="true" displayed="true"
+            bounds="[0,0][300,300]" text="Got it! I'll skip the other tips." />
+      <node class="android.widget.Button" clickable="true" enabled="true" displayed="true"
+            bounds="[0,300][200,360]" text="Start Browsing" resource-id="pkg:id/primaryCta" />
+    </hierarchy>"""
+    runner = AppiumRunner.__new__(AppiumRunner)
+    runner.driver = None
+    runner._appium_process = runner._emulator_process = None
+    runner._appium_log_handle = runner._emulator_log_handle = None
+    chosen = runner._find_popup_candidate(xml, {
+        "popup_terms": ["skip", "start browsing"]
+    })
+    assert chosen["label"].startswith("Start Browsing")

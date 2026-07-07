@@ -744,6 +744,12 @@ class AppiumRunner:
         if not app_activity:
             app_activity = f"{package_name}.MainActivity"
 
+        # Every benchmark task must start from a deterministic application
+        # state. Reusing the same package across golden/model runs otherwise
+        # restores the previous Activity and preferences, making crawler paths
+        # depend on run order.
+        self._clear_package_state(package_name)
+
         self._active_package = package_name
         self._target_package_name = package_name
         
@@ -762,6 +768,8 @@ class AppiumRunner:
             options.set_capability("appium:appActivity", app_activity)
             options.set_capability("appium:automationName", "UiAutomator2")
             options.set_capability("appium:autoGrantPermissions", True)
+            options.set_capability("appium:noReset", False)
+            options.set_capability("appium:fullReset", False)
             options.set_capability("appium:newCommandTimeout", 300)
             options.set_capability("appium:adbExecTimeout", int(os.getenv("ADB_EXEC_TIMEOUT", "120000")))
             options.set_capability(
@@ -787,6 +795,8 @@ class AppiumRunner:
                 "appActivity": app_activity,
                 "automationName": "UiAutomator2",
                 "autoGrantPermissions": True,
+                "noReset": False,
+                "fullReset": False,
                 "newCommandTimeout": 300,
                 "adbExecTimeout": int(os.getenv("ADB_EXEC_TIMEOUT", "120000")),
                 "uiautomator2ServerLaunchTimeout": int(
@@ -821,6 +831,23 @@ class AppiumRunner:
                 errors.append(f"{appium_url}: {type(exc).__name__}: {exc}")
 
         raise RuntimeError(f"Failed to connect to Appium endpoints: {' || '.join(errors)}")
+
+    def _clear_package_state(self, package_name: str) -> bool:
+        """Clear persisted Activity/preferences before each independent task."""
+        if not package_name:
+            return False
+        try:
+            result = subprocess.run(
+                ["adb", "-s", self.ADB_DEVICE, "shell", "pm", "clear", package_name],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            # A package may not be installed yet; Appium will install it fresh.
+            return result.returncode == 0 and "success" in result.stdout.lower()
+        except Exception as exc:
+            print(f"[AppiumRunner] WARN: failed to clear {package_name}: {exc}")
+            return False
 
     def _load_meta(self, app_name: str, task_id: str) -> dict:
         meta_path = self.data_dir / app_name / task_id / "meta.json"
@@ -991,11 +1018,37 @@ class AppiumRunner:
     def _find_popup_candidate(self, xml_text: str, level2_spec: dict) -> Optional[dict]:
         popup_terms = [normalize_text(x) for x in level2_spec.get("popup_terms", [])]
         candidates = self._click_candidates_from_xml(xml_text)
+        scored: list[tuple[int, int, dict]] = []
         for c in candidates:
             label = normalize_text(c.get("label", ""))
-            if any(term and self._label_contains_term(label, term) for term in popup_terms):
-                return c
-        return None
+            matched = [
+                term for term in popup_terms
+                if term and self._label_contains_term(label, term)
+            ]
+            if not matched:
+                continue
+            priority = 10
+            if any(term in matched for term in (
+                "skip", "i've been here before", "not now", "no thanks", "maybe later",
+                "start browsing", "finish",
+                "跳过", "稍后",
+            )):
+                priority = 30
+            elif any(term in matched for term in ("cancel", "close", "取消", "关闭")):
+                priority = 20
+            node_class = normalize_text(c.get("class", ""))
+            resource_id = normalize_text(c.get("resource_id", ""))
+            if node_class.endswith("button"):
+                priority += 20
+            elif node_class.endswith("textview"):
+                priority -= 10
+            if "skiponboardingbutton" in resource_id:
+                priority += 30
+            scored.append((priority, c.get("area", 0), c))
+        if not scored:
+            return None
+        scored.sort(key=lambda item: (-item[0], item[1]))
+        return scored[0][2]
 
     @staticmethod
     def _label_contains_term(label: str, term: str) -> bool:
@@ -1079,6 +1132,8 @@ class AppiumRunner:
             candidates.append({
                 "bounds": bounds,
                 "clickable": clickable,
+                "class": attrs.get("class", ""),
+                "resource_id": attrs.get("resource-id", ""),
                 "label": label,
                 "area": self._bounds_area(parsed_bounds),
                 "key": f"{bounds}:{normalize_text(label)}",
