@@ -48,12 +48,14 @@ class Evaluator:
         self,
         data_dir:    str = "data",
         results_dir: str = "results",
+        workspace_dir: str = "workspace",
         vlm_model:   str = "visual-judge",
         enable_level3: bool = True,
     ):
         root = Path(__file__).parent.parent
         self.data_dir    = root / data_dir
         self.results_dir = root / results_dir
+        self.workspace_dir = root / workspace_dir
         self.vlm_model   = vlm_model
         self.enable_level3 = enable_level3
         self._vlm: Optional[object] = None   # 懒加载，仅视觉任务才用
@@ -834,7 +836,7 @@ class Evaluator:
         }
 
     def _collect_modified_files(self, app_name: str, task_id: str) -> list[str]:
-        workspace_task = self.results_dir.parent / "workspace" / app_name / task_id
+        workspace_task = self.workspace_dir / app_name / task_id
         base_src = self.data_dir / app_name / "base_src"
         return self._collect_modified_files_between_roots(base_src, workspace_task)
 

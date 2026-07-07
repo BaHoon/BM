@@ -22,14 +22,26 @@ NAVIGATION_TERMS = [
     "设置", "前往设置", "菜单", "更多", "偏好", "选项",
 ]
 
+# Prompt concepts that commonly name an intermediate settings row.  These are
+# navigation hints only; they never count as a Level 2 target-node match.
+PROMPT_NAV_CONCEPTS = [
+    "theme", "appearance", "color scheme", "display", "layout", "font",
+    "navigation", "toolbar", "language", "notification",
+    "account", "backup", "sync", "calendar", "editor",
+    "主题", "外观", "配色", "显示", "布局", "字体", "导航", "工具栏", "语言",
+    "通知", "账户", "备份", "同步", "日历", "编辑器",
+]
+
 POPUP_TERMS = [
     "ok", "okay", "allow", "continue", "skip", "agree", "close", "cancel", "later",
+    "i've been here before", "let's do it", "get started", "next", "not now",
+    "no thanks", "maybe later", "start browsing", "finish",
     "确定", "確定", "好的", "允许", "继续", "跳过", "同意", "关闭", "取消", "稍后", "关闭工作表",
 ]
 
 NON_TARGET_TERMS = GENERIC_SCORE_TERMS | {
     term.lower() for term in NAVIGATION_TERMS + POPUP_TERMS
-}
+} | {"the", "and", "for", "with", "overall", "current", "new", "users", "user"}
 
 
 def build_level2_spec(
@@ -209,6 +221,7 @@ def match_target_xml(xml_text: str, spec: dict[str, Any]) -> dict[str, Any]:
                         "keyword": phrase,
                         "value": value,
                         "match_mode": "exact" if exact else "inferred_contains",
+                        "bounds": node.attrib.get("bounds", ""),
                     })
 
     if matched:
@@ -263,9 +276,19 @@ def _derive_score_terms(phrases: list[str]) -> list[str]:
 def _derive_prompt_nav_terms(prompt: str) -> list[str]:
     lower = _normalize(prompt)
     terms = []
-    for term in NAVIGATION_TERMS:
+    for term in NAVIGATION_TERMS + PROMPT_NAV_CONCEPTS:
         if _normalize(term) in lower:
             terms.append(term)
+    # Common UI taxonomy aliases: prompts often say "theme" while an app's
+    # intermediate settings category is labelled "Appearance".
+    if "theme" in lower or "color scheme" in lower:
+        terms.extend(["appearance", "personalization", "customize"])
+    if any(term in lower for term in ("background image", "wallpaper", "background color")):
+        terms.extend(["appearance", "personalization", "customize"])
+    if "notification" in lower:
+        terms.append("alerts")
+    if "backup" in lower or "sync" in lower:
+        terms.extend(["import", "export"])
     return terms
 
 
