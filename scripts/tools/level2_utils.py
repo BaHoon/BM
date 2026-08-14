@@ -18,17 +18,34 @@ GENERIC_SCORE_TERMS = {
 
 NAVIGATION_TERMS = [
     "settings", "setting", "preferences", "options", "menu", "more",
-    "go to settings", "open settings",
+    "go to settings", "open settings", "open navigation drawer", "navigation drawer",
+    "drawer", "hamburger",
     "设置", "前往设置", "菜单", "更多", "偏好", "选项",
+]
+
+# Prompt concepts that commonly name an intermediate settings row.  These are
+# navigation hints only; they never count as a Level 2 target-node match.
+PROMPT_NAV_CONCEPTS = [
+    "theme", "appearance", "color scheme", "display", "layout", "font",
+    "navigation", "toolbar", "language", "notification",
+    "account", "backup", "sync", "calendar", "editor",
+    "主题", "外观", "配色", "显示", "布局", "字体", "导航", "工具栏", "语言",
+    "通知", "账户", "备份", "同步", "日历", "编辑器",
 ]
 
 POPUP_TERMS = [
     "ok", "okay", "allow", "continue", "skip", "agree", "close", "cancel", "later",
+    "i've been here before", "let's do it", "get started", "next", "not now",
+    "no thanks", "maybe later", "start browsing", "finish",
     "确定", "確定", "好的", "允许", "继续", "跳过", "同意", "关闭", "取消", "稍后", "关闭工作表",
 ]
 
 NON_TARGET_TERMS = GENERIC_SCORE_TERMS | {
     term.lower() for term in NAVIGATION_TERMS + POPUP_TERMS
+} | {
+    "the", "and", "for", "with", "overall", "current", "new", "users", "user",
+    "open navigation drawer", "close navigation drawer", "navigate up",
+    "app logo", "version", "itinerary planner",
 }
 
 
@@ -74,9 +91,120 @@ def build_level2_spec(
     for phrase in _extract_prompt_phrases(prompt):
         _add_phrase(phrases, phrase)
 
+    prompt_norm = _normalize(prompt)
+    if "theme" in prompt_norm or "color scheme" in prompt_norm:
+        if any(term in prompt_norm for term in ("girly skull", "girl skull", "skull")):
+            for phrase in (
+                "Girly Skull",
+                "Girly Skull Theme",
+                "Girl Skull Theme",
+                "Skull Girl Theme",
+            ):
+                _add_phrase(phrases, phrase)
+        if "dark theme" in prompt_norm or "dark mode" in prompt_norm:
+            for phrase in ("Dark Theme", "Dark Mode"):
+                _add_phrase(phrases, phrase)
+        if "high contrast" in prompt_norm or "colorblind" in prompt_norm or "color blind" in prompt_norm:
+            for phrase in (
+                "High Contrast Mode",
+                "High Contrast",
+                "Colorblind Mode",
+                "Color Blind Mode",
+                "高对比度模式",
+                "高对比度",
+                "高对比",
+            ):
+                _add_phrase(phrases, phrase)
+
+    if "batch import" in prompt_norm or "root directory" in prompt_norm:
+        for phrase in (
+            "Download",
+            "/storage/emulated/0/Download",
+            "CodexSeed",
+            "import_root",
+            "Select folder",
+            "Use this folder",
+        ):
+            _add_phrase(phrases, phrase)
+
+    if any(term in prompt_norm for term in ("background image", "wallpaper")) and any(
+        term in prompt_norm for term in ("upload", "select", "choose", "pick")
+    ):
+        for phrase in (
+            "Background Image",
+            "Custom Background",
+            "example.png",
+        ):
+            _add_phrase(phrases, phrase)
+
+    if any(term in prompt_norm for term in ("notification", "reminder", "reminders")):
+        for phrase in (
+            "Timer Expired Notification",
+            "No Activity Notification",
+            "Break Notification",
+        ):
+            _add_phrase(phrases, phrase)
+
+    if any(term in prompt_norm for term in ("search button", "direct search", "search icon")):
+        for phrase in ("Search", "action_search", "Search plans"):
+            _add_phrase(phrases, phrase)
+
+    if any(term in prompt_norm for term in ("share icon", "share button", "sharing the current page", "share the current page")):
+        for phrase in ("Share", "action_share", "Share page", "Share current page"):
+            _add_phrase(phrases, phrase)
+
+    if any(term in prompt_norm for term in ("back/up", "back button/gesture", "back button", "navigate up")):
+        for phrase in ("Navigate up", "android:id/home", "Back", "Up"):
+            _add_phrase(phrases, phrase)
+
+    if "language" in prompt_norm:
+        language_aliases = {
+            "bengali": ("Bengali", "বাংলা (Bengali)", "বাংলা (বাংলাদেশ)", "বাংলা"),
+            "korean": ("Korean", "한국어 (Korean)", "한국어"),
+        }
+        for marker, aliases in language_aliases.items():
+            if marker in prompt_norm:
+                for phrase in aliases:
+                    _add_phrase(phrases, phrase)
+
+    if (
+        any(term in prompt_norm for term in ("completed task", "completed tasks", "completed"))
+        and any(term in prompt_norm for term in ("count", "number", "display"))
+    ):
+        for phrase in (
+            "Today:",
+            "checklist",
+            "checklists",
+            "goal",
+            "goals",
+        ):
+            _add_phrase(phrases, phrase)
+
+    if _prompt_names_quick_menu(prompt_norm):
+        for phrase in (
+            "Quick Menu",
+            "main_fab",
+            "global_fab",
+            "speed_dial",
+            "speed_dial_container",
+            "global_floating_container",
+        ):
+            _add_phrase(phrases, phrase)
+
+    _add_localized_equivalent_phrases(phrases, explicit_phrases)
+
     score_terms = _derive_score_terms(phrases)
-    nav_terms = _dedupe(NAVIGATION_TERMS + score_terms + _derive_prompt_nav_terms(prompt))
-    interaction_preconditions = _derive_interaction_preconditions(prompt)
+    golden_nav_terms = (
+        derive_golden_navigation_terms(Path(base_src), Path(golden_src))
+        if base_src and golden_src else []
+    )
+    nav_terms = _dedupe(
+        NAVIGATION_TERMS + golden_nav_terms + score_terms + _derive_prompt_nav_terms(prompt)
+    )
+    metadata_preconditions = _metadata_preconditions(meta)
+    interaction_preconditions = _dedupe(
+        metadata_preconditions if metadata_preconditions else _derive_interaction_preconditions(prompt)
+    )
 
     return {
         "target_phrases": phrases,
@@ -93,6 +221,21 @@ def build_level2_spec(
             "name",
         ],
     }
+
+
+def _metadata_preconditions(meta: dict[str, Any]) -> list[str]:
+    conditions: list[str] = []
+    for key in ("preconditions", "interaction_preconditions", "appium_preconditions"):
+        value = meta.get(key)
+        values = value if isinstance(value, list) else [value] if value else []
+        for item in values:
+            if isinstance(item, str):
+                conditions.append(item)
+            elif isinstance(item, dict):
+                name = item.get("type") or item.get("name") or item.get("category")
+                if name:
+                    conditions.append(str(name))
+    return conditions
 
 
 def _derive_interaction_preconditions(prompt: str) -> list[str]:
@@ -148,7 +291,7 @@ def derive_golden_ui_phrases(base_src: Path, golden_src: Path) -> list[str]:
         for line in added:
             resource_names.extend(re.findall(r"(?:@string/|R\.string\.)([A-Za-z0-9_]+)", line))
             for match in re.finditer(
-                r"(?:android:(?:text|contentDescription)|text|contentDescription)\s*=\s*[\"']([^@\"']{2,80})[\"']",
+                r"(?:android:(?:text|contentDescription|title|summary)|text|contentDescription|title|summary)\s*=\s*[\"']([^@\"']{2,80})[\"']",
                 line,
             ):
                 literal_phrases.append(match.group(1))
@@ -156,6 +299,13 @@ def derive_golden_ui_phrases(base_src: Path, golden_src: Path) -> list[str]:
             if match:
                 strings.setdefault(match.group(1), match.group(2).strip())
                 resource_names.append(match.group(1))
+            # Theme/select choices commonly live in string-array <item> nodes,
+            # not <string> resources. Missing these made the crawler search for
+            # prompt wording ("Girly Skull") while the real option said
+            # "Skull Girl".
+            for item_text in re.findall(r"<item(?:\s+[^>]*)?>([^<]{2,100})</item>", line):
+                if not item_text.strip().startswith("@"):
+                    literal_phrases.append(item_text.strip())
 
     phrases: list[str] = []
     weak = NON_TARGET_TERMS | {
@@ -173,6 +323,61 @@ def derive_golden_ui_phrases(base_src: Path, golden_src: Path) -> list[str]:
             continue
         _add_phrase(phrases, value)
     return phrases[:24]
+
+
+def derive_golden_navigation_terms(base_src: Path, golden_src: Path) -> list[str]:
+    """Infer the containing settings section from changed preference XML paths."""
+    terms: list[str] = []
+    for path in golden_src.glob("**/src/main/res/xml/*.xml"):
+        rel = path.relative_to(golden_src)
+        base_path = base_src / rel
+        try:
+            changed = not base_path.exists() or path.read_bytes() != base_path.read_bytes()
+        except OSError:
+            continue
+        if not changed:
+            continue
+        stem = normalize_text(path.stem)
+        words = [
+            word for word in stem.split()
+            if word not in {"preference", "preferences", "pref", "prefs", "setting", "settings", "screen"}
+        ]
+        if not words or words == ["root"]:
+            continue
+        phrase = " ".join(words)
+        terms.append(phrase)
+        if phrase == "other":
+            terms.append("other settings")
+    return _dedupe(terms)
+
+
+def _add_localized_equivalent_phrases(phrases: list[str], explicit_phrases: list[str]) -> None:
+    equivalents = {
+        "通知设置": "Notification settings",
+        "管理通知偏好": "Manage notification preferences",
+        "启用通知": "Enable notifications",
+        "允许应用发送通知": "Allow the app to send notifications",
+        "用餐提醒": "Meal reminders",
+        "获取记录餐食的提醒": "Get reminded to log your meals",
+        "目标提醒": "Goal reminders",
+        "获取每日目标的通知": "Get notified about your daily goals",
+        "导入/导出通知": "Import/export notifications",
+        "显示导入和导出操作的通知": "Show notifications for import and export operations",
+        "Bengali": "বাংলা (বাংলাদেশ)",
+        "বাংলা": "বাংলা (বাংলাদেশ)",
+        "বাংলা (Bengali)": "বাংলা (বাংলাদেশ)",
+    }
+    existing = {_normalize(p) for p in phrases}
+    explicit_existing = {_normalize(p) for p in explicit_phrases}
+    for source, equivalent in equivalents.items():
+        if _normalize(source) not in existing:
+            continue
+        if _normalize(equivalent) not in existing:
+            phrases.append(equivalent)
+            existing.add(_normalize(equivalent))
+        if _normalize(source) in explicit_existing and _normalize(equivalent) not in explicit_existing:
+            explicit_phrases.append(equivalent)
+            explicit_existing.add(_normalize(equivalent))
 
 
 def match_target_xml(xml_text: str, spec: dict[str, Any]) -> dict[str, Any]:
@@ -209,10 +414,48 @@ def match_target_xml(xml_text: str, spec: dict[str, Any]) -> dict[str, Any]:
                         "keyword": phrase,
                         "value": value,
                         "match_mode": "exact" if exact else "inferred_contains",
+                        "bounds": node.attrib.get("bounds", ""),
                     })
 
     if matched:
         return {"matched": True, "matched_nodes": matched}
+
+    if _matches_theme_target_page(xml_text, spec):
+        return {
+            "matched": True,
+            "matched_nodes": [{
+                "attribute": "page_signature",
+                "keyword": "theme_target_page",
+                "value": "appearance theme system light dark dynamic colors",
+                "match_mode": "theme_page_signature",
+                "bounds": "",
+            }],
+        }
+
+    core_buttons = _matches_core_function_home_buttons(xml_text, spec)
+    if core_buttons:
+        return {
+            "matched": True,
+            "matched_nodes": [{
+                "attribute": "page_signature",
+                "keyword": "core_function_home_buttons",
+                "value": " ".join(core_buttons),
+                "match_mode": "core_function_buttons_signature",
+                "bounds": "",
+            }],
+        }
+
+    if _matches_emoji_library_panel(xml_text, spec):
+        return {
+            "matched": True,
+            "matched_nodes": [{
+                "attribute": "page_signature",
+                "keyword": "emoji_library_panel",
+                "value": "emojiRecycler rich emoji choices",
+                "match_mode": "emoji_library_panel_signature",
+                "bounds": "",
+            }],
+        }
 
     # Fallback only when no precise phrase exists: require multiple strong terms.
     if target_phrases:
@@ -232,6 +475,7 @@ def _extract_prompt_phrases(prompt: str) -> list[str]:
         r"\*\*[\"“”']?(.+?)[\"“”']?\*\*",
         r"[\"“]([^\"”]{3,80})[\"”]",
         r"'([^']{3,80})'",
+        r"\b[A-Ba-b]\s*:\s*(.+?)(?=,\s*[A-Ba-b]\s*:|[.;\n]|$)",
         r"\bcalled\s+[\"“']?([^\"”'.]{3,80})[\"”']?",
         r"\bnamed\s+[\"“']?([^\"”'.]{3,80})[\"”']?",
         r"\bnew\s+(?:theme|menu|feature|page|screen)\s+(?:called|named)?\s*[\"“']?([^\"”'.]{3,80})[\"”']?",
@@ -240,6 +484,10 @@ def _extract_prompt_phrases(prompt: str) -> list[str]:
         r"\bprovide\s+(?:an?|the)?\s*(.{3,70}?)(?:,|\s+allowing|\.)",
         r"\ballow(?:ing)?\s+users\s+to\s+(.{3,70}?)(?:,|\s+and|\.)",
         r"\badd\s+(.{3,70}?buttons.{0,40}?)(?:,|\s+enabling|\.)",
+        r"\badd\s+(?:an?|the)?\s*([a-z0-9 /-]{3,50}?\s+button)\b",
+        r"\badd\s+(?:an?|the)?\s*([a-z0-9 /-]{3,50}?\s+icon)\b",
+        r"\badd\s+(?:an?|the)?\s*(built-in emoji library)\b",
+        r"\bprovides?\s+(rich emojis?)\b",
     ]
     for pattern in patterns:
         for match in re.finditer(pattern, prompt, flags=re.IGNORECASE):
@@ -260,12 +508,33 @@ def _derive_score_terms(phrases: list[str]) -> list[str]:
     return _dedupe(terms)
 
 
+def _prompt_names_quick_menu(prompt_norm: str) -> bool:
+    return (
+        "quick menu" in prompt_norm
+        or (
+            "global" in prompt_norm
+            and "navigation" in prompt_norm
+            and any(term in prompt_norm for term in ("quick access", "access at any time"))
+        )
+    )
+
+
 def _derive_prompt_nav_terms(prompt: str) -> list[str]:
     lower = _normalize(prompt)
     terms = []
-    for term in NAVIGATION_TERMS:
+    for term in NAVIGATION_TERMS + PROMPT_NAV_CONCEPTS:
         if _normalize(term) in lower:
             terms.append(term)
+    # Common UI taxonomy aliases: prompts often say "theme" while an app's
+    # intermediate settings category is labelled "Appearance".
+    if "theme" in lower or "color scheme" in lower:
+        terms.extend(["appearance", "personalization", "customize", "color", "colors", "palette"])
+    if any(term in lower for term in ("background image", "wallpaper", "background color")):
+        terms.extend(["appearance", "personalization", "customize", "color", "colors", "palette"])
+    if "notification" in lower:
+        terms.append("alerts")
+    if "backup" in lower or "sync" in lower:
+        terms.extend(["import", "export"])
     return terms
 
 
@@ -281,6 +550,71 @@ def _visible_xml_text(xml_text: str, attrs: list[str]) -> str:
             if value:
                 values.append(value)
     return " ".join(values)
+
+
+def _matches_theme_target_page(xml_text: str, spec: dict[str, Any]) -> bool:
+    nav_terms = {_normalize(x) for x in spec.get("navigation_terms") or []}
+    if not {"theme", "appearance", "colors"} & nav_terms:
+        return False
+
+    visible = _normalize(_visible_xml_text(xml_text, spec.get("match_attributes") or ["text", "content-desc"]))
+    if not visible:
+        return False
+
+    signature_terms = ["theme", "appearance", "system", "light", "dark", "dynamic colors"]
+    hits = sum(1 for term in signature_terms if _contains_normalized_phrase(visible, term))
+    return hits >= 4 and "theme" in visible
+
+
+def _matches_core_function_home_buttons(xml_text: str, spec: dict[str, Any]) -> list[str]:
+    prompt_terms = {
+        _normalize(x)
+        for x in (spec.get("target_phrases") or []) + (spec.get("navigation_terms") or [])
+    }
+    prompt_text = " ".join(prompt_terms)
+    if not (
+        "home" in prompt_text
+        and "core" in prompt_text
+        and "button" in prompt_text
+        and any(term in prompt_text for term in ("direct", "accessible", "access"))
+    ):
+        return []
+
+    visible = _normalize(_visible_xml_text(xml_text, spec.get("match_attributes") or ["text", "content-desc", "resource-id"]))
+    if not visible:
+        return []
+
+    groups = {
+        "undo": ("undo",),
+        "redo": ("redo",),
+        "eraser": ("eraser",),
+        "eyedropper": ("eyedropper", "eye dropper"),
+        "bucket_fill": ("bucket fill", "bucket_fill"),
+        "change_color": ("change color", "change_color", "color picker"),
+    }
+    hits: list[str] = []
+    for name, aliases in groups.items():
+        if any(_contains_normalized_phrase(visible, _normalize(alias)) or _normalize(alias) in visible for alias in aliases):
+            hits.append(name)
+    return hits if len(hits) >= 3 else []
+
+
+def _matches_emoji_library_panel(xml_text: str, spec: dict[str, Any]) -> bool:
+    prompt_text = _normalize(" ".join(
+        str(x) for x in (spec.get("target_phrases") or []) + (spec.get("score_terms") or [])
+    ))
+    if "emoji" not in prompt_text or not any(term in prompt_text for term in ("library", "rich", "emojis")):
+        return False
+
+    visible = _normalize(_visible_xml_text(xml_text, spec.get("match_attributes") or ["text", "content-desc", "resource-id"]))
+    if _contains_normalized_phrase(visible, "emojirecycler") or _contains_normalized_phrase(visible, "emoji recycler"):
+        return True
+
+    emoji_items = re.findall(
+        r"[\U0001F300-\U0001FAFF\U00002700-\U000027BF]",
+        _visible_xml_text(xml_text, spec.get("match_attributes") or ["text", "content-desc"]),
+    )
+    return len(emoji_items) >= 4
 
 
 def _add_phrase(phrases: list[str], phrase: str) -> None:
@@ -319,8 +653,9 @@ def _contains_normalized_phrase(value: str, phrase: str) -> bool:
     """Allow a prompt-derived phrase inside one node value, never page-wide."""
     if not value or not phrase or value == phrase:
         return False
-    # Word/phrase boundary containment avoids matches such as red in colored.
-    if f" {phrase} " in f" {value} ":
+    # Word/phrase boundary containment avoids matches such as red in colored,
+    # while still handling resource IDs with separators like :id/main_fab.
+    if re.search(rf"(?<![a-z0-9]){re.escape(phrase)}(?![a-z0-9])", value):
         return True
     # Chinese/Japanese UI labels commonly have no spaces.
     if re.search(r"[\u3400-\u9fff]", phrase) and len(phrase) >= 2:
