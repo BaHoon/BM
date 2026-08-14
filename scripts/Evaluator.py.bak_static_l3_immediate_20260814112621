@@ -378,24 +378,23 @@ class Evaluator:
             print("  [S3-visual] SKIP  explicitly disabled")
             return base_detail, False, None
 
-        static_evidence = level2.get("static_evidence") or {}
-        if static_evidence.get("passed"):
-            detail = {
-                **base_detail,
-                "passed": True,
-                "skipped": False,
-                "level3_score": 1,
-                "level3_reason": "Configured static UI evidence proves the benchmark target for this task; the crawler may miss the required transient or precondition-dependent runtime state.",
-                "vlm_binary_checks": [{
-                    "id": "static_ui_evidence",
-                    "passed": True,
-                    "reason": static_evidence.get("summary", "configured evidence passed"),
-                }],
-            }
-            print("  [S3-visual] level3=1  source=static_ui_evidence")
-            return detail, True, 1
-
         if not valid_shots:
+            static_evidence = level2.get("static_evidence") or {}
+            if static_evidence.get("passed"):
+                detail = {
+                    **base_detail,
+                    "passed": True,
+                    "skipped": False,
+                    "level3_score": 1,
+                    "level3_reason": "Static UI evidence is sufficient for this configured task; runtime media state is not reproducible in the crawler.",
+                    "vlm_binary_checks": [{
+                        "id": "static_ui_evidence",
+                        "passed": True,
+                        "reason": static_evidence.get("summary", "configured evidence passed"),
+                    }],
+                }
+                print("  [S3-visual] level3=1  source=static_ui_evidence")
+                return detail, True, 1
             base_detail["skipped"] = True
             base_detail["level3_score"] = None
             base_detail["level3_reason"] = "Level 3 skipped: no valid screenshots available."

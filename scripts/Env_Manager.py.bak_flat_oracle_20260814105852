@@ -112,13 +112,8 @@ class EnvManager:
         oracle_src = next((path for path in candidates if path.exists()), None)
         dst = self.workspace_dir / app_name / task_id
 
-        if oracle_src is None and self._looks_like_flattened_oracle_snapshot(task_dir):
-            # Some historical task restores flattened golden_src into the task
-            # directory itself. Treat that directory as a full oracle snapshot so
-            # the task remains a valid benchmark item instead of being dropped.
-            oracle_src = task_dir
         if oracle_src is None:
-            searched = ", ".join(str(path) for path in candidates + [task_dir])
+            searched = ", ".join(str(path) for path in candidates)
             raise FileNotFoundError(f"golden source not found; searched: {searched}")
         if not base_src.exists():
             raise FileNotFoundError(f"base_src not found: {base_src}")
@@ -506,22 +501,6 @@ class EnvManager:
             raise FileNotFoundError(f"meta.json not found: {meta_path}")
         with open(meta_path, "r", encoding="utf-8") as f:
             return json.load(f)
-
-    def _looks_like_flattened_oracle_snapshot(self, task_dir: Path) -> bool:
-        """Return True when a task directory itself is a restored golden snapshot."""
-        if not task_dir.exists() or not task_dir.is_dir():
-            return False
-        if (task_dir / "golden_src").exists() or (task_dir / "ground_truth_src").exists():
-            return False
-        project_markers = (
-            task_dir / "settings.gradle",
-            task_dir / "settings.gradle.kts",
-            task_dir / "build.gradle",
-            task_dir / "build.gradle.kts",
-            task_dir / "gradlew",
-        )
-        nested_markers = list(task_dir.glob("*/settings.gradle")) + list(task_dir.glob("*/settings.gradle.kts"))
-        return any(path.exists() for path in project_markers) or bool(nested_markers)
 
     def _resolve_build_command(self, meta: dict) -> str:
         """优先使用任务 meta.json 的 build_command，并兼容 macOS/Linux wrapper 写法。"""

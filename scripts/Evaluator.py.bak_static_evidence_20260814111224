@@ -378,23 +378,6 @@ class Evaluator:
             print("  [S3-visual] SKIP  explicitly disabled")
             return base_detail, False, None
 
-        static_evidence = level2.get("static_evidence") or {}
-        if static_evidence.get("passed"):
-            detail = {
-                **base_detail,
-                "passed": True,
-                "skipped": False,
-                "level3_score": 1,
-                "level3_reason": "Configured static UI evidence proves the benchmark target for this task; the crawler may miss the required transient or precondition-dependent runtime state.",
-                "vlm_binary_checks": [{
-                    "id": "static_ui_evidence",
-                    "passed": True,
-                    "reason": static_evidence.get("summary", "configured evidence passed"),
-                }],
-            }
-            print("  [S3-visual] level3=1  source=static_ui_evidence")
-            return detail, True, 1
-
         if not valid_shots:
             base_detail["skipped"] = True
             base_detail["level3_score"] = None
@@ -1026,26 +1009,6 @@ class Evaluator:
                 "xml_error": xml_error,
             }
 
-        static_evidence = self._score_level2_static_evidence(app_name, task_id, meta)
-        if static_evidence.get("passed"):
-            return {
-                "score": 2,
-                "reason": "任务配置的静态 UI 结构证据已在构建后的 workspace 中满足。",
-                "target_xml_path": str(target_xml_path) if target_xml_path else None,
-                "expected_nodes": expected_nodes,
-                "level2_spec": spec,
-                "matched_node": {
-                    "tree_path": None,
-                    "matched_attribute": "static_evidence",
-                    "expected": static_evidence.get("summary"),
-                    "node": {"static_evidence": static_evidence.get("summary", "")},
-                    "matched_nodes": [],
-                },
-                "file_fallback": None,
-                "xml_error": xml_error,
-                "static_evidence": static_evidence,
-            }
-
         file_fallback = self._score_level2_file_fallback(app_name, task_id, meta)
         preconditions = spec.get("interaction_preconditions") or []
         precondition_note = (
@@ -1272,38 +1235,6 @@ class Evaluator:
 
     def _normalize_node_value(self, value: str) -> str:
         return re.sub(r"\s+", " ", value or "").strip().casefold()
-
-    def _score_level2_static_evidence(self, app_name: str, task_id: str, meta: dict) -> dict:
-        evidence = meta.get("level2_static_evidence") or []
-        if not evidence:
-            return {"passed": False, "reason": "not_configured"}
-        if isinstance(evidence, dict):
-            evidence = [evidence]
-        workspace = Path(__file__).parent.parent / "workspace" / app_name / task_id
-        checks = []
-        for item in evidence:
-            if not isinstance(item, dict):
-                checks.append({"passed": False, "reason": "invalid evidence item"})
-                continue
-            rel = item.get("path")
-            required = item.get("contains") or []
-            if isinstance(required, str):
-                required = [required]
-            file_path = workspace / str(rel or "")
-            if not rel or not file_path.exists() or not file_path.is_file():
-                checks.append({"path": rel, "passed": False, "reason": "file missing"})
-                continue
-            content = file_path.read_text(encoding="utf-8", errors="replace")
-            missing = [term for term in required if str(term) not in content]
-            checks.append({
-                "path": rel,
-                "passed": not missing,
-                "missing": missing,
-                "required": required,
-            })
-        passed = bool(checks) and all(check.get("passed") for check in checks)
-        summary = "; ".join(str(check.get("path")) for check in checks if check.get("passed"))
-        return {"passed": passed, "checks": checks, "summary": summary}
 
     def _score_level2_file_fallback(self, app_name: str, task_id: str, meta: dict) -> dict:
         predicted = self._collect_modified_files(app_name, task_id)

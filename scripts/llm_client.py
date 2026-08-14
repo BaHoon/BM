@@ -306,7 +306,8 @@ class LLMClient:
         feedback_screenshots: Optional[list[str]] = None,
         feedback_log: Optional[str] = None,
         temperature: float = 0.2,
-        max_tokens: int = 16000,
+        # 修改，避免超出上下文
+        max_tokens: int = 12000,
     ) -> str:
         """
         调用 LLM 生成/修复代码。
@@ -422,7 +423,7 @@ class LLMClient:
             "Return strict JSON only:\n"
             "{"
             "\"passed\": <true only if every check passed>, "
-            "\"checks\": [{\"id\": \"...\", \"question\": \"...\", \"passed\": <bool>, \"evidence\": \"short visible evidence\"}], "
+            "\"checks\": [{\"id\": \"...\", \"passed\": <bool>, \"evidence\": \"short visible evidence\"}], "
             "\"reason\": \"one short sentence\""
             "}"
         )
@@ -440,7 +441,7 @@ class LLMClient:
                 model=model_name,
                 messages=messages,
                 temperature=temperature,
-                max_tokens=800,
+                max_tokens=max(1200, int(os.getenv("VLM_MAX_TOKENS", "2000"))),
             )
         )
         raw = response.choices[0].message.content.strip()
